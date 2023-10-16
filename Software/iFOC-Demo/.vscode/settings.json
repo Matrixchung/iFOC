@@ -1,0 +1,32 @@
+{
+    "cortex-debug.armToolchainPath": "C:\\ARM-GNU-TOOLCHAIN-12.3.REL1-MINGW-W64-I686-ARM-NONE-EABI\\BIN",
+    "cortex-debug.openocdPath": "C:\\OPENOCD-20230712-0.12.0\\BIN\\OPENOCD.EXE",
+    "C_Cpp.default.compilerPath": "C:\\ARM-GNU-TOOLCHAIN-12.3.REL1-MINGW-W64-I686-ARM-NONE-EABI\\BIN\\ARM-NONE-EABI-GCC.EXE",
+    "files.associations": {
+        "uart_handler.h": "c",
+        "task.h": "c",
+        "user_task.h": "c",
+        "fifo.h": "c",
+        "freertos.h": "c",
+        "cmsis_os.h": "c",
+        "main.h": "c",
+        "algorithm": "c",
+        "oled.h": "c",
+        "adc_handler.h": "c",
+        "stm32f1xx_hal.h": "c",
+        "stm32f1xx_hal_conf.h": "c",
+        "vofa.h": "c",
+        "foc.h": "c",
+        "utils.h": "c",
+        "iqmathlib.h": "c",
+        "pwm_encoder.h": "c",
+        "lowpass_filter.h": "c",
+        "delay.h": "c",
+        "stdlib.h": "c",
+        "stdint-gcc.h": "c",
+        "stdint.h": "c",
+        "compare": "c",
+        "spi_encoder.h": "c"
+    },
+    "cortex-debug.variableUseNaturalFormat": true
+}
