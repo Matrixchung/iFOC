@@ -1,0 +1,21 @@
+{
+  "configurations": [
+    {
+      "name": "STM32",
+      "includePath": [
+        "Core/Inc",
+        "Drivers/CMSIS/Device/ST/STM32F1xx/Include",
+        "Drivers/CMSIS/Include",
+        "Drivers/STM32F1xx_HAL_Driver/Inc",
+        "Drivers/STM32F1xx_HAL_Driver/Inc/Legacy"
+      ],
+      "defines": [
+        "STM32F103xB",
+        "USE_FULL_LL_DRIVER",
+        "USE_HAL_DRIVER"
+      ],
+      "compilerPath": "C:\\ARM-GNU-TOOLCHAIN-12.3.REL1-MINGW-W64-I686-ARM-NONE-EABI\\BIN\\ARM-NONE-EABI-GCC.EXE"
+    }
+  ],
+  "version": 4
+}

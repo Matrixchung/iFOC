@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "showDevDebugOutput": "parsed",
+            "cwd": "${workspaceRoot}",
+            "executable": "./build/iFOC-v0.1-Baremetal.elf",
+            "name": "Debug STM32",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "preLaunchTask": "Build STM",
+            "device": "stm32f103xb.s",
+            "configFiles": [
+                "openocd.cfg"
+            ],
+            "svdFile": "STM32F103xx.svd"
+        },
+        {
+            "showDevDebugOutput": "parsed",
+            "cwd": "${workspaceRoot}",
+            "executable": "./build/iFOC-v0.1-Baremetal.elf",
+            "name": "Attach STM32",
+            "request": "attach",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "preLaunchTask": "Build STM",
+            "device": "stm32f103xb.s",
+            "configFiles": [
+                "openocd.cfg"
+            ],
+            "svdFile": "STM32F103xx.svd"
+        }
+    ]
+}
