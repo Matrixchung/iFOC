@@ -1,0 +1,6 @@
+#ifndef _FOC_MODULE_ANTICOGGING_HPP
+#define _FOC_MODULE_ANTICOGGING_HPP
+
+
+
+#endif
