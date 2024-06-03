@@ -7,7 +7,7 @@
 #include "driver_base.hpp"
 
 // BDC Estimator Base Classes
-#include "estimator_base.h"
+#include "estimator_base.hpp"
 #include "estimator_bdc_sensor.hpp"
 
 // Sense Base Classes
@@ -15,7 +15,6 @@
 #include "bus_sense_base.hpp"
 #include "bus_sense_mirror.hpp"
 #include "bus_sense_static.hpp"
-#include "thermal_sense_base.hpp"
 
 // Unit agreements: all angle are radius, while speed is RPM at output shaft of motor
 

@@ -1,7 +1,7 @@
 #ifndef _FOC_ESTIMATOR_BDC_SENSOR_H
 #define _FOC_ESTIMATOR_BDC_SENSOR_H
 
-#include "estimator_base.h"
+#include "estimator_base.hpp"
 #include "encoder_base.h"
 #include "limiter_base.hpp"
 
