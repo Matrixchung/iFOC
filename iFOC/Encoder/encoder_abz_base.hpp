@@ -16,7 +16,7 @@ public:
 protected:
     int8_t direction = FOC_DIR_POS;
 #if ENCODER_ABZ_USE_PLL
-    SpeedPLL speed_pll = SpeedPLL(0.0f, 0.0f, 0.0f);
+    SpeedPLL speed_pll;
 #else
     SlidingFilter sliding_filter = SlidingFilter(20);
     LowpassFilter speed_filter = LowpassFilter(0.0001f);
@@ -36,7 +36,10 @@ bool EncoderABZBase::Init(float max_vel)
 {
     max_velocity = max_vel;
 #if ENCODER_ABZ_USE_PLL
-    speed_pll = SpeedPLL(350.0f, 90000.0f, max_velocity);
+    speed_pll.pi_controller.Kp = 350.0f;
+    speed_pll.pi_controller.Ki = 90000.0f;
+    speed_pll.pi_controller.limit = max_velocity;
+    speed_pll.lpf.Tf = 0.001f;
 #endif
     return PortInit();
 }

@@ -83,9 +83,9 @@ void EstimatorSensor::Update(float Ts)
     {
         if(align_state == ALL_ALIGNED)
         {
-            if(mode == MODE_SPEED || mode == MODE_POSITION)
+            if(mode >= MODE_SPEED)
             {
-                if(mode == MODE_POSITION) output->out_speed = Position_PID.GetOutput(input->set_abs_pos - output->estimated_raw_angle, Ts);
+                if(mode >= MODE_POSITION) output->out_speed = Position_PID.GetOutput(input->set_abs_pos - output->estimated_raw_angle, Ts);
                 else output->out_speed = input->set_speed;
                 output->Iqd_out.q = Speed_PID.GetOutput(output->out_speed - output->estimated_speed, Ts);
                 output->Iqd_out.d = 0.0f;
@@ -102,6 +102,14 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
     if(mode == MODE_TORQUE)
     {
         output->Iqd_out = input->Iqd_set;
+    }
+    else
+    {
+        if(mode == MODE_TRAJECTORY)
+        {
+            trajController.Update(Ts);
+            input->set_abs_pos = trajController.GetPos();
+        }
     }
     // if(!encoder->UseSpeedPLL())
     // {

@@ -51,6 +51,9 @@ typedef struct foc_config_t
     float home_speed;
     float max_speed;  // max allowed speed, overspeed for *overspeed_detection_ms* cause OVERSPEED error.
     float overspeed_detect_time; // if speed above limit exceed this duration(ms), we will throw error. 
+    float traj_cruise_speed;
+    float traj_max_accel;
+    float traj_max_decel;
     int8_t encoder_dir;
     int8_t aux_encoder_dir;
     bool startup_state;

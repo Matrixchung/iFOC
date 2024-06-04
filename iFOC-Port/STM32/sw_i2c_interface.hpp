@@ -3,21 +3,23 @@
 
 #include "global_include.h"
 #include "delay.h"
+#include "i2c_base.h"
 
 // The SDA and SCL pin must be configured in GPIO Open Drain output first
 // I2C Protocol: 7-bit address, MSB first
 
-class SWI2C
+class SWI2C : public I2CBase
 {
 public:
     SWI2C(GPIO_TypeDef *_scl_port, uint32_t _scl_pin, GPIO_TypeDef *_sda_port, uint32_t _sda_pin, uint32_t _freq)
     : scl_port(_scl_port), scl_pin(_scl_pin), sda_port(_sda_port), sda_pin(_sda_pin), freq(_freq) {};
     SWI2C(GPIO_TypeDef *_scl_port, uint32_t _scl_pin, GPIO_TypeDef *_sda_port, uint32_t _sda_pin)
     : scl_port(_scl_port), scl_pin(_scl_pin), sda_port(_sda_port), sda_pin(_sda_pin) {};
-    void Init();
+    void Init() override;
     uint8_t CheckDevice(uint8_t addr); // 1 if the specific address returns ACK, else 0
-    uint8_t WriteBytes(uint8_t addr, const uint8_t *data, uint8_t len); // return 1 if success, else 0
-    uint8_t ReadBytes(uint8_t addr, uint8_t *data, uint8_t len);
+    uint8_t WriteBytes(uint8_t addr, uint8_t *data, uint8_t len) override; // return 1 if success, else 0
+    uint8_t ReadBytes(uint8_t addr, uint8_t *data, uint8_t len) override;
+    void DelayMs(uint32_t ms) override { delay_ms(ms); };
 private:
     inline void SDAInputMode();
     inline void SDAOutputMode();
@@ -56,7 +58,7 @@ uint8_t SWI2C::CheckDevice(uint8_t addr)
     return 1;
 }
 
-uint8_t SWI2C::WriteBytes(uint8_t addr, const uint8_t *data, uint8_t len)
+uint8_t SWI2C::WriteBytes(uint8_t addr, uint8_t *data, uint8_t len)
 {
     addr &= ~0x01; // R/W bit
     __disable_irq();

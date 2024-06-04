@@ -48,7 +48,7 @@ public:
     uint8_t undervoltage_flag = 0;
     uint32_t raw_21bit_angle = 0;
 protected:
-    SpeedPLL speed_pll = SpeedPLL(0.0f, 0.0f, 0.0f);
+    SpeedPLL speed_pll;
     uint8_t crc_mismatch_count = 0;
     uint8_t last_angle_valid = 0;
     float single_round_angle_prev = -1.0f;
@@ -72,7 +72,7 @@ bool EncoderMT6835Base::Init(float max_vel)
     max_velocity = max_vel;
     // direction = _dir;
     // max_velocity = max_vel;
-    speed_pll = SpeedPLL(350.0f, 90000.0f, max_velocity);
+    speed_pll = SpeedPLL(350.0f, 90000.0f, max_velocity, 0.001f);
     PortSetCS(1);
     if(!PortSPIInit()) return false;
     // Turn off ABZ output

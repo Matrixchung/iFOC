@@ -62,7 +62,16 @@ typedef enum PROTOCOL_ENDPOINT
     ESTIMATED_ACCELERATION,
     GO_HOME,
     BREAK_MODE,
-    
+
+    TRAJ_STATE,  // Readonly
+    TRAJ_TARGET_RAD, // R/W, trigger traj
+    TRAJ_TARGET_DEG,
+    TRAJ_CRUISE_SPEED,
+    TRAJ_MAX_ACCEL,
+    TRAJ_MAX_DECEL,
+    TRAJ_CURRENT_POS,
+    TRAJ_CURRENT_SPEED,
+    TRAJ_CURRENT_ACCEL,
     LAST_EP_PLACEHOLDER // For auto-detect endpoints count
 }PROTOCOL_ENDPOINT;
 

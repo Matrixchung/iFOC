@@ -17,10 +17,10 @@ public:
 protected:
     int8_t direction = FOC_DIR_POS;
 #if ENCODER_AB_USE_PLL
-    SpeedPLL speed_pll = SpeedPLL(0.0f, 0.0f, 0.0f);
+    SpeedPLL speed_pll;
 #else
     SlidingFilter sliding_filter = SlidingFilter(20);
-    LowpassFilter speed_filter = LowpassFilter(0.0001f);
+    LowpassFilter speed_filter = LowpassFilter(0.0005f);
     int last_rotations = 0;
     float last_angle = 0.0f;
     float last_velocity = 0.0f;
@@ -30,13 +30,17 @@ protected:
     float single_round_angle_prev = -1.0f;
     virtual bool PortInit() = 0;
     virtual void PortUpdateDirPulse() = 0;
+    virtual void PortSetCounter(uint32_t counter) = 0;
 };
 
 bool EncoderABBase::Init(float max_vel)
 {
     max_velocity = max_vel;
 #if ENCODER_AB_USE_PLL
-    speed_pll = SpeedPLL(800.0f, 30000.0f, max_velocity);
+    speed_pll.pi_controller.Kp = 750.0f;
+    speed_pll.pi_controller.Ki = 350000.0f;
+    speed_pll.pi_controller.limit = max_velocity;
+    speed_pll.lpf.Tf = 0.00075f;
 #endif
     return PortInit();
 }
@@ -49,12 +53,21 @@ void EncoderABBase::Update(float Ts)
     if(single_round_angle_prev >= 0.0f)
     {
         float delta = single_round_angle - single_round_angle_prev;
-        if(delta > 0.8f * PI2) full_rotations -= 1;
-        else if(delta < -0.8f * PI2) full_rotations += 1;
+        if(delta > 0.8f * PI2)
+        {
+            full_rotations--;
+            PortSetCounter(cpr);
+        }
+        else if(delta < -0.8f * PI2)
+        {
+            full_rotations++;
+            PortSetCounter(0);
+        }
         raw_angle = full_rotations * PI2 + single_round_angle;
     }
     single_round_angle_prev = single_round_angle;
 #if ENCODER_AB_USE_PLL
+
     velocity = speed_pll.Calculate(single_round_angle, Ts);
 #endif
 }

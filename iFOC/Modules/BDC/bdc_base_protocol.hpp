@@ -100,6 +100,24 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
             return instance.est_output.estimated_acceleration;
         case BREAK_MODE:
             return instance.config.break_mode;
+        case TRAJ_STATE:
+            return instance.estimator.trajController.GetState();
+        case TRAJ_TARGET_RAD:
+            return instance.estimator.trajController.GetFinalPos();
+        case TRAJ_TARGET_DEG:
+            return RAD2DEG(instance.estimator.trajController.GetFinalPos());
+        case TRAJ_CRUISE_SPEED:
+            return instance.config.traj_cruise_speed;
+        case TRAJ_MAX_ACCEL:
+            return instance.config.traj_max_accel;
+        case TRAJ_MAX_DECEL:
+            return instance.config.traj_max_decel;
+        case TRAJ_CURRENT_POS:
+            return instance.estimator.trajController.GetPos();
+        case TRAJ_CURRENT_SPEED:
+            return instance.estimator.trajController.GetSpeed();
+        case TRAJ_CURRENT_ACCEL:
+            return instance.estimator.trajController.GetAccel();
         default: break;
     }
     return 0.0f;
@@ -146,6 +164,10 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
         // case ID_SET:
         //     instance.est_input.Iqd_set.d = set_value;
         //     break;
+        case IQ_SET:
+        case ID_SET:
+            instance.est_output.Udc = set_value;
+            break;
         case SPEED_SET:
             instance.est_input.set_speed = set_value;
             break;
@@ -222,6 +244,30 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
             break;
         case BREAK_MODE:
             instance.config.break_mode = (uint8_t)set_value;
+            break;
+        case TRAJ_TARGET_RAD:
+            if(!instance.estimator.trajController.GetState())
+            {
+                result = CMD_FORBIDDEN;
+                break;
+            }
+            instance.estimator.trajController.PlanTrajectory(set_value, 
+                                                            instance.est_output.estimated_raw_angle, 
+                                                            instance.est_output.estimated_speed, 
+                                                            instance.config.traj_cruise_speed,
+                                                            instance.config.traj_max_accel,
+                                                            instance.config.traj_max_decel);
+            break;
+        case TRAJ_TARGET_DEG:
+            return SetEndpointValue(TRAJ_TARGET_RAD, DEG2RAD(set_value));
+        case TRAJ_CRUISE_SPEED:
+            instance.config.traj_cruise_speed = set_value;
+            break;
+        case TRAJ_MAX_ACCEL:
+            instance.config.traj_max_accel = set_value;
+            break;
+        case TRAJ_MAX_DECEL:
+            instance.config.traj_max_decel = set_value;
             break;
         default: 
             result = CMD_FORBIDDEN; 

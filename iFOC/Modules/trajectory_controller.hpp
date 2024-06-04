@@ -10,6 +10,7 @@ public:
     void PlanTrajectory(float target_pos, float current_pos, float current_speed,
                         float cruise_speed, float max_accel, float max_decel); // pos all absolute
     void Update(float Ts);
+    inline float GetFinalPos() { return final_pos; };
     inline float GetPos() { return set_pos; };
     inline float GetSpeed() { return set_speed; };
     inline float GetAccel() { return set_accel; };

@@ -9,18 +9,17 @@
 class SpeedPLL
 {
 public:
-    SpeedPLL(float p ,float i, float _limit)
+    SpeedPLL(float p ,float i, float limit, float Tlp)
     {
-        Kp = p;
-        Ki = i;
-        limit = _limit;
-        pi_controller = PID(Kp, Ki, 0.0f, limit);
+        pi_controller.Kp = p;
+        pi_controller.Ki = i;
+        pi_controller.limit = limit;
+        lpf.Tf = Tlp;
     };
+    SpeedPLL() {};
     float est_velocity = 0.0f;
     float est_angle = 0.0f;
     float Calculate(float input, float Ts);
-private:
-    float Kp = 0.0f, Ki = 0.0f, limit = 0.0f;
     PID pi_controller = PID(0.0f, 0.0f, 0.0f, 0.0f);
     LowpassFilter lpf = LowpassFilter(0.001f);
 };

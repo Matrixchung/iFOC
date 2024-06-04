@@ -13,7 +13,6 @@ public:
     void SetOutputRaw(uint16_t ch_1, uint8_t dir);
     void EnableOutput() {LL_TIM_EnableAllOutputs(htim);};
     void DisableOutput() {LL_TIM_DisableAllOutputs(htim);};
-    void DriverSetLSIdleState(uint8_t state) {};
 private:
     typedef void (*_set_compare)(TIM_TypeDef *TIMx, uint32_t compare);
     _set_compare set_cmp;

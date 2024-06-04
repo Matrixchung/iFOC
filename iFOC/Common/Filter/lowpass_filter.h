@@ -9,8 +9,8 @@ public:
     explicit LowpassFilter(float time_constant):Tf(time_constant) {};
     float GetOutput(float input, float Ts);
     void Reset();
-private:
     float Tf;
+private:
     float output_prev;
     float last_dt;
 };

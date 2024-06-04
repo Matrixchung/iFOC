@@ -81,15 +81,10 @@ void EstimatorBDC::Update(float Ts)
     output.estimated_angle = encoder->single_round_angle;
     output.estimated_raw_angle = encoder->raw_angle / config.motor.gear_ratio;
     output.estimated_speed = rad_speed_to_RPM(encoder->velocity, 1);
-    if(input.output_state)
-    {
-        if(mode == MODE_SPEED || mode == MODE_POSITION)
-        {
-            if(mode == MODE_POSITION) output.out_speed = Position_PID.GetOutput(input.set_abs_pos - output.estimated_raw_angle, Ts);
-            else output.out_speed = input.set_speed;
-        }
-        output.Udc = Speed_PID.GetOutput(output.out_speed - output.estimated_speed, Ts);
-    }
+    // if(input.output_state)
+    // {
+        
+    // }
 }
 
 void EstimatorBDC::UpdateMidInterval(float Ts)
@@ -97,7 +92,20 @@ void EstimatorBDC::UpdateMidInterval(float Ts)
     encoder->UpdateMidInterval(Ts);
     if(input.output_state)
     {
-        
+        if(mode >= MODE_SPEED)
+        {
+            if(mode >= MODE_POSITION) 
+            {
+                    if(mode == MODE_TRAJECTORY)
+                    {
+                        trajController.Update(Ts);
+                        input.set_abs_pos = trajController.GetPos();
+                    }
+                output.out_speed = Position_PID.GetOutput(input.set_abs_pos - output.estimated_raw_angle, Ts);
+            }
+            else output.out_speed = input.set_speed;
+            output.Udc = Speed_PID.GetOutput(output.out_speed - output.estimated_speed, Ts);
+        }
     }
     else
     {
@@ -108,7 +116,14 @@ void EstimatorBDC::UpdateMidInterval(float Ts)
 
 void EstimatorBDC::Reset()
 {
-    
+    input.set_speed = 0.0f;
+    // input.set_abs_pos = 0.0f;
+    // output.estimated_acceleration
+    output.Udc = 0.0f;
+    submode = SUBMODE_NONE;
+    Idc_PID.Reset();
+    Speed_PID.Reset();
+    Position_PID.Reset();
 }
 
 FOC_ERROR_FLAG EstimatorBDC::GetErrorFlag()

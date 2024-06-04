@@ -1,6 +1,0 @@
-#ifndef _STM32_BUS_SENSE_INA226_H
-#define _STM32_BUS_SENSE_INA226_H
-
-
-
-#endif

@@ -11,6 +11,7 @@ public:
     EncoderABBase(_cpr), htim(_htim) {};
     bool PortInit() override;
     void PortUpdateDirPulse() override;
+    void PortSetCounter(uint32_t counter) override { LL_TIM_SetCounter(htim, counter); };
 protected:
     TIM_TypeDef *htim;
 };

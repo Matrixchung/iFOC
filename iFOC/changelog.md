@@ -47,3 +47,10 @@
 ## 2024-05-29
 * (IMPORTANT)Added Trajectory Controller
 * Added Software I2C support, enabling interface to INA226(BusSense) and I2C EEPROM, as well as AS5600 Encoder, etc.
+
+## 2024-06-03/04
+* Split BDC and Stepper into independent module
+* Implemented Software/Hardware I2C, simplified the interfaces with I2C peripherals.
+* Added Trajectory Controller params to BaseProtocol
+* Added eeprom_interface with CRC algorithm.
+* Fixed BDC part
