@@ -57,7 +57,6 @@ typedef enum FOC_SUBMODE
 {
     SUBMODE_NONE,
     SUBMODE_HOME,
-    SUBMODE_TRAJECTORY,
 }FOC_SUBMODE;
 
 typedef struct qd_t

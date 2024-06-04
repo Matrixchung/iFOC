@@ -1,7 +1,7 @@
 #ifndef _FOC_DRIVER_BDC_BASE_H
 #define _FOC_DRIVER_BDC_BASE_H
 
-#include "foc_header.h"
+#include "foc_math.h"
 
 template<typename T>
 class DriverBDCBase
@@ -11,7 +11,6 @@ public:
     bool DriverInit() { return static_cast<T*>(this)->Init(); }
     void DriverEnableOutput() { static_cast<T*>(this)->EnableOutput(); };
     void DriverDisableOutput() { static_cast<T*>(this)->DisableOutput(); };
-    void DriverSetLSIdleState(uint8_t state) { static_cast<T*>(this)->DriverSetLSIdleState(state); };
     void SetOutput(uint16_t ch_1, uint8_t dir) { static_cast<T*>(this)->SetOutputRaw(ch_1, dir); }
     uint16_t GetMaxCompare() {return max_compare;};
     void SetOutputPct(float pct_1) // [-1.0f, 1.0f]
