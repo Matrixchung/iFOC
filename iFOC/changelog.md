@@ -54,3 +54,4 @@
 * Added Trajectory Controller params to BaseProtocol
 * Added eeprom_interface with CRC algorithm.
 * Fixed BDC part
+* Modified Speed PLL and Lowpass Filter classes, enabling modification of parameters

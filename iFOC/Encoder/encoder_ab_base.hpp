@@ -53,12 +53,12 @@ void EncoderABBase::Update(float Ts)
     if(single_round_angle_prev >= 0.0f)
     {
         float delta = single_round_angle - single_round_angle_prev;
-        if(delta > 0.8f * PI2)
+        if(delta > 0.9f * PI2)
         {
             full_rotations--;
             PortSetCounter(cpr);
         }
-        else if(delta < -0.8f * PI2)
+        else if(delta < -0.9f * PI2)
         {
             full_rotations++;
             PortSetCounter(0);

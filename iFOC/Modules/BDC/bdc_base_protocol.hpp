@@ -155,7 +155,7 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
             instance.SetOutputState((bool)((uint8_t)set_value == 1));
             break;
         case DRIVE_MODE:
-            if((uint8_t)set_value <= 3) result = instance.estimator.SetMode((FOC_MODE)set_value);
+            if((uint8_t)set_value < LAST_MODE_PLACEHOLDER) result = instance.estimator.SetMode((FOC_MODE)set_value);
             else result = CMD_NOT_SUPPORTED;
             break;
         // case IQ_SET:

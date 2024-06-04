@@ -45,6 +45,7 @@ void BusSenseINA226<T>::Init()
     i2c_buffer[1] = 0x45;
     i2c_buffer[2] = 0x27;
     i2c.WriteBytes(device_addr, i2c_buffer, 3);
+    i2c.DelayMs(100);
     i2c_buffer[0] = 0x05; // Calibration register
     i2c_buffer[1] = (uint8_t)(current_cal_reg >> 8);
     i2c_buffer[2] = (uint8_t)current_cal_reg;

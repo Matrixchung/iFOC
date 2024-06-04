@@ -8,6 +8,7 @@ typedef enum EEPROM_ADDR_OFFSET
 {
     NODE_ID = 0,
     
+    CRC_BIT, // last, will save CRC8 calculated value from all above(except itself)
 }EEPROM_ADDR_OFFSET;
 
 template<typename T = I2CBase>
