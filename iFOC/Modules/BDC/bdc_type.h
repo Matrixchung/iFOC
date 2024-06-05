@@ -18,6 +18,7 @@ typedef struct bdc_state_output_t
     float estimated_raw_angle;
     float out_speed;
     float estimated_speed;
+    float estimated_shaft_speed;
     float estimated_acceleration;
 }bdc_state_output_t;
 

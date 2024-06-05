@@ -96,11 +96,15 @@ void EstimatorBDC::UpdateMidInterval(float Ts)
         {
             if(mode >= MODE_POSITION) 
             {
-                    if(mode == MODE_TRAJECTORY)
-                    {
-                        trajController.Update(Ts);
-                        input.set_abs_pos = trajController.GetPos();
-                    }
+                if(mode == MODE_TRAJECTORY)
+                {
+                    trajController.Update(Ts);
+                    input.set_abs_pos = trajController.GetPos();
+                }
+                else
+                {
+                    trajController.Reset();
+                }
                 output.out_speed = Position_PID.GetOutput(input.set_abs_pos - output.estimated_raw_angle, Ts);
             }
             else output.out_speed = input.set_speed;

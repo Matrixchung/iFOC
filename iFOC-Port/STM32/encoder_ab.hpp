@@ -28,6 +28,7 @@ bool EncoderAB::PortInit()
     LL_TIM_DisableIT_COM(htim);
     LL_TIM_DisableIT_TRIG(htim);
     LL_TIM_DisableIT_UPDATE(htim);
+    LL_TIM_SetAutoReload(htim, cpr);
     LL_TIM_EnableCounter(htim);
     return true;
 }

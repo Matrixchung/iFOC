@@ -167,6 +167,7 @@ BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::BDC(T_DriverBase& _driver
         .estimated_raw_angle = 0.0f,
         .out_speed = 0.0f,
         .estimated_speed = 0.0f,
+        .estimated_shaft_speed = 0.0f,
         .estimated_acceleration = 0.0f,
     };
     est_input = {

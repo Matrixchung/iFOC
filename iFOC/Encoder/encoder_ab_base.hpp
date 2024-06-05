@@ -19,8 +19,8 @@ protected:
 #if ENCODER_AB_USE_PLL
     SpeedPLL speed_pll;
 #else
-    SlidingFilter sliding_filter = SlidingFilter(20);
-    LowpassFilter speed_filter = LowpassFilter(0.0005f);
+    SlidingFilter sliding_filter = SlidingFilter(5);
+    LowpassFilter speed_filter = LowpassFilter(0.01f);
     int last_rotations = 0;
     float last_angle = 0.0f;
     float last_velocity = 0.0f;
@@ -53,16 +53,8 @@ void EncoderABBase::Update(float Ts)
     if(single_round_angle_prev >= 0.0f)
     {
         float delta = single_round_angle - single_round_angle_prev;
-        if(delta > 0.9f * PI2)
-        {
-            full_rotations--;
-            PortSetCounter(cpr);
-        }
-        else if(delta < -0.9f * PI2)
-        {
-            full_rotations++;
-            PortSetCounter(0);
-        }
+        if(delta > 0.8f * PI2) full_rotations--;
+        else if(delta < -0.8f * PI2) full_rotations++;
         raw_angle = full_rotations * PI2 + single_round_angle;
     }
     single_round_angle_prev = single_round_angle;
@@ -81,10 +73,12 @@ void EncoderABBase::UpdateMidInterval(float Ts)
     float vel = ((float)(full_rotations - last_rotations) * PI2 + (single_round_angle - last_angle)) / Ts;
     last_angle = single_round_angle;
     last_rotations = full_rotations;
-    vel = sliding_filter.GetOutput(vel);
+    // vel = sliding_filter.GetOutput(vel);
     // if(ABS(vel) >= 1.0f && ABS(vel - last_velocity) >= 200.0f) vel = last_velocity;
     last_velocity = vel;
     velocity = speed_filter.GetOutput(vel, Ts);
+    // vel = speed_filter.GetOutput(vel, Ts);
+    // velocity = sliding_filter.GetOutput(vel);
 #endif
 }
 

@@ -10,6 +10,7 @@ public:
     void PlanTrajectory(float target_pos, float current_pos, float current_speed,
                         float cruise_speed, float max_accel, float max_decel); // pos all absolute
     void Update(float Ts);
+    void Reset();
     inline float GetFinalPos() { return final_pos; };
     inline float GetPos() { return set_pos; };
     inline float GetSpeed() { return set_speed; };
@@ -44,6 +45,7 @@ void TrajController::PlanTrajectory(float target_pos, float current_pos, float c
     if(max_decel < 0.0f) max_decel = -max_decel; // make sure positive acc limits
     if(max_accel == 0.0f || max_decel == 0.0f) return;
     task_done = false;
+    state_timer = 0.0f;
     float dX = target_pos - current_pos; // distance to travel
     float min_stop_dist = (current_speed * current_speed) / (2.0f * max_decel); // minimum stopping distance from current_speed to 0
     float dX_stop = current_speed >= 0 ? min_stop_dist : -min_stop_dist; // if current_speed >= 0, then we need to move forward and decel, vise versa
@@ -107,7 +109,7 @@ void TrajController::Update(float Ts)
         }
         else
         {
-            set_pos = init_pos;
+            set_pos = final_pos;
             set_speed = 0.0f;
             set_accel = 0.0f;
             // reset state
@@ -115,6 +117,25 @@ void TrajController::Update(float Ts)
             state_timer = 0.0f;
         }
     }
+}
+
+void TrajController::Reset()
+{
+    accel_time = 0.0f;
+    decel_time = 0.0f;
+    cruise_time = 0.0f;
+    total_time = 0.0f;
+    init_pos = 0.0f;
+    init_speed = 0.0f;
+    final_pos = 0.0f;
+    start_cruise_pos = 0.0f;
+
+    set_pos = 0.0f; 
+    set_speed = 0.0f;
+    set_accel = 0.0f;
+    task_done = true;
+
+    state_timer = 0.0f;
 }
 
 #endif
