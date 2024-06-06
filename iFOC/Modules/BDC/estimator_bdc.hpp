@@ -34,6 +34,8 @@ private:
     foc_config_t& config;
     FOC_MODE mode = MODE_INIT;
     FOC_SUBMODE submode = SUBMODE_NONE;
+    SlidingFilter Idc_sf = SlidingFilter(10);
+    LowpassFilter Idc_lpf = LowpassFilter(0.001f);
     float state_timer = 0.0f;
     void Reset();
 };
@@ -77,6 +79,7 @@ FOC_CMD_RET EstimatorBDC::SetSubMode(FOC_SUBMODE _smode)
 
 void EstimatorBDC::Update(float Ts)
 {
+    input.Idc = Idc_lpf.GetOutput(input.Idc, Ts);
     encoder->Update(Ts);
     output.estimated_angle = encoder->single_round_angle;
     output.estimated_raw_angle = encoder->raw_angle / config.motor.gear_ratio;

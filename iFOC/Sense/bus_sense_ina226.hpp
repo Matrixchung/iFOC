@@ -20,8 +20,8 @@ public:
     };
     void Init();
     void Update();
-    T& i2c;
 private:
+    T& i2c;
     uint8_t device_addr = 0x80;
     float max_current = 10.0f;
     float rshunt_ohm = 0.002f;

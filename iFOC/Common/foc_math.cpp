@@ -266,3 +266,19 @@ uint8_t getCRC8(uint8_t* data, uint16_t len)
   }
   return crc;
 }
+
+
+//---------------------------------------------------------------------------------------------------
+// Fast inverse square-root
+// See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
+ 
+float fast_inv_sqrt(float x) 
+{
+	float halfx = 0.5f * x;
+	float y = x;
+	long i = *(long*)&y;
+	i = 0x5f3759df - (i>>1);
+	y = *(float*)&i;
+	y = y * (1.5f - (halfx * y * y));
+	return y;
+}

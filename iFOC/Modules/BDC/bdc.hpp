@@ -27,6 +27,7 @@ public:
     bool Init();
     void Update(float Ts);
     void UpdateMidInterval(float Ts);
+    void UpdateIdleTask(float Ts);
     void SetOutputState(bool state);
     void EmergencyStop();
     foc_config_t config;
@@ -110,8 +111,14 @@ void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::EmergencyStop()
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
 void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateMidInterval(float Ts)
 {
-    bus_sense.BusSenseUpdate();
+    // bus_sense.BusSenseUpdate();
     estimator.UpdateMidInterval(Ts);
+}
+
+template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
+void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateIdleTask(float Ts)
+{
+    bus_sense.BusSenseUpdate();
 }
 
 // init structs
