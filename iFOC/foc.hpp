@@ -220,20 +220,20 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
     };
 
     est_output = {
-        .Iqd_out = {.q = 0.0f, .d = 0.0f},
+        .Iqd_set = {.q = 0.0f, .d = 0.0f},
         .Iqd_fb = {.q = 0.0f, .d = 0.0f,},
         .Uqd = {.q = 0.0f, .d = 0.0f,},
         .electric_angle = 0.0f,
         .estimated_angle = 0.0f,
         .estimated_raw_angle = 0.0f,
-        .out_speed = 0.0f,
+        .set_speed = 0.0f,
         .estimated_speed = 0.0f,
         .estimated_acceleration = 0.0f,
     };
     est_input = {
-        .Iqd_set = {.q = 0.0f, .d = 0.0f},
+        .Iqd_target = {.q = 0.0f, .d = 0.0f},
         .Ialphabeta_fb = {.alpha = 0.0f, .beta = 0.0f},
-        .set_speed = 0.0f,
+        .target_speed = 0.0f,
         .set_abs_pos = 0.0f,
         .output_state = false,
     };

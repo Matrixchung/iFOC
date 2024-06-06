@@ -42,7 +42,7 @@ void EstimatorIF::Update(float Ts)
         if(mode == MODE_SPEED)
         {
             state_timer += Ts;
-            if(state_timer < if_position_time && input->set_speed != 0.0f)
+            if(state_timer < if_position_time && input->target_speed != 0.0f)
             {
                 state = POSITION;
                 output->electric_angle = 0.0f;
@@ -52,28 +52,28 @@ void EstimatorIF::Update(float Ts)
             }
             else
             {
-                if(state_timer < (if_position_time + start_time) && (ABS(output->estimated_speed) < ABS(input->set_speed)))
+                if(state_timer < (if_position_time + start_time) && (ABS(output->estimated_speed) < ABS(input->target_speed)))
                 {
                     state = DRAG;
-                    output->estimated_acceleration = input->set_speed / start_time;
+                    output->estimated_acceleration = input->target_speed / start_time;
                     output->estimated_speed += output->estimated_acceleration * Ts;
                 }
                 else
                 {
                     state = CONSTANT;
                     output->estimated_acceleration = 0.0f;
-                    output->estimated_speed = input->set_speed;
+                    output->estimated_speed = input->target_speed;
                 }
                 output->electric_angle += RPM_speed_to_rad(output->estimated_speed, config->motor.pole_pair) * Ts;
                 output->electric_angle = normalize_rad(output->electric_angle);
                 output->estimated_raw_angle += RPM_speed_to_rad(output->estimated_speed, 1) * Ts;
                 output->estimated_angle = normalize_rad(output->estimated_raw_angle);
             }
-            output->Iqd_out = input->Iqd_set;
-            output->out_speed = output->estimated_speed;
+            output->Iqd_set = input->Iqd_target;
+            output->set_speed = output->estimated_speed;
         }
-        output->Uqd.q = Iq_PID.GetOutput(output->Iqd_out.q - output->Iqd_fb.q, Ts);
-        output->Uqd.d = Id_PID.GetOutput(output->Iqd_out.d - output->Iqd_fb.d, Ts);
+        output->Uqd.q = Iq_PID.GetOutput(output->Iqd_set.q - output->Iqd_fb.q, Ts);
+        output->Uqd.d = Id_PID.GetOutput(output->Iqd_set.d - output->Iqd_fb.d, Ts);
     }
     else
     {

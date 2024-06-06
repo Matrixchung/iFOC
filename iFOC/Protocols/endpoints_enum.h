@@ -29,11 +29,11 @@ typedef enum PROTOCOL_ENDPOINT
     COMPARE_A,
     COMPARE_B,
     COMPARE_C,
-    IQ_SET,
+    IQ_TARGET, // R/W
+    ID_TARGET,
+    IQ_SET,    // R
     ID_SET,
-    IQ_OUT,
-    ID_OUT,
-    SPEED_SET,
+    SPEED_TARGET,
     POS_ABS_SET_RAD,
     POS_INC_RAD,
     POS_ABS_SET_DEG,

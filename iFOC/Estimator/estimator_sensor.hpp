@@ -83,14 +83,14 @@ void EstimatorSensor::Update(float Ts)
         {
             if(mode >= MODE_SPEED)
             {
-                if(mode >= MODE_POSITION) output->out_speed = Position_PID.GetOutput(input->set_abs_pos - output->estimated_raw_angle, Ts);
-                else output->out_speed = input->set_speed;
-                output->Iqd_out.q = Speed_PID.GetOutput(output->out_speed - output->estimated_speed, Ts);
-                output->Iqd_out.d = 0.0f;
+                if(mode >= MODE_POSITION) output->set_speed = Position_PID.GetOutput(input->set_abs_pos - output->estimated_raw_angle, Ts);
+                else output->set_speed = input->target_speed;
+                output->Iqd_set.q = Speed_PID.GetOutput(output->set_speed - output->estimated_speed, Ts);
+                output->Iqd_set.d = 0.0f;
             }
         }
-        output->Uqd.q = Iq_PID.GetOutput(output->Iqd_out.q - output->Iqd_fb.q, Ts);
-        output->Uqd.d = Id_PID.GetOutput(output->Iqd_out.d - output->Iqd_fb.d, Ts);
+        output->Uqd.q = Iq_PID.GetOutput(output->Iqd_set.q - output->Iqd_fb.q, Ts);
+        output->Uqd.d = Id_PID.GetOutput(output->Iqd_set.d - output->Iqd_fb.d, Ts);
     }
 }
 
@@ -99,7 +99,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
     encoder->UpdateMidInterval(Ts);
     if(mode == MODE_TORQUE)
     {
-        output->Iqd_out = input->Iqd_set;
+        output->Iqd_set = input->Iqd_target;
     }
     else
     {
@@ -136,7 +136,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             if(state_timer < align_time)
             {
                 output->electric_angle = _3PI_2;
-                output->Iqd_out = Iqd_align;
+                output->Iqd_set = Iqd_align;
             }
             else if(state_timer < align_time + steady_time)
             {
@@ -169,8 +169,8 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
                         //     align_state = MECHANIC_ANGLE_ALIGNING; // has limiter switch, now aligning mechanic angle
                         // }
                         align_state = ALL_ALIGNED;
-                        output->Iqd_out.q = 0.0f;
-                        output->Iqd_out.d = 0.0f;
+                        output->Iqd_set.q = 0.0f;
+                        output->Iqd_set.d = 0.0f;
                         state_timer = 0.0f;
                     }
                 }
@@ -193,7 +193,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             {
                 Speed_PID.limit = 0.4f;
                 mode = MODE_SPEED;
-                input->set_speed = config->home_speed * limiter->direction;
+                input->target_speed = config->home_speed * limiter->direction;
                 if(ABS(output->Iqd_fb.q) >= 0.3f)
                 {
                     state_timer += Ts;
@@ -208,7 +208,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
                 {
                     Speed_PID.limit = config->speed_current_limit;
                     mode = MODE_POSITION;
-                    input->set_speed = 0.0f;
+                    input->target_speed = 0.0f;
                     // input->set_abs_pos = 0.0f;
                     input->set_abs_pos = output->estimated_raw_angle;
                     submode = SUBMODE_NONE;

@@ -75,16 +75,16 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
             return (float)instance.svpwm.compare_b;
         case COMPARE_C:
             return (float)instance.svpwm.compare_c;
+        case IQ_TARGET:
+            return instance.est_input.Iqd_target.q;
+        case ID_TARGET:
+            return instance.est_input.Iqd_target.d;
         case IQ_SET:
-            return instance.est_input.Iqd_set.q;
+            return instance.est_output.Iqd_set.q;
         case ID_SET:
-            return instance.est_input.Iqd_set.d;
-        case IQ_OUT:
-            return instance.est_output.Iqd_out.q;
-        case ID_OUT:
-            return instance.est_output.Iqd_out.d;
-        case SPEED_SET:
-            return instance.est_input.set_speed;
+            return instance.est_output.Iqd_set.d;
+        case SPEED_TARGET:
+            return instance.est_input.target_speed;
         case POS_ABS_SET_RAD:
             return instance.est_input.set_abs_pos;
         case POS_ABS_SET_DEG:
@@ -198,14 +198,14 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             if((uint8_t)set_value <= 3) result = instance.estimator->SetMode((FOC_MODE)set_value);
             else result = CMD_NOT_SUPPORTED;
             break;
-        case IQ_SET:
-            instance.est_input.Iqd_set.q = set_value;
+        case IQ_TARGET:
+            instance.est_input.Iqd_target.q = set_value;
             break;
-        case ID_SET:
-            instance.est_input.Iqd_set.d = set_value;
+        case ID_TARGET:
+            instance.est_input.Iqd_target.d = set_value;
             break;
-        case SPEED_SET:
-            instance.est_input.set_speed = set_value;
+        case SPEED_TARGET:
+            instance.est_input.target_speed = set_value;
             break;
         case POS_ABS_SET_RAD:
             instance.est_input.set_abs_pos = set_value;

@@ -94,7 +94,7 @@ void STM32CAN<U>::ProcessDataFrame(uint32_t id, uint8_t *payload, uint8_t len)
             base.SetEndpointValue(POS_SPEED_LIMIT, temp1);
             break;
         case GET_IQ:
-            temp1 = base.GetEndpointValue(IQ_OUT);
+            temp1 = base.GetEndpointValue(IQ_SET);
             memcpy(tx_buffer, &temp1, 4);
             temp1 = base.GetEndpointValue(CURRENT_IQ);
             memcpy(tx_buffer + 4, &temp1, 4);

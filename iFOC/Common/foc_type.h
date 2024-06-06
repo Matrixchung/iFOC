@@ -98,22 +98,22 @@ typedef struct svpwm_t
 typedef struct foc_state_input_t
 {
     // motor_param_t motor_param;
-    qd_t Iqd_set;
+    qd_t Iqd_target;
     alphabeta_t Ialphabeta_fb;
-    float set_speed;
+    float target_speed;
     float set_abs_pos;
     bool output_state;
 }foc_state_input_t;
 
 typedef struct foc_state_output_t
 {
-    qd_t Iqd_out;
+    qd_t Iqd_set;
     qd_t Iqd_fb;
     qd_t Uqd;
     float electric_angle;
     float estimated_angle;
     float estimated_raw_angle;
-    float out_speed;
+    float set_speed;
     float estimated_speed;
     float estimated_acceleration;
 }foc_state_output_t;

@@ -99,9 +99,9 @@ void EstimatorBase::Reset()
     // output->estimated_angle = 0.0f;
     // output->estimated_raw_angle = 0.0f;
     output->estimated_speed = 0.0f;
-    output->out_speed = 0.0f;
-    output->Iqd_out.q = 0.0f;
-    output->Iqd_out.d = 0.0f;
+    output->set_speed = 0.0f;
+    output->Iqd_set.q = 0.0f;
+    output->Iqd_set.d = 0.0f;
     output->Uqd.q = 0.0f;
     output->Uqd.d = 0.0f;
     submode = SUBMODE_NONE;
