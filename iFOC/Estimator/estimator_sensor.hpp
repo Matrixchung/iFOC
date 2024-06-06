@@ -11,7 +11,6 @@
 class EstimatorSensor : public EstimatorBase
 {
 public:
-    // FOC_ESTIMATOR type = ESTIMATOR_SENSOR;
     bool Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_config_t *_config) override;
     void AttachEncoder(EncoderBase *_encoder);
     void AttachAuxEncoder(EncoderBase *_aux_encoder);
@@ -31,7 +30,6 @@ private:
     float zero_electric_angle = 0.0f;
     const float align_time = FOC_SENSOR_ALIGN_PERIOD * 1e-3f;
     const float steady_time = FOC_SENSOR_ALIGN_STEADY_PERIOD * 1e-3f;
-    float overspeed_timer = 0.0f;
     uint8_t error_flag = 0;
     typedef enum AlignMode
     {
@@ -174,7 +172,6 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
                         output->Iqd_out.q = 0.0f;
                         output->Iqd_out.d = 0.0f;
                         state_timer = 0.0f;
-                        overspeed_timer = 0.0f;
                     }
                 }
                 else
@@ -187,20 +184,6 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
         else if(align_state == MECHANIC_ANGLE_ALIGNING)
         {
             ;
-        }
-        
-        // Overspeed protection
-        if(config->max_speed > 0.0f)
-        {
-            if(ABS(output->estimated_speed) > config->max_speed)
-            {
-                overspeed_timer += Ts;
-                if(overspeed_timer > config->overspeed_detect_time)
-                {
-                    error_flag = 2;
-                }
-            }
-            else overspeed_timer = 0.0f;
         }
         
         // Limiter class
@@ -237,7 +220,6 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
     {
         align_state = ELECTRIC_ANGLE_ALIGNING;
         state_timer = 0.0f;
-        overspeed_timer = 0.0f;
         last_est_speed = 0.0f;
         error_flag = 0;
         EstimatorBase::Reset();
@@ -269,7 +251,6 @@ FOC_ERROR_FLAG EstimatorSensor::GetErrorFlag()
     if(encoder == nullptr || encoder->IsError()) ret |= FOC_ERROR_FEEDBACK; // lost primary encoder
     if(aux_encoder != nullptr && aux_encoder->IsError()) ret |= FOC_ERROR_FEEDBACK; // lost auxiliary encoder
     if(error_flag == 1) ret |= FOC_ERROR_ALIGN;
-    else if(error_flag == 2) ret |= FOC_ERROR_OVERSPEED;
     return static_cast<FOC_ERROR_FLAG>(ret);
 }
 

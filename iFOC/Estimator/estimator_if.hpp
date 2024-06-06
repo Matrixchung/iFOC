@@ -42,7 +42,7 @@ void EstimatorIF::Update(float Ts)
         if(mode == MODE_SPEED)
         {
             state_timer += Ts;
-            if(state_timer < if_position_time)
+            if(state_timer < if_position_time && input->set_speed != 0.0f)
             {
                 state = POSITION;
                 output->electric_angle = 0.0f;

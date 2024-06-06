@@ -30,11 +30,12 @@ class FOC
 public:
     FOC(T_DriverBase& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus);
     bool Init();
-    void AttachEstimator(EstimatorBase *_estimator);
-    void AttachMCUTempProbe(float *ptr);
-    void AttachMotorTempProbe(float *ptr);
+    void AttachEstimator(EstimatorBase *_estimator) { estimator = _estimator; };
+    void AttachMCUTempProbe(float *ptr) { mcu_temp = ptr; };
+    void AttachMotorTempProbe(float *ptr) { motor_temp = ptr; };
     void Update(float Ts);
     void UpdateMidInterval(float Ts);
+    void UpdateIdleTask(float Ts);
     void SetOutputState(bool state);
     void EmergencyStop();
     foc_config_t config;
@@ -49,6 +50,7 @@ private:
     foc_state_input_t est_input;
     foc_state_output_t est_output;
     svpwm_t svpwm;
+    float overspeed_timer = 0.0f;
     uint16_t error_code = FOC_ERROR_NONE;
     float *mcu_temp = nullptr;   // in degree
     float *motor_temp = nullptr; // in degree
@@ -69,19 +71,8 @@ bool FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Init()
     bus_sense.BusSenseUpdate();
     est_input.output_state = config.startup_state;
     error_code = FOC_ERROR_NONE;
+    soundInjector.inject_voltage = config.Vphase_limit / 2.0f;
     return true;
-}
-
-template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
-void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::AttachMCUTempProbe(float *ptr)
-{
-    mcu_temp = ptr;
-}
-
-template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
-void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::AttachMotorTempProbe(float *ptr)
-{
-    motor_temp = ptr;
 }
 
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
@@ -107,6 +98,40 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Update(float Ts)
             EmergencyStop();
         }
     }
+}
+
+template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
+void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateMidInterval(float Ts)
+{
+    estimator->UpdateMidInterval(Ts);
+    if(mcu_temp != nullptr)
+    {
+        if(*mcu_temp > config.mcu_temp_limit) error_code |= FOC_ERROR_MCU_OVERTEMP;
+    }
+    if(motor_temp != nullptr)
+    {
+        if(*motor_temp > config.motor_temp_limit) error_code |= FOC_ERROR_MOTOR_OVERTEMP;
+    }
+    // Overspeed protection
+    if(config.max_speed > 0.0f)
+    {
+        if(ABS(est_output.estimated_speed) > config.max_speed)
+        {
+            overspeed_timer += Ts;
+            if(overspeed_timer > config.overspeed_detect_time)
+            {
+                error_code |= FOC_ERROR_OVERSPEED;
+            }
+        }
+        else overspeed_timer = 0.0f;
+    }
+}
+
+template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
+void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateIdleTask(float Ts)
+{
+    bus_sense.BusSenseUpdate();
+    estimator->UpdateIdleTask(Ts);
 }
 
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
@@ -142,27 +167,6 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::EmergencyStop()
             driver.SetOutputPct(0.0f, 0.0f, 0.0f);
             break;
     }
-}
-
-template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
-void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateMidInterval(float Ts)
-{
-    bus_sense.BusSenseUpdate();
-    estimator->UpdateMidInterval(Ts);
-    if(mcu_temp != nullptr)
-    {
-        if(*mcu_temp > config.mcu_temp_limit) error_code |= FOC_ERROR_MCU_OVERTEMP;
-    }
-    if(motor_temp != nullptr)
-    {
-        if(*motor_temp > config.motor_temp_limit) error_code |= FOC_ERROR_MOTOR_OVERTEMP;
-    }
-}
-
-template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
-void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::AttachEstimator(EstimatorBase *_estimator)
-{
-    estimator = _estimator;
 }
 
 // init structs

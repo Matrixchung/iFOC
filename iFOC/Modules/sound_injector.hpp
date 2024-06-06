@@ -19,24 +19,27 @@ typedef enum Note
     H1, H15, H2, H25, H3, H4, H45, H5, H55, H6, H65, H7,
 }Note;
 
-const static uint16_t _sound_freq[36] = {262,277,294,311,330,349,370,392,415,440,466,494,523,554,587,622,659,698,740,784,831,880,932,988,1046,1109,1175,1245,1318,1397,1480,1568,1661,1760,1865,1976};
+// const static uint16_t _sound_freq[36] = {262,277,294,311,330,349,370,392,415,440,466,494,523,554,587,622,659,698,740,784,831,880,932,988,1046,1109,1175,1245,1318,1397,1480,1568,1661,1760,1865,1976};
+const static float _sound_Ts[36] = {1/262.0f,1/277.0f,1/294.0f,1/311.0f,1/330.0f,1/349.0f,1/370.0f,1/392.0f,1/415.0f,1/440.0f,1/466.0f,1/494.0f,1/523.0f,1/554.0f,1/587.0f,1/622.0f,1/659.0f,1/698.0f,1/740.0f,1/784.0f,1/831.0f,1/880.0f,1/932.0f,1/988.0f,1/1046.0f,1/1109.0f,1/1175.0f,1/1245.0f,1/1318.0f,1/1397.0f,1/1480.0f,1/1568.0f,1/1661.0f,1/1760.0f,1/1865.0f,1/1976.0f};
 
 class SoundInjector
 {
 public:
     template<std::size_t _Nm>
-    bool PlaySound(const std::array<Note, _Nm> &array, uint8_t BPM);
+    bool PlaySound(const std::array<Note, _Nm> &array, uint16_t BPM);
     void Update(qd_t &_modified, float Ts); // should be updated in inner loop
+    float inject_voltage = 0.0f;
 private:
     bool play_complete = true;
     float beat_time = 0.0f; // = 60s / BPM
     float state_timer = 0.0f;
+    float note_timer = 0.0f;
     const Note* iter_begin = nullptr;
     const Note* iter_end = nullptr;
 };
 
 template<std::size_t _Nm>
-bool SoundInjector::PlaySound(const std::array<Note, _Nm> &array, uint8_t BPM)
+bool SoundInjector::PlaySound(const std::array<Note, _Nm> &array, uint16_t BPM)
 {
     if(!play_complete) return false;
     play_complete = false;
@@ -55,14 +58,18 @@ void SoundInjector::Update(qd_t &_modified, float Ts)
         {
             play_complete = true;
             state_timer = 0.0f;
+            note_timer = 0.0f;
             return;
         }
         state_timer += Ts;
+        note_timer += Ts;
+        if(note_timer >= _sound_Ts[*iter_begin]) note_timer = 0.0f;
+        else _modified.d += inject_voltage;
         if(state_timer >= beat_time)
         {
-            // uint16_t freq = _sound_freq[*iter_begin];
             iter_begin++;
             state_timer = 0.0f;
+            note_timer = 0.0f;
         }
     }
 }
