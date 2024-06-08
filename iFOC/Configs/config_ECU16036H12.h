@@ -11,7 +11,7 @@ static foc_config_t config_ecu16036h12 =
         .Ld = 0.0000102f,
         .flux = 0.0115585f,
         .gear_ratio = 21.0f,
-        .max_mechanic_speed = 18000.0f,
+        .max_mechanic_speed = 850.0f,
         .pole_pair = 1,
     },
     .virtual_endstop = 
@@ -49,6 +49,7 @@ static foc_config_t config_ecu16036h12 =
     .startup_state = false,
     .break_mode = BREAK_MODE_ASC,
     .startup_mode = MODE_INIT,
+    .apply_curr_feedforward = true,
 };
 
 #endif

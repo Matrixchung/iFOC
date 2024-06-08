@@ -46,19 +46,22 @@ typedef enum FOC_ESTIMATOR
 
 typedef enum FOC_MODE
 {
-    MODE_INIT,
+    MODE_INIT = 0,
     MODE_TORQUE,
     MODE_SPEED,
     MODE_POSITION,
     MODE_TRAJECTORY,
+    MODE_CUSTOM,
     LAST_MODE_PLACEHOLDER,
 }FOC_MODE;
 
-typedef enum FOC_SUBMODE
+typedef enum FOC_EST_TARGET
 {
-    SUBMODE_NONE,
-    SUBMODE_HOME,
-}FOC_SUBMODE;
+    EST_TARGET_NONE = 0,
+    EST_TARGET_TORQUE = 1,
+    EST_TARGET_SPEED = 2,
+    EST_TARGET_POS = 3,
+}FOC_EST_TARGET;
 
 typedef struct qd_t
 {
@@ -97,12 +100,11 @@ typedef struct svpwm_t
 
 typedef struct foc_state_input_t
 {
-    // motor_param_t motor_param;
     qd_t Iqd_target;
     alphabeta_t Ialphabeta_fb;
     float target_speed;
-    float set_abs_pos;
-    bool output_state;
+    float target_pos;
+    FOC_EST_TARGET target;
 }foc_state_input_t;
 
 typedef struct foc_state_output_t
@@ -115,7 +117,6 @@ typedef struct foc_state_output_t
     float estimated_raw_angle;
     float set_speed;
     float estimated_speed;
-    float estimated_acceleration;
 }foc_state_output_t;
 
 /**

@@ -11,7 +11,6 @@ public:
     // FOC_ESTIMATOR type = ESTIMATOR_IF;
     bool Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_config_t *_config) override;
     void Update(float Ts) override;
-    FOC_CMD_RET SetMode(FOC_MODE _mode) override;
     float start_time = 1.0f;
 private:
     float state_timer = 0.0f;
@@ -29,7 +28,6 @@ bool EstimatorIF::Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_con
 {
     type = ESTIMATOR_IF;
     EstimatorBase::_Init(_in, _out, _config);
-    mode = MODE_SPEED;
     if(start_time <= 0.0f) start_time = 1.0f;
     return true;
 }
@@ -37,9 +35,9 @@ bool EstimatorIF::Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_con
 void EstimatorIF::Update(float Ts)
 {
     output->Iqd_fb = FOC_Park(input->Ialphabeta_fb, output->electric_angle);
-    if(input->output_state)
+    if(input->target > EST_TARGET_NONE)
     {
-        if(mode == MODE_SPEED)
+        if(input->target == EST_TARGET_SPEED)
         {
             state_timer += Ts;
             if(state_timer < if_position_time && input->target_speed != 0.0f)
@@ -55,13 +53,11 @@ void EstimatorIF::Update(float Ts)
                 if(state_timer < (if_position_time + start_time) && (ABS(output->estimated_speed) < ABS(input->target_speed)))
                 {
                     state = DRAG;
-                    output->estimated_acceleration = input->target_speed / start_time;
-                    output->estimated_speed += output->estimated_acceleration * Ts;
+                    output->estimated_speed += input->target_speed / start_time * Ts;
                 }
                 else
                 {
                     state = CONSTANT;
-                    output->estimated_acceleration = 0.0f;
                     output->estimated_speed = input->target_speed;
                 }
                 output->electric_angle += RPM_speed_to_rad(output->estimated_speed, config->motor.pole_pair) * Ts;
@@ -70,7 +66,6 @@ void EstimatorIF::Update(float Ts)
                 output->estimated_angle = normalize_rad(output->estimated_raw_angle);
             }
             output->Iqd_set = input->Iqd_target;
-            output->set_speed = output->estimated_speed;
         }
         output->Uqd.q = Iq_PID.GetOutput(output->Iqd_set.q - output->Iqd_fb.q, Ts);
         output->Uqd.d = Id_PID.GetOutput(output->Iqd_set.d - output->Iqd_fb.d, Ts);
@@ -81,16 +76,6 @@ void EstimatorIF::Update(float Ts)
         state_timer = 0.0f;
         EstimatorBase::Reset();
     }
-}
-
-FOC_CMD_RET EstimatorIF::SetMode(FOC_MODE _mode)
-{
-    if(_mode == MODE_INIT || _mode == MODE_SPEED)
-    {
-        mode = _mode;
-        return CMD_SUCCESS;
-    }
-    return CMD_NOT_SUPPORTED;
 }
 
 #endif

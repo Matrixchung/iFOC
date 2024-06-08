@@ -59,6 +59,7 @@ typedef struct foc_config_t
     bool startup_state;
     uint8_t break_mode;
     FOC_MODE startup_mode;
+    bool apply_curr_feedforward; // requires accurate Ld measurement
 }foc_config_t;
 
 #endif

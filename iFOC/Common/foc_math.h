@@ -49,6 +49,8 @@ float max(float *data, uint16_t len);
 float min(float *data, uint16_t len);
 float rad_speed_to_RPM(float omega, uint8_t pole_pair);
 float RPM_speed_to_rad(float rpm, uint8_t pole_pair);
+float origin_to_shaft(float origin, float gear_ratio);
+float shaft_to_origin(float shaft, float gear_ratio);
 float sat(float s, float delta);
 uint8_t getCRC8(uint8_t* data, uint16_t len);
 float fast_inv_sqrt(float x);

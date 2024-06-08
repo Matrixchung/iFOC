@@ -2,7 +2,6 @@
 #define _FOC_H
 
 // Brushless DC Motor(BLDC)
-
 #include "foc_header.h"
 #include "driver_base.hpp"
 
@@ -18,7 +17,9 @@
 #include "bus_sense_static.hpp"
 
 // iFOC Modules
+#include "module_base.hpp"
 #include "sound_injector.hpp"
+#include "trajectory_controller.hpp"
 
 // Unit agreements: all angle are radius, while speed is RPM at output shaft of motor
 // Using CRTP for zero-overhead polymorphism at *compile-time*
@@ -40,6 +41,8 @@ public:
     void EmergencyStop();
     foc_config_t config;
     SoundInjector soundInjector;
+    TrajController trajController;
+    ModuleBase* extra_module = nullptr;
 private:
     template<typename U>
     friend class BaseProtocol;
@@ -54,14 +57,17 @@ private:
     uint16_t error_code = FOC_ERROR_NONE;
     float *mcu_temp = nullptr;   // in degree
     float *motor_temp = nullptr; // in degree
+    FOC_MODE mode = MODE_INIT;
+    bool output_state = false;
+    uint8_t limiter_count = 0; // 0, 1 - one direction, 2 - bidirection virtual/hardware, 3 - bi-dir + mid
+    LimiterBase *limiters[3] = {nullptr};
 };
 
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
 bool FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Init()
 {
     if( driver.DriverInit() == false ||
-       (estimator == nullptr || !estimator->Init(&est_input, &est_output, &config)) ||
-       (estimator->SetMode(config.startup_mode)))
+       (estimator == nullptr || !estimator->Init(&est_input, &est_output, &config)))
     {
         error_code = FOC_ERROR_INITIALIZE;
         return false;
@@ -69,7 +75,7 @@ bool FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Init()
     svpwm.max_compare = driver.GetMaxCompare();
     current_sense.CurrentSenseUpdate();
     bus_sense.BusSenseUpdate();
-    est_input.output_state = config.startup_state;
+    output_state = config.startup_state;
     error_code = FOC_ERROR_NONE;
     soundInjector.inject_voltage = config.Vphase_limit / 2.0f;
     return true;
@@ -80,23 +86,50 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Update(float Ts)
 {
     current_sense.CurrentSenseUpdate();
     est_input.Ialphabeta_fb = FOC_Clark_ABC(current_sense.Iabc);
-    estimator->Update(Ts);
-
-    soundInjector.Update(est_output.Uqd, Ts);
-    svpwm.Ualphabeta = FOC_Rev_Park(est_output.Uqd, est_output.electric_angle);
-    if(est_input.output_state) 
+    if(output_state)
     {
-        error_code |= estimator->GetErrorFlag();
+        if(extra_module != nullptr) extra_module->Preprocess(est_input, est_output, Ts);
+        else
+        {
+            switch(mode)
+            {
+                case MODE_SPEED:
+                    est_input.target = EST_TARGET_SPEED;
+                    est_input.Iqd_target = {0.0f, 0.0f}; // Iqd_target now acts as bias
+                    break;
+                case MODE_TRAJECTORY:
+                    trajController.Preprocess(est_input, est_output, Ts);
+                case MODE_POSITION:
+                    est_input.target = EST_TARGET_POS;
+                    est_input.Iqd_target = {0.0f, 0.0f};
+                    break;
+                default: 
+                    est_input.target = EST_TARGET_TORQUE;
+                    break;
+            }
+        }
+    }
+    else est_input.target = EST_TARGET_NONE;
+    estimator->Update(Ts);
+    error_code |= estimator->GetErrorFlag();
+    if(output_state)
+    {
+        if(extra_module != nullptr) extra_module->Postprocess(est_input, est_output, Ts);
+        else 
+        {
+            // soundInjector.Postprocess(est_input, est_output, Ts);
+            if(config.apply_curr_feedforward)
+            {
+                
+            }
+        }
+        svpwm.Ualphabeta = FOC_Rev_Park(est_output.Uqd, est_output.electric_angle);
         if(error_code == FOC_ERROR_NONE)
         {
             FOC_SVPWM(&svpwm, bus_sense.Vbus);
             driver.SetOutput(svpwm.compare_a, svpwm.compare_b, svpwm.compare_c);
         }
-        else
-        {
-            // we should emergency break
-            EmergencyStop();
-        }
+        else EmergencyStop();
     }
 }
 
@@ -118,10 +151,7 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateMidInterval(fl
         if(ABS(est_output.estimated_speed) > config.max_speed)
         {
             overspeed_timer += Ts;
-            if(overspeed_timer > config.overspeed_detect_time)
-            {
-                error_code |= FOC_ERROR_OVERSPEED;
-            }
+            if(overspeed_timer > config.overspeed_detect_time) error_code |= FOC_ERROR_OVERSPEED;
         }
         else overspeed_timer = 0.0f;
     }
@@ -137,7 +167,7 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateIdleTask(float
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
 void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::SetOutputState(bool state)
 {
-    est_input.output_state = state;
+    output_state = state;
     if(state)
     {
         error_code = 0;
@@ -152,7 +182,7 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::SetOutputState(bool 
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
 void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::EmergencyStop()
 {
-    est_input.output_state = false;
+    output_state = false;
     switch(config.break_mode)
     {
         case BREAK_MODE_SPO: // SPO
@@ -217,6 +247,7 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
         .startup_state = false,
         .break_mode = BREAK_MODE_ASC,
         .startup_mode = MODE_INIT,
+        .apply_curr_feedforward = false,
     };
 
     est_output = {
@@ -228,14 +259,13 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
         .estimated_raw_angle = 0.0f,
         .set_speed = 0.0f,
         .estimated_speed = 0.0f,
-        .estimated_acceleration = 0.0f,
     };
     est_input = {
         .Iqd_target = {.q = 0.0f, .d = 0.0f},
         .Ialphabeta_fb = {.alpha = 0.0f, .beta = 0.0f},
         .target_speed = 0.0f,
-        .set_abs_pos = 0.0f,
-        .output_state = false,
+        .target_pos = 0.0f,
+        .target = EST_TARGET_NONE,
     };
     svpwm = {
         .Ualphabeta = {.alpha = 0.0f, .beta = 0.0f,},

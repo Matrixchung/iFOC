@@ -39,11 +39,12 @@ private:
     GPIO_TypeDef *sda_port;
     uint32_t sda_pin;
     uint32_t clock_cycles = 1;
-    uint32_t freq = 4000000;
+    uint32_t freq = 400000;
 };
 
 uint8_t SWI2C::CheckDevice(uint8_t addr)
 {
+    addr <<= 1; // 7-bit
     addr |= 0x01; // R/W bit
     __disable_irq();
     Start();
@@ -60,6 +61,7 @@ uint8_t SWI2C::CheckDevice(uint8_t addr)
 
 uint8_t SWI2C::WriteBytes(uint8_t addr, uint8_t *data, uint8_t len)
 {
+    addr <<= 1;
     addr &= ~0x01; // R/W bit
     __disable_irq();
     Start();
@@ -85,6 +87,7 @@ uint8_t SWI2C::WriteBytes(uint8_t addr, uint8_t *data, uint8_t len)
 
 uint8_t SWI2C::ReadBytes(uint8_t addr, uint8_t *data, uint8_t len)
 {
+    addr <<= 1;
     addr |= 0x01; // R/W bit
     __disable_irq();
     Start();
@@ -114,6 +117,8 @@ void SWI2C::Init()
     LL_GPIO_SetPinOutputType(sda_port, sda_pin, LL_GPIO_OUTPUT_OPENDRAIN);
     LL_GPIO_SetPinPull(scl_port, scl_pin, LL_GPIO_PULL_NO);
     LL_GPIO_SetPinPull(sda_port, sda_pin, LL_GPIO_PULL_NO);
+    LL_GPIO_SetOutputPin(scl_port, scl_pin);
+    LL_GPIO_SetOutputPin(sda_port, sda_pin);
     clock_cycles = SystemCoreClock / freq;
     clock_cycles /= 2;
 }

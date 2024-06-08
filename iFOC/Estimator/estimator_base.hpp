@@ -4,12 +4,11 @@
 #include "foc_header.h"
 #include "pid.h"
 
-// Include iFOC Modules
-#include "trajectory_controller.hpp"
-
 // An estimator needs: state input
 // ... and outputs: estimated angle, estimated speed, etc.
 // Estimator needs to calculate Iqd_fb based on estimated elec angle and Uqd.
+// For motor with gear ratio, the estimator only needs to calculate angle(rad) and speed(RPM) at the drive output(called origin).
+// All inputs to the estimator also represent origin speed.
 
 class EstimatorBase
 {
@@ -20,22 +19,17 @@ public:
     virtual void Update(float Ts) = 0;
     virtual void UpdateMidInterval(float Ts) {};
     virtual void UpdateIdleTask(float Ts) {};
-    virtual FOC_CMD_RET SetMode(FOC_MODE _mode) {return CMD_NOT_SUPPORTED;};
-    virtual FOC_CMD_RET SetSubMode(FOC_SUBMODE _smode) {return CMD_NOT_SUPPORTED;};
     virtual FOC_ERROR_FLAG GetErrorFlag() {return FOC_ERROR_NONE;};
-    FOC_MODE GetMode() {return mode;};
 // protected:
     PID Iq_PID = PID(0.0f, 0.0f, 0.0f, 0.0f);
     PID Id_PID = PID(0.0f, 0.0f, 0.0f, 0.0f);
     PID Speed_PID = PID(0.0f, 0.0f, 0.0f, 0.0f);
     PID Position_PID = PID(0.0f, 0.0f, 0.0f, 0.0f);
-    TrajController trajController;
+    // TrajController trajController;
 protected:
     foc_state_input_t *input;
     foc_state_output_t *output;
     foc_config_t *config;
-    FOC_MODE mode = MODE_INIT;
-    FOC_SUBMODE submode = SUBMODE_NONE;
     void _Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_config_t *_config);
     void Reset();
 };
@@ -53,7 +47,7 @@ void EstimatorBase::_Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_
         Id_PID.Kp = config->current_kp;
         Id_PID.Ki = config->current_ki;
     }
-    else // we use current_bandwidth and motor params to calculate
+    else if(config->current_damping_coefficient > 0.0f) // we use current_bandwidth and motor params to calculate
     {
         // https://blog.csdn.net/weixin_45182459/article/details/136971188
         // Kp = current_loop_bandwidth * Lq / (6 * xi^2) (xi = 0.707, for damping), Ki = Rs * bandwidth / (6 * xi^2)
@@ -93,18 +87,12 @@ void EstimatorBase::_Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_
 
 void EstimatorBase::Reset()
 {
-    // input->set_speed = 0.0f;
-    // input->set_abs_pos = 0.0f;
     output->electric_angle = 0.0f;
-    // output->estimated_angle = 0.0f;
-    // output->estimated_raw_angle = 0.0f;
-    output->estimated_speed = 0.0f;
-    output->set_speed = 0.0f;
+    // output->estimated_speed = 0.0f;
     output->Iqd_set.q = 0.0f;
     output->Iqd_set.d = 0.0f;
     output->Uqd.q = 0.0f;
     output->Uqd.d = 0.0f;
-    submode = SUBMODE_NONE;
     Iq_PID.Reset();
     Id_PID.Reset();
     Speed_PID.Reset();

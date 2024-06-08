@@ -2,14 +2,15 @@
 #define _FOC_MODULE_TRAJECTORY_CONTROLLER_HPP
 
 #include "cmath"
+#include "module_base.hpp"
 
-class TrajController
+class TrajController : public ModuleBase
 {
 public:
     TrajController() {};
     void PlanTrajectory(float target_pos, float current_pos, float current_speed,
                         float cruise_speed, float max_accel, float max_decel); // pos all absolute
-    void Update(float Ts);
+    void Preprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts) final;
     void Reset();
     inline float GetFinalPos() { return final_pos; };
     inline float GetPos() { return set_pos; };
@@ -83,7 +84,7 @@ void TrajController::PlanTrajectory(float target_pos, float current_pos, float c
     start_cruise_pos = current_pos + current_speed * accel_time + 0.5f * ref_accel * (accel_time * accel_time); // pos at start of cruising phase
 }
 
-void TrajController::Update(float Ts)
+void TrajController::Preprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts)
 {
     if(!task_done)
     {
@@ -116,6 +117,7 @@ void TrajController::Update(float Ts)
             task_done = true;
             state_timer = 0.0f;
         }
+        in.target_pos = set_pos;
     }
 }
 

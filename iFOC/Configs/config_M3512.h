@@ -12,7 +12,7 @@ static foc_config_t config_m3512 =
         .flux = 0.0115585f,
         .gear_ratio = 1.0f,
         .max_mechanic_speed = 1800.0f,
-        .pole_pair = 1,
+        .pole_pair = 7,
     },
     .virtual_endstop = 
     {
@@ -26,6 +26,8 @@ static foc_config_t config_m3512 =
     .current_damping_coefficient = 0.0f,
     .current_kp = 0.051f,
     .current_ki = 825.0f,
+    // .current_kp = 0.0f,
+    // .current_ki = 0.0f,
     .Vphase_limit = 12.0f,
     .current_ramp_limit = 0.0f,
     .speed_kp = 0.0002f,

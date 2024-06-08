@@ -282,3 +282,12 @@ float fast_inv_sqrt(float x)
 	y = y * (1.5f - (halfx * y * y));
 	return y;
 }
+
+float origin_to_shaft(float origin, float gear_ratio)
+{
+    return (float)(origin / gear_ratio);
+}
+float shaft_to_origin(float shaft, float gear_ratio)
+{
+    return (float)(shaft * gear_ratio);
+}
