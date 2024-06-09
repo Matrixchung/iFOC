@@ -34,9 +34,9 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
         case DRIVE_ERROR_CODE:
             return (float)instance.error_code;
         case OUTPUT_STATE:
-            return (float)instance.est_input.output_state;
+            return (float)instance.output_state;
         case DRIVE_MODE:
-            return (float)instance.estimator.GetMode();
+            return (float)instance.mode;
         case CURRENT_PHASE_A:
         case CURRENT_PHASE_B:
         case CURRENT_PHASE_C:
@@ -50,12 +50,12 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
         case VALPHA_OUT:
         case VBETA_OUT:
             return instance.est_output.Udc;
-        case SPEED_SET:
-            return instance.est_input.set_speed;
+        case SPEED_TARGET:
+            return origin_to_shaft(instance.est_input.target_speed, instance.config.motor.gear_ratio);
         case POS_ABS_SET_RAD:
-            return instance.est_input.set_abs_pos;
+            return origin_to_shaft(instance.est_input.target_pos, instance.config.motor.gear_ratio);
         case POS_ABS_SET_DEG:
-            return RAD2DEG(instance.est_input.set_abs_pos);
+            return RAD2DEG(GetEndpointValue(POS_ABS_SET_RAD));
         case CURRENT_KP:
             return instance.estimator.Idc_PID.Kp;
         case CURRENT_KI:
@@ -86,26 +86,26 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
             return instance.config.position_ramp_limit;
         case ELECTRIC_ANGLE_RAD:
         case ESTIMATED_ANGLE_RAD:
-            return instance.est_output.estimated_angle;
+            return normalize_rad(GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD));
         case ELECTRIC_ANGLE_DEG:
         case ESTIMATED_ANGLE_DEG:
-            return RAD2DEG(instance.est_output.estimated_angle);
+            return RAD2DEG(GetEndpointValue(ESTIMATED_ANGLE_RAD));
         case ESTIMATED_RAW_ANGLE_RAD:
-            return instance.est_output.estimated_raw_angle;
+            return origin_to_shaft(instance.est_output.estimated_raw_angle, instance.config.motor.gear_ratio);
         case ESTIMATED_RAW_ANGLE_DEG:
-            return RAD2DEG(instance.est_output.estimated_raw_angle);
+            return RAD2DEG(GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD));
         case ESTIMATED_SPEED:
-            return instance.est_output.estimated_speed;
-        case ESTIMATED_ACCELERATION:
-            return instance.est_output.estimated_acceleration;
+            return origin_to_shaft(instance.est_output.estimated_speed, instance.config.motor.gear_ratio);
+        // case ESTIMATED_ACCELERATION:
+        //     return instance.est_output.estimated_acceleration;
         case BREAK_MODE:
             return instance.config.break_mode;
         case TRAJ_STATE:
-            return instance.estimator.trajController.GetState();
+            return instance.trajController.GetState();
         case TRAJ_TARGET_RAD:
-            return instance.estimator.trajController.GetFinalPos();
+            return instance.trajController.GetFinalPos();
         case TRAJ_TARGET_DEG:
-            return RAD2DEG(instance.estimator.trajController.GetFinalPos());
+            return RAD2DEG(instance.trajController.GetFinalPos());
         case TRAJ_CRUISE_SPEED:
             return instance.config.traj_cruise_speed;
         case TRAJ_MAX_ACCEL:
@@ -113,11 +113,11 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
         case TRAJ_MAX_DECEL:
             return instance.config.traj_max_decel;
         case TRAJ_CURRENT_POS:
-            return instance.estimator.trajController.GetPos();
+            return instance.trajController.GetPos();
         case TRAJ_CURRENT_SPEED:
-            return rad_speed_to_RPM(instance.estimator.trajController.GetSpeed(), 1) * instance.config.motor.gear_ratio;
+            return rad_speed_to_RPM(instance.trajController.GetSpeed(), 1) * instance.config.motor.gear_ratio;
         case TRAJ_CURRENT_ACCEL:
-            return rad_speed_to_RPM(instance.estimator.trajController.GetAccel(), 1) * instance.config.motor.gear_ratio;
+            return rad_speed_to_RPM(instance.trajController.GetAccel(), 1) * instance.config.motor.gear_ratio;
         default: break;
     }
     return 0.0f;
@@ -155,7 +155,10 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
             instance.SetOutputState((bool)((uint8_t)set_value == 1));
             break;
         case DRIVE_MODE:
-            if((uint8_t)set_value < LAST_MODE_PLACEHOLDER) result = instance.estimator.SetMode((FOC_MODE)set_value);
+            if((FOC_MODE)set_value < LAST_MODE_PLACEHOLDER)
+            {
+                instance.mode = (FOC_MODE)set_value;
+            }
             else result = CMD_NOT_SUPPORTED;
             break;
         // case IQ_SET:
@@ -168,20 +171,20 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
         case ID_SET:
             instance.est_output.Udc = set_value;
             break;
-        case SPEED_SET:
-            instance.est_input.set_speed = set_value;
+        case SPEED_TARGET:
+            instance.est_input.target_speed = shaft_to_origin(set_value, instance.config.motor.gear_ratio);
             break;
         case POS_ABS_SET_RAD:
-            instance.est_input.set_abs_pos = set_value;
+            instance.est_input.target_pos = shaft_to_origin(set_value, instance.config.motor.gear_ratio);
             break;
         case POS_INC_RAD:
-            instance.est_input.set_abs_pos += set_value;
+            instance.est_input.target_pos += shaft_to_origin(set_value, instance.config.motor.gear_ratio);
             break;
         case POS_ABS_SET_DEG:
-            instance.est_input.set_abs_pos = DEG2RAD(set_value);
+            instance.est_input.target_pos = DEG2RAD(shaft_to_origin(set_value, instance.config.motor.gear_ratio));
             break;
         case POS_INC_DEG:
-            instance.est_input.set_abs_pos += DEG2RAD(set_value);
+            instance.est_input.target_pos += DEG2RAD(shaft_to_origin(set_value, instance.config.motor.gear_ratio));
             break;
         case CURRENT_KP:
             instance.config.current_kp = set_value;
@@ -240,7 +243,7 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
             instance.estimator.Position_PID.ramp_limit = set_value;
             break;
         case GO_HOME:
-            instance.estimator.SetSubMode(SUBMODE_HOME);
+            // instance.estimator.SetSubMode(SUBMODE_HOME);
             break;
         case BREAK_MODE:
             instance.config.break_mode = (uint8_t)set_value;
@@ -251,13 +254,13 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
             //     result = CMD_FORBIDDEN;
             //     break;
             // }
-            instance.estimator.trajController.PlanTrajectory(set_value,                              // rad(shaft)
-                                                            instance.est_output.estimated_raw_angle, // rad(shaft)
-                                                            RPM_speed_to_rad(instance.est_output.estimated_speed, 1) / instance.config.motor.gear_ratio,  // RPM(output) -> rad(shaft)
-                                                            RPM_speed_to_rad(instance.config.traj_cruise_speed, 1) / instance.config.motor.gear_ratio,    // RPM(out) -> rad(shaft)
-                                                            RPM_speed_to_rad(instance.config.traj_max_accel, 1) / instance.config.motor.gear_ratio,       // RPM/s -> rad(shaft)
-                                                            RPM_speed_to_rad(instance.config.traj_max_decel, 1) / instance.config.motor.gear_ratio        // RPM/s -> rad(shaft)
-                                                            );
+            instance.trajController.PlanTrajectory(shaft_to_origin(set_value, instance.config.motor.gear_ratio),              // rad(shaft)
+                                                   instance.est_output.estimated_raw_angle,                                   // rad(shaft)
+                                                   instance.est_output.estimated_speed,                                       // RPM(output) -> rad(shaft)
+                                                   shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio),    // RPM(out) -> rad(shaft)
+                                                   instance.config.traj_max_accel,                                            // RPM/s -> rad(shaft)
+                                                   instance.config.traj_max_decel                                             // RPM/s -> rad(shaft)
+                                                  );
             break;
         case TRAJ_TARGET_DEG:
             return SetEndpointValue(TRAJ_TARGET_RAD, DEG2RAD(set_value));

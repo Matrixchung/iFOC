@@ -9,8 +9,8 @@
 #include "global_include.h"
 #include "string.h"
 
-uint8_t GetCANID(uint32_t& id) { return (uint8_t)((id & 0x7E0) >> 5); };
-uint8_t GetCANCommand(uint32_t& id) { return (uint8_t)(id & 0x1F); };
+uint8_t GetCANID(uint32_t id) { return (uint8_t)((id & 0x7E0) >> 5); };
+uint8_t GetCANCommand(uint32_t id) { return (uint8_t)(id & 0x1F); };
 uint16_t GetCANFrameID(uint8_t node_id, uint16_t id) { return (uint16_t)((uint16_t)node_id << 5) | id; };
 
 template<typename U>
@@ -40,11 +40,13 @@ void STM32CANFD<U>::ProcessDataFrame(uint32_t id, uint8_t *payload, uint8_t len)
     float temp1 = 0.0f;
     uint16_t temp_u16 = 0;
     uint64_t temp_u64 = 0;
+    int32_t temp_i32 = 0;
     switch(opcode)
     {
         case SET_INPUT_POS:
-            memcpy(&temp1, payload, sizeof(float));
-            base.SetEndpointValue(POS_INC_DEG, temp1);
+            // memcpy(&temp1, payload, sizeof(float));
+            temp_i32 = (int32_t)(payload[0] | (payload[1] << 8) | (payload[2] << 16) | (payload[3] << 24));
+            base.SetEndpointValue(POS_INC_DEG, (float)temp_i32);
             break;
         case ACCESS_ENDPOINT:
             if(len < 4) break;
@@ -94,7 +96,7 @@ void STM32CANFD<U>::ProcessDataFrame(uint32_t id, uint8_t *payload, uint8_t len)
             base.SetEndpointValue(POS_SPEED_LIMIT, temp1);
             break;
         case GET_IQ:
-            temp1 = base.GetEndpointValue(IQ_OUT);
+            temp1 = base.GetEndpointValue(IQ_SET);
             memcpy(tx_buffer, &temp1, 4);
             temp1 = base.GetEndpointValue(CURRENT_IQ);
             memcpy(tx_buffer + 4, &temp1, 4);
@@ -156,55 +158,68 @@ void STM32CANFD<U>::IRQHandler(const FDCAN_RxHeaderTypeDef& header, uint8_t *buf
 template<typename U>
 void STM32CANFD<U>::InitFilter()
 {
-    SET_BIT(hcan->Instance->MCR, CAN_MCR_INRQ);
+    // SET_BIT(hcan->Instance->MCR, CAN_MCR_INRQ);
     // HAL_CAN_Stop(hcan);
-    if(base.node_id != 0x3F) ConfigFilter(base.node_id << 10, 0x7E0 << 5, 0, base.sub_dev_index * 2);
+    if(base.node_id != 0x3F) ConfigFilter(base.node_id << 5, 0x7E0, 0, base.sub_dev_index * 2);
     // ConfigFilter(0x3F << 10, 0x7E0 << 5, 1, base.sub_dev_index * 2 + 1);
-    if(base.sub_dev_index == 0) ConfigFilter(0x3F << 10, 0x7E0 << 5, 1, 1);
+    if(base.sub_dev_index == 0) ConfigFilter(0x3F << 5, 0x7E0, 1, 1);
     // InitHW();
-    CLEAR_BIT(hcan->Instance->MCR, CAN_MCR_INRQ);
+    // CLEAR_BIT(hcan->Instance->MCR, CAN_MCR_INRQ);
 }
-
 
 template<typename U>
 void STM32CANFD<U>::InitHW()
 {
-    HAL_CAN_ActivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_RX_FIFO1_MSG_PENDING);
-    HAL_CAN_Start(hcan);
+    HAL_FDCAN_ConfigTxDelayCompensation(hcan, hcan->Init.DataPrescaler * hcan->Init.DataTimeSeg1, 0);
+    HAL_FDCAN_EnableTxDelayCompensation(hcan);
+    HAL_FDCAN_ConfigGlobalFilter(hcan, FDCAN_ACCEPT_IN_RX_FIFO0, FDCAN_ACCEPT_IN_RX_FIFO0, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
+    // HAL_FDCAN_ConfigGlobalFilter(hcan, FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
+    HAL_FDCAN_ActivateNotification(hcan, FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0);
+    HAL_FDCAN_Start(hcan);
 }
 
 template<typename U>
 void STM32CANFD<U>::ConfigFilter(uint32_t id, uint32_t mask, uint8_t fifo_index, uint8_t filter_index)
 {
-    CAN_FilterTypeDef sFilterConfig;
-    sFilterConfig.FilterActivation = ENABLE;
-    sFilterConfig.FilterBank = filter_index;
-    sFilterConfig.FilterFIFOAssignment = fifo_index == 0 ? CAN_FILTER_FIFO0 : CAN_FILTER_FIFO1;
-    sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-    sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-    sFilterConfig.FilterIdHigh = id;
-    sFilterConfig.FilterIdLow = 0x0000;
-    sFilterConfig.FilterMaskIdHigh = mask;
-    sFilterConfig.FilterMaskIdLow = 0xFFFC;
-    if(HAL_CAN_ConfigFilter(hcan, &sFilterConfig) != HAL_OK)
-    {
-        while(1);
-    }
+    FDCAN_FilterTypeDef sFilterConfig;
+    sFilterConfig.IdType = FDCAN_STANDARD_ID;
+    sFilterConfig.FilterIndex = filter_index;
+    sFilterConfig.FilterType = FDCAN_FILTER_MASK;
+    sFilterConfig.FilterConfig = fifo_index == 0 ? FDCAN_FILTER_TO_RXFIFO0 : FDCAN_FILTER_TO_RXFIFO1;
+    // sFilterConfig.FilterID1 = (id << 16) | 0x0000;
+    // sFilterConfig.FilterID2 = (mask << 16) | 0xFFFC;
+    sFilterConfig.FilterID1 = id;
+    sFilterConfig.FilterID2 = mask;
+    // sFilterConfig.FilterID1 = 0x000;
+    // sFilterConfig.FilterID2 = 0x000;
+    sFilterConfig.RxBufferIndex = 0;
+    if(HAL_FDCAN_ConfigFilter(hcan, &sFilterConfig) != HAL_OK) Error_Handler();
+    // sFilterConfig.FilterActivation = ENABLE;
+    // sFilterConfig.FilterBank = filter_index;
+    // sFilterConfig.FilterFIFOAssignment = fifo_index == 0 ? CAN_FILTER_FIFO0 : CAN_FILTER_FIFO1;
+    // sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+    // sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+    // sFilterConfig.FilterIdHigh = id;
+    // sFilterConfig.FilterIdLow = 0x0000;
+    // sFilterConfig.FilterMaskIdHigh = mask;
+    // sFilterConfig.FilterMaskIdLow = 0xFFFC;
 }
 
 template<typename U>
 void STM32CANFD<U>::SendPayload(uint32_t id, uint8_t *payload, uint8_t len)
 {
-    uint32_t mailbox = 0;
-    CAN_TxHeaderTypeDef header;
-    header.TransmitGlobalTime = DISABLE;
-    header.IDE = CAN_ID_STD;
-    header.StdId = id;
-    header.RTR = CAN_RTR_DATA;
+    FDCAN_TxHeaderTypeDef header;
+    header.IdType = FDCAN_STANDARD_ID;
+    header.Identifier = id;
+    header.TxFrameType = FDCAN_DATA_FRAME;
     if(len > 8) len = 8;
-    header.DLC = len;
+    header.DataLength = len;
+    header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+    header.BitRateSwitch = FDCAN_BRS_OFF;
+    header.FDFormat = FDCAN_CLASSIC_CAN;
+    header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+    header.MessageMarker = 0;
     memcpy(tx_buffer, payload, len);
-    HAL_CAN_AddTxMessage(hcan, &header, tx_buffer, &mailbox);
+    HAL_FDCAN_AddMessageToTxFifoQ(hcan, &header, tx_buffer);
 }
-
 #endif

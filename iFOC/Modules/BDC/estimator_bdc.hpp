@@ -14,13 +14,10 @@ public:
     bool Init();
     void AttachEncoder(EncoderBase *_encoder) { encoder = _encoder; };
     void AttachAuxEncoder(EncoderBase *_aux_encoder) { aux_encoder = _aux_encoder; };
-    void AttachLimiter(LimiterBase *_limiter) { limiter = _limiter; };
+    // void AttachLimiter(LimiterBase *_limiter) { limiter = _limiter; };
     void Update(float Ts);
     void UpdateMidInterval(float Ts);
-    FOC_CMD_RET SetMode(FOC_MODE _mode);
-    FOC_CMD_RET SetSubMode(FOC_SUBMODE _smode);
     FOC_ERROR_FLAG GetErrorFlag();
-    FOC_MODE GetMode() {return mode;};
     PID Idc_PID = PID(0.0f, 0.0f, 0.0f, 0.0f);
     PID Speed_PID = PID(0.0f, 0.0f, 0.0f, 0.0f);
     PID Position_PID = PID(0.0f, 0.0f, 0.0f, 0.0f);
@@ -28,12 +25,10 @@ public:
 private:
     EncoderBase *encoder = nullptr;
     EncoderBase *aux_encoder = nullptr;
-    LimiterBase *limiter = nullptr;
+    // LimiterBase *limiter = nullptr;
     bdc_state_input_t& input;
     bdc_state_output_t& output;
     foc_config_t& config;
-    FOC_MODE mode = MODE_INIT;
-    FOC_SUBMODE submode = SUBMODE_NONE;
     SlidingFilter Idc_sf = SlidingFilter(10);
     LowpassFilter Idc_lpf = LowpassFilter(0.001f);
     float state_timer = 0.0f;
@@ -62,27 +57,27 @@ bool EstimatorBDC::Init()
     return encoder1_init_state & aux_encoder->Init(RPM_speed_to_rad(config.motor.max_mechanic_speed, config.motor.pole_pair));
 }
 
-FOC_CMD_RET EstimatorBDC::SetMode(FOC_MODE _mode)
-{
-    mode = _mode;
-    state_timer = 0.0f;
-    return CMD_SUCCESS;
-}
+// FOC_CMD_RET EstimatorBDC::SetMode(FOC_MODE _mode)
+// {
+//     mode = _mode;
+//     state_timer = 0.0f;
+//     return CMD_SUCCESS;
+// }
 
-FOC_CMD_RET EstimatorBDC::SetSubMode(FOC_SUBMODE _smode)
-{
-    if(_smode == SUBMODE_HOME && limiter == nullptr) return CMD_NOT_SUPPORTED;
-    submode = _smode;
-    state_timer = 0.0f;
-    return CMD_SUCCESS;
-}
+// FOC_CMD_RET EstimatorBDC::SetSubMode(FOC_SUBMODE _smode)
+// {
+//     if(_smode == SUBMODE_HOME && limiter == nullptr) return CMD_NOT_SUPPORTED;
+//     submode = _smode;
+//     state_timer = 0.0f;
+//     return CMD_SUCCESS;
+// }
 
 void EstimatorBDC::Update(float Ts)
 {
     input.Idc = Idc_lpf.GetOutput(input.Idc, Ts);
     encoder->Update(Ts);
     output.estimated_angle = encoder->single_round_angle;
-    output.estimated_raw_angle = encoder->raw_angle / config.motor.gear_ratio;
+    output.estimated_raw_angle = encoder->raw_angle;
     output.estimated_speed = rad_speed_to_RPM(encoder->velocity, 1);
     // if(input.output_state)
     // {
@@ -93,25 +88,25 @@ void EstimatorBDC::Update(float Ts)
 void EstimatorBDC::UpdateMidInterval(float Ts)
 {
     encoder->UpdateMidInterval(Ts);
-    if(input.output_state)
+    if(input.target > EST_TARGET_NONE)
     {
-        if(mode >= MODE_SPEED)
+        if(input.target >= EST_TARGET_SPEED)
         {
-            if(mode >= MODE_POSITION) 
+            if(input.target >= EST_TARGET_POS) 
             {
-                if(mode == MODE_TRAJECTORY)
-                {
-                    trajController.Update(Ts);
-                    input.set_abs_pos = trajController.GetPos();
-                }
-                else
-                {
-                    trajController.Reset();
-                }
-                output.out_speed = Position_PID.GetOutput(input.set_abs_pos - output.estimated_raw_angle, Ts);
+                // if(mode == MODE_TRAJECTORY)
+                // {
+                //     trajController.Update(Ts);
+                //     input.set_abs_pos = trajController.GetPos();
+                // }
+                // else
+                // {
+                //     trajController.Reset();
+                // }
+                output.set_speed = Position_PID.GetOutput(input.target_pos - output.estimated_raw_angle, Ts);
             }
-            else output.out_speed = input.set_speed;
-            output.Udc = Speed_PID.GetOutput(output.out_speed - output.estimated_speed, Ts);
+            else output.set_speed = input.target_speed;
+            output.Udc = Speed_PID.GetOutput(output.set_speed - output.estimated_speed, Ts);
         }
     }
     else
@@ -123,11 +118,10 @@ void EstimatorBDC::UpdateMidInterval(float Ts)
 
 void EstimatorBDC::Reset()
 {
-    input.set_speed = 0.0f;
+    // input.target_speed = 0.0f;
     // input.set_abs_pos = 0.0f;
     // output.estimated_acceleration
     output.Udc = 0.0f;
-    submode = SUBMODE_NONE;
     Idc_PID.Reset();
     Speed_PID.Reset();
     Position_PID.Reset();

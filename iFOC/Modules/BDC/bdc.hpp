@@ -31,6 +31,7 @@ public:
     void SetOutputState(bool state);
     void EmergencyStop();
     foc_config_t config;
+    TrajController trajController;
     EstimatorBDC estimator = EstimatorBDC(est_input, est_output, config);
 private:
     template<typename U>
@@ -41,21 +42,23 @@ private:
     bdc_state_input_t est_input;
     bdc_state_output_t est_output;
     uint16_t error_code = FOC_ERROR_NONE;
+    FOC_MODE mode = MODE_INIT;
+    bool output_state = false;
 };
 
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
 bool BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Init()
 {
     if( driver.DriverInit() == false ||
-       (estimator.Init() == false) ||
-       (estimator.SetMode(config.startup_mode)))
+       (estimator.Init() == false))
     {
         error_code = FOC_ERROR_INITIALIZE;
         return false;
     }
     current_sense.CurrentSenseUpdate();
     bus_sense.BusSenseUpdate();
-    est_input.output_state = config.startup_state;
+    mode = config.startup_mode;
+    output_state = config.startup_state;
     error_code = FOC_ERROR_NONE;
     return true;
 }
@@ -65,10 +68,32 @@ void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Update(float Ts)
 {
     current_sense.CurrentSenseUpdate();
     est_input.Idc = current_sense.Iabc.a;
-    estimator.Update(Ts);
-    if(est_input.output_state) 
+    if(output_state)
     {
-        error_code = estimator.GetErrorFlag();
+        switch(mode)
+        {
+            case MODE_SPEED:
+                est_input.target = EST_TARGET_SPEED;
+                est_input.Idc = 0.0f;
+                break;
+            case MODE_TRAJECTORY:
+                
+                // trajController.Preprocess(est_input, est_output, Ts);
+                break;
+            case MODE_POSITION:
+                est_input.target = EST_TARGET_POS;
+                est_input.Idc = 0.0f;
+                break;
+            default:
+                est_input.target = EST_TARGET_TORQUE;
+                break;
+        }
+    }
+    else est_input.target = EST_TARGET_NONE;
+    estimator.Update(Ts);
+    error_code = estimator.GetErrorFlag();
+    if(output_state) 
+    {
         if(error_code == FOC_ERROR_NONE && bus_sense.Vbus > 0.0f)
         {
             driver.SetOutputPct(est_output.Udc / bus_sense.Vbus);
@@ -84,7 +109,7 @@ void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Update(float Ts)
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
 void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::SetOutputState(bool state)
 {
-    est_input.output_state = state;
+    output_state = state;
     if(state)
     {
         error_code = 0;
@@ -99,7 +124,7 @@ void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::SetOutputState(bool 
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
 void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::EmergencyStop()
 {
-    est_input.output_state = false;
+    output_state = false;
     switch(config.break_mode)
     {
         default: 
@@ -167,21 +192,18 @@ BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::BDC(T_DriverBase& _driver
         .break_mode = BREAK_MODE_ASC,
         .startup_mode = MODE_INIT,
     };
-
     est_output = {
         .Udc = 0.0f,
         .estimated_angle = 0.0f,
         .estimated_raw_angle = 0.0f,
-        .out_speed = 0.0f,
+        .set_speed = 0.0f,
         .estimated_speed = 0.0f,
-        .estimated_shaft_speed = 0.0f,
-        .estimated_acceleration = 0.0f,
     };
     est_input = {
         .Idc = 0.0f,
-        .set_speed = 0.0f,
-        .set_abs_pos = 0.0f,
-        .output_state = false,
+        .target_speed = 0.0f,
+        .target_pos = 0.0f,
+        .target = EST_TARGET_NONE,
     };
 }
 

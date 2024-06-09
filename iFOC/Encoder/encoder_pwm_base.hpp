@@ -40,6 +40,7 @@ protected:
     uint8_t error_flag = 0;
     SlidingFilter sliding_filter = SlidingFilter(10);
     LowpassFilter speed_filter = LowpassFilter(0.001f);
+    LowpassFilter angle_filter = LowpassFilter(0.001f);
     // SpeedPLL speed_pll = SpeedPLL(0.0f, 0.0f, 0.0f);
     float last_raw_angle = 0.0f;
     float last_velocity = 0.0f;
@@ -61,7 +62,7 @@ void EncoderPWMBase::Update(float Ts)
     if(error_flag == 0)
     {
         single_round_angle = normalize_rad(irq_single_round_angle);
-        // single_round_angle = normalize_rad(irq_single_round_angle);
+        single_round_angle = angle_filter.GetOutput(single_round_angle, Ts);
         // single_round_angle = irq_single_round_angle;
         if(single_round_angle_prev >= 0.0f)
         {

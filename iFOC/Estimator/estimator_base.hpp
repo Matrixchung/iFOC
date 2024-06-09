@@ -39,7 +39,7 @@ void EstimatorBase::_Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_
     input = _in;
     output = _out;
     config = _config;
-    if(config->motor.gear_ratio <= 0.0f) config->motor.gear_ratio = 1.0f;
+    if(config->motor.gear_ratio == 0.0f) config->motor.gear_ratio = 1.0f;
     if(config->current_kp > 0.0f && config->current_ki > 0.0f) // if set current Kp/Ki in config, then use it
     {
         Iq_PID.Kp = config->current_kp;
