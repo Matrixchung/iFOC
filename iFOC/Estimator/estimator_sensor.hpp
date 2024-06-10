@@ -58,7 +58,7 @@ void EstimatorSensor::Update(float Ts)
             {
                 if(input->target == EST_TARGET_POS) output->set_speed = Position_PID.GetOutput(input->target_pos - output->estimated_raw_angle, Ts);
                 else output->set_speed = input->target_speed;
-                output->Iqd_set.q = Speed_PID.GetOutput(input->target_speed - output->estimated_speed, Ts);
+                output->Iqd_set.q = Speed_PID.GetOutput(output->set_speed - output->estimated_speed, Ts);
                 output->Iqd_set.d = 0.0f;
             }
             else output->Iqd_set = input->Iqd_target;

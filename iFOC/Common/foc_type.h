@@ -46,8 +46,8 @@ typedef enum FOC_ESTIMATOR
 
 typedef enum FOC_MODE
 {
-    MODE_INIT = 0,
-    MODE_TORQUE,
+    // MODE_INIT = 0,
+    MODE_TORQUE = 0,
     MODE_SPEED,
     MODE_POSITION,
     MODE_TRAJECTORY,

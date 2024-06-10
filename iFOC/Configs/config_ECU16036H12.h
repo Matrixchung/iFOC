@@ -48,7 +48,7 @@ static foc_config_t config_ecu16036h12 =
     .aux_encoder_dir = FOC_DIR_POS,
     .startup_state = false,
     .break_mode = BREAK_MODE_ASC,
-    .startup_mode = MODE_INIT,
+    .startup_mode = MODE_POSITION,
     .apply_curr_feedforward = true,
 };
 

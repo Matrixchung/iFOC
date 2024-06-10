@@ -96,6 +96,10 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
                 }
             }
             break;
+        case SET_STATE:
+            if(payload[0] == 0) base.SetEndpointValue(OUTPUT_STATE, 0.0f);
+            else base.SetEndpointValue(OUTPUT_STATE, 1.0f);
+            break;
         case SET_LIMITS:
             break;
         case SET_TRAJ_VEL_LIMIT:

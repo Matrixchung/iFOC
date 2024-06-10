@@ -58,7 +58,7 @@ private:
     uint16_t error_code = FOC_ERROR_NONE;
     float *mcu_temp = nullptr;   // in degree
     float *motor_temp = nullptr; // in degree
-    FOC_MODE mode = MODE_INIT;
+    FOC_MODE mode = MODE_TORQUE;
     bool output_state = false;
     uint8_t limiter_count = 0; // 0, 1 - one direction, 2 - bidirection virtual/hardware, 3 - bi-dir + mid
     LimiterBase *limiters[3] = {nullptr};
@@ -77,6 +77,7 @@ bool FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Init()
     current_sense.CurrentSenseUpdate();
     bus_sense.BusSenseUpdate();
     output_state = config.startup_state;
+    mode = config.startup_mode;
     error_code = FOC_ERROR_NONE;
     soundInjector.inject_voltage = config.Vphase_limit / 2.0f;
     return true;
@@ -100,6 +101,9 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Update(float Ts)
                     break;
                 case MODE_TRAJECTORY:
                     trajController.Preprocess(est_input, est_output, Ts);
+                    est_input.target = EST_TARGET_POS;
+                    est_input.Iqd_target = {0.0f, 0.0f};
+                    break;
                 case MODE_POSITION:
                     est_input.target = EST_TARGET_POS;
                     est_input.Iqd_target = {0.0f, 0.0f};
@@ -247,7 +251,7 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
         .aux_encoder_dir = FOC_DIR_POS,
         .startup_state = false,
         .break_mode = BREAK_MODE_ASC,
-        .startup_mode = MODE_INIT,
+        .startup_mode = MODE_TORQUE,
         .apply_curr_feedforward = false,
     };
 
