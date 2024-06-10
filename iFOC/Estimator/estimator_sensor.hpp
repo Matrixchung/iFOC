@@ -48,7 +48,7 @@ void EstimatorSensor::Update(float Ts)
     output->estimated_angle = encoder->single_round_angle;
     output->estimated_raw_angle = encoder->raw_angle;
     output->estimated_speed = rad_speed_to_RPM(encoder->velocity, 1);
-    if(align_state && config->motor.pole_pair > 0) output->electric_angle = normalize_rad(output->estimated_angle * config->motor.pole_pair - zero_electric_angle);
+    if(align_state) output->electric_angle = normalize_rad(output->estimated_angle * config->motor.pole_pair - zero_electric_angle);
     output->Iqd_fb = FOC_Park(input->Ialphabeta_fb, output->electric_angle);
     if(input->target > EST_TARGET_NONE)
     {
@@ -89,7 +89,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
     if(input->target > EST_TARGET_NONE)
     {
         // Pre-alignment process
-        if(!align_state)
+        if(!align_state && config->motor.pole_pair > 0)
         {
             state_timer += Ts;
             if(state_timer < align_time)

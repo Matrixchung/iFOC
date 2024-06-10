@@ -20,6 +20,7 @@
 #include "module_base.hpp"
 #include "sound_injector.hpp"
 #include "trajectory_controller.hpp"
+#include "param_ident.hpp"
 
 // Unit agreements: all angle are radius, while speed is RPM at output shaft of motor
 // Using CRTP for zero-overhead polymorphism at *compile-time*
