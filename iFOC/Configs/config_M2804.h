@@ -1,23 +1,18 @@
-#ifndef _FOC_MOTOR_CONFIG_M3512_H
-#define _FOC_MOTOR_CONFIG_M3512_H
+#ifndef _FOC_MOTOR_CONFIG_M2804_H
+#define _FOC_MOTOR_CONFIG_M2804_H
 
 #include "foc_config_type.h"
 
-static foc_config_t config_m3512 = 
+static foc_config_t config_m2804 = 
 {
     .motor = 
     {
         .Rs = 1.65f,
-        .Ld = 0.0000102f,
-        .flux = 0.0115585f,
+        .Ld = 0.0028f,
+        .flux = 0.0f,
         .gear_ratio = 1.0f,
         .max_mechanic_speed = 1800.0f,
         .pole_pair = 7,
-    },
-    .virtual_endstop = 
-    {
-        .current_limit = 0.0f,
-        .stuck_time = 0.0f,
     },
     .mcu_temp_limit = 80.0f,
     .motor_temp_limit = 80.0f, 

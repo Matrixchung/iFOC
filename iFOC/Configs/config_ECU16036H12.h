@@ -14,11 +14,6 @@ static foc_config_t config_ecu16036h12 =
         .max_mechanic_speed = 850.0f,
         .pole_pair = 1,
     },
-    .virtual_endstop = 
-    {
-        .current_limit = 0.0f,
-        .stuck_time = 0.0f,
-    },
     .mcu_temp_limit = 80.0f,
     .motor_temp_limit = 80.0f, 
     .align_current = 0.6f,
