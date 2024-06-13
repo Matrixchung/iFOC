@@ -35,6 +35,7 @@ private:
     float beat_time = 0.0f; // = 60s / BPM
     float state_timer = 0.0f;
     float note_timer = 0.0f;
+    float flip_time = 0.0f;
     const Note* iter_begin = nullptr;
     const Note* iter_end = nullptr;
 };
@@ -64,13 +65,18 @@ void SoundInjector::Postprocess(foc_state_input_t &in, foc_state_output_t &out, 
         }
         state_timer += Ts;
         note_timer += Ts;
-        if(note_timer >= _sound_Ts[*iter_begin]) note_timer = 0.0f;
-        else out.Uqd.d += inject_voltage;
+        if(note_timer < flip_time) out.Uqd.d += inject_voltage;
+        else
+        {
+            out.Uqd.d -= inject_voltage;
+            if(note_timer >= _sound_Ts[*iter_begin]) note_timer = 0;
+        }
         if(state_timer >= beat_time)
         {
             iter_begin++;
             state_timer = 0.0f;
             note_timer = 0.0f;
+            flip_time = _sound_Ts[*iter_begin] * 0.5f;
         }
     }
 }
