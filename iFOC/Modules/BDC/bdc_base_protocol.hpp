@@ -44,12 +44,12 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
         case CURRENT_IBETA:
         case CURRENT_IQ:
         case CURRENT_ID:
-            return instance.est_input.Idc;
+            return instance.est_input.Ialphabeta_fb.alpha;
         case VQ_OUT:
         case VD_OUT:
         case VALPHA_OUT:
         case VBETA_OUT:
-            return instance.est_output.Udc;
+            return instance.est_output.Uqd.q;
         case SPEED_TARGET:
             return origin_to_shaft(instance.est_input.target_speed, instance.config.motor.gear_ratio);
         case POS_ABS_SET_RAD:
@@ -169,7 +169,7 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
         //     break;
         case IQ_SET:
         case ID_SET:
-            instance.est_output.Udc = set_value;
+            instance.est_output.Uqd.q = set_value;
             break;
         case SPEED_TARGET:
             instance.est_input.target_speed = shaft_to_origin(set_value, instance.config.motor.gear_ratio);

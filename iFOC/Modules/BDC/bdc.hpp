@@ -2,9 +2,7 @@
 #define _BDC_H
 
 // Brushed DC Motor(BDC)
-
 #include "foc_header.h"
-#include "bdc_type.h"
 #include "foc_config_type.h"
 #include "driver_bdc_base.hpp"
 
@@ -39,10 +37,10 @@ private:
     T_DriverBase& driver;
     T_CurrentSenseBase& current_sense;
     T_BusSenseBase& bus_sense;
-    bdc_state_input_t est_input;
-    bdc_state_output_t est_output;
+    foc_state_input_t est_input;
+    foc_state_output_t est_output;
     uint16_t error_code = FOC_ERROR_NONE;
-    FOC_MODE mode = MODE_INIT;
+    FOC_MODE mode = MODE_TORQUE;
     bool output_state = false;
 };
 
@@ -67,22 +65,22 @@ template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSense
 void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Update(float Ts)
 {
     current_sense.CurrentSenseUpdate();
-    est_input.Idc = current_sense.Iabc.a;
+    est_input.Ialphabeta_fb.alpha = current_sense.Iabc.a;
     if(output_state)
     {
         switch(mode)
         {
             case MODE_SPEED:
                 est_input.target = EST_TARGET_SPEED;
-                est_input.Idc = 0.0f;
+                est_input.Iqd_target = {0.0f, 0.0f};
                 break;
             case MODE_TRAJECTORY:
-                
-                // trajController.Preprocess(est_input, est_output, Ts);
+                trajController.Preprocess(est_input, est_output, Ts);
+                est_input.target = EST_TARGET_POS;
                 break;
             case MODE_POSITION:
                 est_input.target = EST_TARGET_POS;
-                est_input.Idc = 0.0f;
+                est_input.Iqd_target = {0.0f, 0.0f};
                 break;
             default:
                 est_input.target = EST_TARGET_TORQUE;
@@ -96,7 +94,7 @@ void BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Update(float Ts)
     {
         if(error_code == FOC_ERROR_NONE && bus_sense.Vbus > 0.0f)
         {
-            driver.SetOutputPct(est_output.Udc / bus_sense.Vbus);
+            driver.SetOutputPct(est_output.Uqd.q / bus_sense.Vbus);
         }
         else
         {
@@ -160,10 +158,6 @@ BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::BDC(T_DriverBase& _driver
             .max_mechanic_speed = 0.0f,
             .pole_pair = 1,
         },
-        .virtual_endstop = {
-            .current_limit = 0.3f,
-            .stuck_time = 0.5f,
-        },
         .mcu_temp_limit = 80.0f,  // limit MCU max temp to 80 degree
         .motor_temp_limit = 80.0f, 
         .current_kp = 1.0f, // if we dont use current loop, just pass Kp = 1
@@ -190,17 +184,20 @@ BDC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::BDC(T_DriverBase& _driver
         .aux_encoder_dir = FOC_DIR_POS,
         .startup_state = false,
         .break_mode = BREAK_MODE_ASC,
-        .startup_mode = MODE_INIT,
+        .startup_mode = MODE_TORQUE,
     };
     est_output = {
-        .Udc = 0.0f,
+        .Iqd_set = {0.0f, 0.0f},
+        .Iqd_fb = {0.0f, 0.0f},
+        .Uqd = {0.0f, 0.0f},
         .estimated_angle = 0.0f,
         .estimated_raw_angle = 0.0f,
         .set_speed = 0.0f,
         .estimated_speed = 0.0f,
     };
     est_input = {
-        .Idc = 0.0f,
+        .Iqd_target = {0.0f, 0.0f},
+        .Ialphabeta_fb = {0.0f, 0.0f},
         .target_speed = 0.0f,
         .target_pos = 0.0f,
         .target = EST_TARGET_NONE,

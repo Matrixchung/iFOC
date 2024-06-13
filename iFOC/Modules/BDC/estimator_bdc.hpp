@@ -2,14 +2,13 @@
 #define _FOC_ESTIMATOR_BDC_H
 
 #include "encoder_base.h"
-#include "bdc_type.h"
 #include "limiter_base.hpp"
 #include "trajectory_controller.hpp"
 
 class EstimatorBDC
 {
 public:
-    EstimatorBDC(bdc_state_input_t& _input, bdc_state_output_t& _output, foc_config_t& _config)
+    EstimatorBDC(foc_state_input_t& _input, foc_state_output_t& _output, foc_config_t& _config)
     : input(_input), output(_output), config(_config) {};
     bool Init();
     void AttachEncoder(EncoderBase *_encoder) { encoder = _encoder; };
@@ -26,8 +25,8 @@ private:
     EncoderBase *encoder = nullptr;
     EncoderBase *aux_encoder = nullptr;
     // LimiterBase *limiter = nullptr;
-    bdc_state_input_t& input;
-    bdc_state_output_t& output;
+    foc_state_input_t& input;
+    foc_state_output_t& output;
     foc_config_t& config;
     SlidingFilter Idc_sf = SlidingFilter(10);
     LowpassFilter Idc_lpf = LowpassFilter(0.001f);
@@ -74,7 +73,8 @@ bool EstimatorBDC::Init()
 
 void EstimatorBDC::Update(float Ts)
 {
-    input.Idc = Idc_lpf.GetOutput(input.Idc, Ts);
+    input.Ialphabeta_fb.alpha = Idc_lpf.GetOutput(input.Ialphabeta_fb.alpha, Ts);
+    output.Iqd_fb = {input.Ialphabeta_fb.alpha, 0.0f};
     encoder->Update(Ts);
     output.estimated_angle = encoder->single_round_angle;
     output.estimated_raw_angle = encoder->raw_angle;
@@ -106,7 +106,7 @@ void EstimatorBDC::UpdateMidInterval(float Ts)
                 output.set_speed = Position_PID.GetOutput(input.target_pos - output.estimated_raw_angle, Ts);
             }
             else output.set_speed = input.target_speed;
-            output.Udc = Speed_PID.GetOutput(output.set_speed - output.estimated_speed, Ts);
+            output.Uqd.q = Speed_PID.GetOutput(output.set_speed - output.estimated_speed, Ts);
         }
     }
     else
@@ -121,7 +121,7 @@ void EstimatorBDC::Reset()
     // input.target_speed = 0.0f;
     // input.set_abs_pos = 0.0f;
     // output.estimated_acceleration
-    output.Udc = 0.0f;
+    output.Uqd = {0.0f, 0.0f};
     Idc_PID.Reset();
     Speed_PID.Reset();
     Position_PID.Reset();
