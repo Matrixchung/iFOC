@@ -2,13 +2,15 @@
 float PID::GetOutput(float error, float Ts)
 {
     float integral = 0.0f;
+    float output = Kp * error;
     if(enable_integral)
     {
-        integral = _constrain(integral_prev + (Ki * Ts * 0.5f * (error + error_prev)), -limit, limit);
+        integral = _constrain(integral_prev + (Ki * Ts * 0.5f * (error + error_prev)), -limit - output, limit - output);
         integral_prev = integral;
     }
     else integral_prev = 0.0f;
-    float output = (Kp * error) + integral + (Kd * (error - error_prev) / Ts);
+    output += integral + (Kd * (error - error_prev) / Ts);
+    // float output = (Kp * error) + integral + (Kd * (error - error_prev) / Ts);
     output = _constrain(output, -limit, limit);
     if(ramp_limit > 0.0f)
     {
