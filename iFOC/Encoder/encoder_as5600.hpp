@@ -24,7 +24,7 @@ private:
     T& i2c;
     uint8_t device_addr = 0x36;
     uint8_t i2c_buffer[2] = {0};
-    uint16_t raw_11bit_angle = 0;
+    uint16_t raw_12bit_angle = 0;
     float single_round_angle_prev = -1.0f;
     SlidingFilter sliding_filter = SlidingFilter(10);
     LowpassFilter speed_filter = LowpassFilter(0.001f);
@@ -52,8 +52,8 @@ void EncoderAS5600<T>::UpdateMidInterval(float Ts)
     uint8_t temp = 0x0C;
     i2c.WriteBytes(device_addr, &temp, 1);
     i2c.ReadBytes(device_addr, i2c_buffer, 2);
-    raw_11bit_angle = ((uint16_t)i2c_buffer[0] << 8) | i2c_buffer[1];
-    single_round_angle = normalize_rad((float)raw_11bit_angle / 4096.0f * PI2);
+    raw_12bit_angle = ((uint16_t)i2c_buffer[0] << 8) | i2c_buffer[1];
+    single_round_angle = normalize_rad((float)raw_12bit_angle / 4095.0f * PI2);
     if(single_round_angle_prev >= 0.0f)
     {
         float delta = single_round_angle - single_round_angle_prev;
