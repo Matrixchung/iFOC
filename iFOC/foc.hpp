@@ -35,6 +35,7 @@ public:
     void AttachEstimator(EstimatorBase *_estimator) { estimator = _estimator; };
     void AttachMCUTempProbe(float *ptr) { mcu_temp = ptr; };
     void AttachMotorTempProbe(float *ptr) { motor_temp = ptr; };
+    void AttachFETTempProbe(float *ptr) { mosfet_temp = ptr; };
     void Update(float Ts);
     void UpdateMidInterval(float Ts);
     void UpdateIdleTask(float Ts);
@@ -56,11 +57,13 @@ private:
     svpwm_t svpwm;
     float overspeed_timer = 0.0f;
     uint16_t error_code = FOC_ERROR_NONE;
-    float *mcu_temp = nullptr;   // in degree
-    float *motor_temp = nullptr; // in degree
+    float *mcu_temp = nullptr;    // in degree
+    float *motor_temp = nullptr;  // in degree
+    float *mosfet_temp = nullptr; // in degree
     FOC_MODE mode = MODE_TORQUE;
     bool output_state = false;
-    uint8_t limiter_count = 0; // 0, 1 - one direction, 2 - bidirection virtual/hardware, 3 - bi-dir + mid
+    // uint8_t limiter_count = 0; // 0, 1 - one direction, 2 - bidirection virtual/hardware, 3 - bi-dir + mid
+    // will first try to meet limiter[0], 
     LimiterBase *limiters[3] = {nullptr};
 };
 
@@ -122,7 +125,7 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Update(float Ts)
         if(extra_module != nullptr) extra_module->Postprocess(est_input, est_output, Ts);
         else 
         {
-            // soundInjector.Postprocess(est_input, est_output, Ts);
+            soundInjector.Postprocess(est_input, est_output, Ts);
             if(config.apply_curr_feedforward)
             {
                 
@@ -149,6 +152,10 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateMidInterval(fl
     if(motor_temp != nullptr)
     {
         if(*motor_temp > config.motor_temp_limit) error_code |= FOC_ERROR_MOTOR_OVERTEMP;
+    }
+    if(mosfet_temp != nullptr)
+    {
+        if(*mosfet_temp > config.motor_temp_limit) error_code |= FOC_ERROR_MOTOR_OVERTEMP;
     }
     // Overspeed protection
     if(config.max_speed > 0.0f)
@@ -217,10 +224,6 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
             .gear_ratio = 1.0f,
             .max_mechanic_speed = 0.0f,
             .pole_pair = 1,
-        },
-        .virtual_endstop = {
-            .current_limit = 0.3f,
-            .stuck_time = 0.5f,
         },
         .mcu_temp_limit = 80.0f,  // limit MCU max temp to 80 degree
         .motor_temp_limit = 80.0f, 
