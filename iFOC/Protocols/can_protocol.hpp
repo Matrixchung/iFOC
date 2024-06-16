@@ -39,7 +39,18 @@ void CANProtocol<Intf, U>::Init(bool initHW)
 template<typename Intf, typename U>
 void CANProtocol<Intf, U>::Tick(float Ts)
 {
-
+    if(base.pos_target_sent && base.GetEndpointValue(TRAJ_POS_STATE))
+    {
+        base.pos_target_sent = false;
+        memset(tx_buffer, 0, 8);
+        uint16_t temp_u16 = 0;
+        temp_u16 = (uint16_t)base.GetEndpointValue(DRIVE_ERROR_CODE);
+        tx_buffer[0] = (uint8_t)temp_u16;
+        tx_buffer[1] = (uint8_t)(temp_u16 << 8);
+        tx_buffer[4] = (uint8_t)base.GetEndpointValue(OUTPUT_STATE);
+        tx_buffer[6] = (uint8_t)base.GetEndpointValue(TRAJ_POS_STATE);
+        interface.SendPayload(GetCANFrameID(base.node_id, HEARTBEAT), tx_buffer, 8);
+    }
 }
 
 template<typename Intf, typename U>
@@ -52,6 +63,25 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
     int32_t temp_i32 = 0;
     switch(opcode)
     {
+        case HEARTBEAT:
+            memset(tx_buffer, 0, 8);
+            temp_u16 = (uint16_t)base.GetEndpointValue(DRIVE_ERROR_CODE);
+            tx_buffer[0] = (uint8_t)temp_u16;
+            tx_buffer[1] = (uint8_t)(temp_u16 << 8);
+            tx_buffer[4] = (uint8_t)base.GetEndpointValue(OUTPUT_STATE);
+            tx_buffer[6] = (uint8_t)base.GetEndpointValue(TRAJ_POS_STATE);
+            interface.SendPayload(GetCANFrameID(base.node_id, HEARTBEAT), tx_buffer, 8);
+            break;
+        case ESTOP:
+            base.SetEndpointValue(OUTPUT_STATE, 0.0f);
+            break;
+        case GET_ERROR:
+            memset(tx_buffer, 0, 8);
+            temp_u16 = (uint16_t)base.GetEndpointValue(DRIVE_ERROR_CODE);
+            tx_buffer[0] = (uint8_t)temp_u16;
+            tx_buffer[1] = (uint8_t)(temp_u16 << 8);
+            interface.SendPayload(GetCANFrameID(base.node_id, GET_ERROR), tx_buffer, 8);
+            break;
         case SET_INPUT_POS:
             temp_i32 = (int32_t)(payload[0] | (payload[1] << 8) | (payload[2] << 16) | (payload[3] << 24));
             base.SetEndpointValue(POS_INC_DEG, (float)temp_i32);
@@ -99,6 +129,14 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
         case SET_STATE:
             if(payload[0] == 0) base.SetEndpointValue(OUTPUT_STATE, 0.0f);
             else base.SetEndpointValue(OUTPUT_STATE, 1.0f);
+            break;
+        case GET_ESTIMATES:
+            memset(tx_buffer, 0, 8);
+            temp1 = base.GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD);
+            memcpy(tx_buffer, &temp1, 4);
+            temp1 = base.GetEndpointValue(ESTIMATED_SPEED);
+            memcpy(tx_buffer + 4, &temp1, 4);
+            interface.SendPayload(GetCANFrameID(base.node_id, GET_ESTIMATES), tx_buffer, 8);
             break;
         case SET_LIMITS:
             break;

@@ -16,19 +16,20 @@ typedef struct motor_param_t
     float flux;
     float gear_ratio;
     float max_mechanic_speed; // design-limited max mechanic speed
+    float zero_elec_angle;    // zero electric angle(rad), could be more than one value
     uint8_t pole_pair;
 }motor_param_t;
 
-typedef struct virtual_endstop_t
-{
-    float current_limit;
-    float stuck_time;
-}virtual_endstop_t;
+// typedef struct virtual_endstop_t
+// {
+//     float current_limit;
+//     float stuck_time;
+// }virtual_endstop_t;
 
 typedef struct foc_config_t
 {
     motor_param_t motor;
-    virtual_endstop_t virtual_endstop;
+    // virtual_endstop_t virtual_endstop;
     float mcu_temp_limit;
     float motor_temp_limit;
     float align_current;

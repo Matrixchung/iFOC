@@ -26,8 +26,8 @@ private:
     uint8_t i2c_buffer[2] = {0};
     uint16_t raw_12bit_angle = 0;
     float single_round_angle_prev = -1.0f;
-    SlidingFilter sliding_filter = SlidingFilter(10);
-    LowpassFilter speed_filter = LowpassFilter(0.001f);
+    // SlidingFilter sliding_filter = SlidingFilter(10);
+    LowpassFilter speed_filter = LowpassFilter(0.0008f);
     float last_raw_angle = 0.0f;
     // uint8_t repeat_counter = 0; // runs at 2KHz
 };
@@ -62,9 +62,9 @@ void EncoderAS5600<T>::UpdateMidInterval(float Ts)
         raw_angle = full_rotations * PI2 + single_round_angle;
         float vel = (float)(raw_angle - last_raw_angle) / Ts;
         // vel = sliding_filter.GetOutput(vel);
-        vel = speed_filter.GetOutput(vel, Ts);
+        velocity = speed_filter.GetOutput(vel, Ts);
         last_raw_angle = raw_angle;
-        velocity = sliding_filter.GetOutput(vel);
+        // velocity = sliding_filter.GetOutput(vel);
     }
     single_round_angle_prev = single_round_angle;
     // repeat_counter = 0;

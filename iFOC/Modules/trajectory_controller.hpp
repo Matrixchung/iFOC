@@ -12,6 +12,7 @@ public:
                         float cruise_speed, float max_accel, float max_decel); // pos all absolute
     void Preprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts) final;
     void Reset();
+    float final_pos = 0.0f;
     inline float GetFinalPos() { return final_pos; };
     inline float GetPos() { return set_pos; };
     inline float GetSpeed() { return set_speed; };
@@ -27,7 +28,7 @@ private:
     float total_time = 0.0f;  // Taccel + Tcruise + Tdecel
     float init_pos = 0.0f;
     float init_speed = 0.0f;
-    float final_pos = 0.0f;
+    
     float start_cruise_pos = 0.0f;
 
     // The following X/dX/d(dX) (pos,speed,accel) are updated simultaneously, we can use any of them in different PID levels

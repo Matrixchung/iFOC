@@ -35,8 +35,13 @@ bool EstimatorSensor::Init(foc_state_input_t *_in, foc_state_output_t *_out, foc
     type = ESTIMATOR_SENSOR;
     if(encoder == nullptr) return false;
     EstimatorBase::_Init(_in, _out, _config);
-    Iqd_align.q = config->align_current;
-    Iqd_align.d = 0.0f;
+    Iqd_align.q = 0.0f;
+    Iqd_align.d = config->align_current;
+    if(config->motor.zero_elec_angle > 0.0f)
+    {
+        align_state = true;
+        zero_electric_angle = config->motor.zero_elec_angle;
+    }
     bool encoder1_init_state = encoder->Init(RPM_speed_to_rad(shaft_to_origin(config->motor.max_mechanic_speed, config->motor.gear_ratio), config->motor.pole_pair));
     if(aux_encoder == nullptr) return encoder1_init_state;
     return encoder1_init_state & aux_encoder->Init(RPM_speed_to_rad(shaft_to_origin(config->motor.max_mechanic_speed, config->motor.gear_ratio), config->motor.pole_pair));
@@ -94,7 +99,8 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             state_timer += Ts;
             if(state_timer < align_time)
             {
-                output->electric_angle = _3PI_2;
+                // output->electric_angle = _3PI_2;
+                output->electric_angle = 0.0f;
                 output->Iqd_set = Iqd_align;
             }
             else if(state_timer < align_time + steady_time)
@@ -110,7 +116,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             {
                 if(encoder->IsCalibrated())
                 {
-                    if(output->electric_angle != _3PI_2)
+                    if(output->electric_angle != 0.0f)
                     {
                         state_timer = 0.0f;
                     }
@@ -163,7 +169,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
     }
     else 
     {
-        align_state = false;
+        // align_state = false;
         state_timer = 0.0f;
         error_flag = 0;
         EstimatorBase::Reset();

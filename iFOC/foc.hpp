@@ -41,6 +41,7 @@ public:
     void UpdateIdleTask(float Ts);
     void SetOutputState(bool state);
     void EmergencyStop();
+    bool GetTrajPosState();
     foc_config_t config;
     SoundInjector soundInjector;
     TrajController trajController;
@@ -126,9 +127,11 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::Update(float Ts)
         else 
         {
             soundInjector.Postprocess(est_input, est_output, Ts);
-            if(config.apply_curr_feedforward)
+            if(config.apply_curr_feedforward) // apply current loop feedforward
             {
-                
+                float omega = RPM_speed_to_rad(est_output.estimated_speed, 1);
+                est_output.Uqd.q += omega * config.motor.Ld * est_output.Iqd_fb.d;
+                est_output.Uqd.d -= omega * config.motor.Ld * est_output.Iqd_fb.q;
             }
         }
         svpwm.Ualphabeta = FOC_Rev_Park(est_output.Uqd, est_output.electric_angle);
@@ -167,6 +170,12 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateMidInterval(fl
         }
         else overspeed_timer = 0.0f;
     }
+    // Sync target with current pos
+    if(!output_state)
+    {
+        est_input.target_pos = est_output.estimated_raw_angle;
+        trajController.final_pos = est_output.estimated_raw_angle;
+    }
 }
 
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
@@ -174,6 +183,26 @@ void FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::UpdateIdleTask(float
 {
     bus_sense.BusSenseUpdate();
     estimator->UpdateIdleTask(Ts);
+}
+
+template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
+bool FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::GetTrajPosState()
+{
+    if(output_state)
+    {
+        if(mode >= MODE_POSITION)
+        {
+            if(ABS(est_input.target_pos - est_output.estimated_raw_angle) <= DEG2RAD(1.0f) && ABS(est_output.estimated_speed) <= 1.0f)
+            {
+                if(mode == MODE_TRAJECTORY) 
+                {
+                    if(trajController.GetState()) return true;
+                }
+                else return true;
+            }
+        }
+    }
+    return false;
 }
 
 template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
@@ -223,6 +252,7 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
             .flux = 0.0f,
             .gear_ratio = 1.0f,
             .max_mechanic_speed = 0.0f,
+            .zero_elec_angle = 0.0f,
             .pole_pair = 1,
         },
         .mcu_temp_limit = 80.0f,  // limit MCU max temp to 80 degree

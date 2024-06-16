@@ -87,7 +87,7 @@ void EstimatorBase::_Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_
 
 void EstimatorBase::Reset()
 {
-    output->electric_angle = 0.0f;
+    // output->electric_angle = 0.0f;
     // output->estimated_speed = 0.0f;
     output->Iqd_set.q = 0.0f;
     output->Iqd_set.d = 0.0f;

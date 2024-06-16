@@ -63,15 +63,22 @@ typedef enum PROTOCOL_ENDPOINT
     GO_HOME,
     BREAK_MODE,
 
-    TRAJ_STATE,  // Readonly
+    TRAJ_POS_STATE,  // Readonly
     TRAJ_TARGET_RAD, // R/W, trigger traj
     TRAJ_TARGET_DEG,
+    TRAJ_TARGET_INC_RAD, // Writeonly
+    TRAJ_TARGET_INC_DEG,
     TRAJ_CRUISE_SPEED,
     TRAJ_MAX_ACCEL,
     TRAJ_MAX_DECEL,
     TRAJ_CURRENT_POS,
     TRAJ_CURRENT_SPEED,
     TRAJ_CURRENT_ACCEL,
+
+    MCU_TEMP,
+    MOTOR_TEMP,
+    MOSFET_TEMP,
+    
     LAST_EP_PLACEHOLDER // For auto-detect endpoints count
 }PROTOCOL_ENDPOINT;
 

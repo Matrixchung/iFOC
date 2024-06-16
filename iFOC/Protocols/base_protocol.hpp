@@ -24,6 +24,7 @@ public:
     uint8_t node_id = 0x3F;
     uint8_t sub_dev_index = 0; // used to mark the index among same physical device, for example motor1, motor2, ...
     uint64_t serial_number = 0;
+    bool pos_target_sent = false;
 };
 
 template<typename U>
@@ -133,8 +134,8 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
             return origin_to_shaft(instance.est_output.estimated_speed, instance.config.motor.gear_ratio);
         case BREAK_MODE:
             return instance.config.break_mode;
-        case TRAJ_STATE:
-            return instance.trajController.GetState();
+        case TRAJ_POS_STATE:
+            return instance.GetTrajPosState();
         case TRAJ_TARGET_RAD:
             return instance.trajController.GetFinalPos();
         case TRAJ_TARGET_DEG:
@@ -207,16 +208,16 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             break;
         case POS_ABS_SET_RAD:
             instance.est_input.target_pos = shaft_to_origin(set_value, instance.config.motor.gear_ratio);
+            pos_target_sent = true;
             break;
         case POS_INC_RAD:
             instance.est_input.target_pos += shaft_to_origin(set_value, instance.config.motor.gear_ratio);
+            pos_target_sent = true;
             break;
         case POS_ABS_SET_DEG:
-            instance.est_input.target_pos = DEG2RAD(shaft_to_origin(set_value, instance.config.motor.gear_ratio));
-            break;
+            return SetEndpointValue(POS_ABS_SET_RAD, DEG2RAD(set_value));
         case POS_INC_DEG:
-            instance.est_input.target_pos += DEG2RAD(shaft_to_origin(set_value, instance.config.motor.gear_ratio));
-            break;
+            return SetEndpointValue(POS_INC_RAD, DEG2RAD(set_value));
         case CURRENT_KP:
             instance.config.current_kp = set_value;
             instance.estimator->Iq_PID.Kp = set_value;
@@ -284,20 +285,32 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             instance.config.break_mode = (uint8_t)set_value;
             break;
         case TRAJ_TARGET_RAD:
-            if(!instance.trajController.GetState())
-            {
-                result = CMD_FORBIDDEN;
-                break;
-            }
+            // if(!instance.trajController.GetState())
+            // {
+            //     result = CMD_FORBIDDEN;
+            //     break;
+            // }
             instance.trajController.PlanTrajectory(shaft_to_origin(set_value, instance.config.motor.gear_ratio), 
                                                     instance.est_output.estimated_raw_angle, 
                                                     instance.est_output.estimated_speed, 
                                                     shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio),
                                                     instance.config.traj_max_accel,
                                                     instance.config.traj_max_decel);
+            pos_target_sent = true;
             break;
         case TRAJ_TARGET_DEG:
             return SetEndpointValue(TRAJ_TARGET_RAD, DEG2RAD(set_value));
+        case TRAJ_TARGET_INC_RAD:
+            instance.trajController.PlanTrajectory(instance.trajController.GetFinalPos() + shaft_to_origin(set_value, instance.config.motor.gear_ratio), 
+                                                    instance.est_output.estimated_raw_angle, 
+                                                    instance.est_output.estimated_speed, 
+                                                    shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio),
+                                                    instance.config.traj_max_accel,
+                                                    instance.config.traj_max_decel);
+            pos_target_sent = true;
+            break;
+        case TRAJ_TARGET_INC_DEG:
+            return SetEndpointValue(TRAJ_TARGET_INC_RAD, DEG2RAD(set_value));
         case TRAJ_CRUISE_SPEED:
             instance.config.traj_cruise_speed = set_value;
             break;

@@ -8,24 +8,22 @@
 class LimiterBase
 {
 public:
-    LimiterBase(uint8_t _active, int8_t _dir): active_state(_active), direction(_dir) {};
+    LimiterBase(int8_t _dir): direction(_dir) {};
     bool IsActivated() {return state;};
     bool HasActivated() {return latched_state;};
     bool Update();
     // virtual void PortActiveIRQ() = 0; // use IRQ
     virtual bool PortGetLimiterState() = 0; // use poll
-    uint8_t active_state = 0;
     int8_t direction = FOC_DIR_POS; // direction * home_speed = real_speed, it indicates which direction the motor should spin to meet the limit switch
 protected:
     bool state = false;
     bool latched_state = false;
-    
     uint16_t debounce_counter = 0;
 };
 
 bool LimiterBase::Update()
 {
-    if(PortGetLimiterState() == active_state)
+    if(PortGetLimiterState())
     {
         if(debounce_counter >= LIMITER_DEBOUNCE_COUNT)
         {
