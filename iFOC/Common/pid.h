@@ -24,13 +24,11 @@ public:
     };
     float GetOutput(float error, float Ts);
     void Reset();
-    void EnableIntegral();
-    void DisableIntegral();
+    bool enable_integral = true;
     float Kp = 0.0f, Ki = 0.0f, Kd = 0.0f;
     float limit = 0.0f;
     float ramp_limit = 0.0f; // positive value
 private:
-    bool enable_integral = true;
     float error_prev = 0.0f;
     float integral_prev = 0.0f;
     float output_prev = 0.0f;

@@ -28,13 +28,3 @@ void PID::Reset()
     error_prev = 0.0f;
     integral_prev = 0.0f;
 }
-
-void PID::EnableIntegral()
-{
-    enable_integral = true;
-}
-
-void PID::DisableIntegral()
-{
-    enable_integral = false;
-}
