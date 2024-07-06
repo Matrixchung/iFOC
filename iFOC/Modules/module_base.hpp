@@ -7,8 +7,8 @@
 class ModuleBase
 {
 public:
-    virtual void Preprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts)  {}; // will be called before estimator updates
-    virtual void Postprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts) {}; // will be called after estimator updated
+    virtual void Preprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts)  {}; // will be called before estimator updates
+    virtual void Postprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts) {}; // will be called after estimator updated
     virtual ~ModuleBase(){};
 };
 

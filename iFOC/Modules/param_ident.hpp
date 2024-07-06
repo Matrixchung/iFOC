@@ -10,7 +10,7 @@ public:
     {
         IDENTSTAGE_INIT,
         IDENTSTAGE_POLE_PAIR, // using TORQUE mode, and bypass estimator current loop
-        
+        IDENTSTAGE_INDUCTANCE, // A Robust DPCC for IPMSM Based on a Full Parameter Identification Method, IEEE TIE
     }IdentStage;
     IdentStage stage = IDENTSTAGE_INIT;
     motor_param_t ident_result =
@@ -24,8 +24,8 @@ public:
     };
     bool stage_complete = true;
     void BeginStage(IdentStage _stage);
-    void Preprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts) override;
-    void Postprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts) override;
+    void Preprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts) override;
+    void Postprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts) override;
     typedef void (*ParamIdentCallback) (ParamIdentModule* ptr);
     ParamIdentCallback callback = nullptr;
 private:
@@ -43,7 +43,7 @@ void ParamIdentModule::BeginStage(IdentStage _stage)
     stage_complete = false;
 }
 
-void ParamIdentModule::Preprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts)
+void ParamIdentModule::Preprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts)
 {
     switch(stage)
     {
@@ -51,21 +51,21 @@ void ParamIdentModule::Preprocess(foc_state_input_t &in, foc_state_output_t &out
     }
 }
 
-void ParamIdentModule::Postprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts)
+void ParamIdentModule::Postprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts)
 {
     switch(stage)
     {
         case IDENTSTAGE_POLE_PAIR:
             if(!stage_complete)
             {
-                out.Uqd = {3.0f, 0.0f};
+                out->Uqd = {3.0f, 0.0f};
                 state_timer += Ts;
                 if(init)
                 {
                     ident_result.pole_pair = 0;
-                    temp[0] = 6.0f*PI;
+                    temp[0] = 6.0f * PI;
                     temp[1] = 0.0f;
-                    temp[2] = out.estimated_raw_angle;
+                    temp[2] = out->estimated_raw_angle;
                     temp[3] = 0.0f;
                     if(state_timer >= 0.3f) // keep steady for 0.3s
                     {
@@ -77,14 +77,14 @@ void ParamIdentModule::Postprocess(foc_state_input_t &in, foc_state_output_t &ou
                 {
                     if(temp[1] >= temp[0])
                     {
-                        temp[3] = out.estimated_raw_angle;
+                        temp[3] = out->estimated_raw_angle;
                         if(state_timer >= 0.3f)
                         {
                             if(temp[2] == temp[3]) ident_result.pole_pair = 0;
                             else ident_result.pole_pair = (uint8_t)(roundf(temp[1] / (temp[3] - temp[2])));
                             stage_complete = true;
                             state_timer = 0.0f;
-                            out.electric_angle = 0.0f;
+                            out->electric_angle = 0.0f;
                             if(callback != nullptr) callback(this);
                         }
                     }
@@ -94,7 +94,7 @@ void ParamIdentModule::Postprocess(foc_state_input_t &in, foc_state_output_t &ou
                         state_timer = 0.0f;
                     }
                 }
-                out.electric_angle = temp[1];
+                out->electric_angle = temp[1];
             }
             break;
         default: break;

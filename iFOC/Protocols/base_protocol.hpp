@@ -59,13 +59,13 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
         case CURRENT_IBETA:
             return instance.est_input.Ialphabeta_fb.beta;
         case CURRENT_IQ:
-            return instance.est_output.Iqd_fb.q;
+            return instance.est_output->Iqd_fb.q;
         case CURRENT_ID:
-            return instance.est_output.Iqd_fb.d;
+            return instance.est_output->Iqd_fb.d;
         case VQ_OUT:
-            return instance.est_output.Uqd.q;
+            return instance.est_output->Uqd.q;
         case VD_OUT:
-            return instance.est_output.Uqd.d;
+            return instance.est_output->Uqd.d;
         case VALPHA_OUT:
             return instance.svpwm.Ualphabeta.alpha;
         case VBETA_OUT:
@@ -81,9 +81,9 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
         case ID_TARGET:
             return instance.est_input.Iqd_target.d;
         case IQ_SET:
-            return instance.est_output.Iqd_set.q;
+            return instance.est_output->Iqd_set.q;
         case ID_SET:
-            return instance.est_output.Iqd_set.d;
+            return instance.est_output->Iqd_set.d;
         case SPEED_TARGET:
             return origin_to_shaft(instance.est_input.target_speed, instance.config.motor.gear_ratio);
         case POS_ABS_SET_RAD:
@@ -91,47 +91,47 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
         case POS_ABS_SET_DEG:
             return RAD2DEG(GetEndpointValue(POS_ABS_SET_RAD));
         case CURRENT_KP:
-            return instance.estimator->Iq_PID.Kp;
+            return instance.config.current_pid.Kp;
         case CURRENT_KI:
-            return instance.estimator->Iq_PID.Ki;
+            return instance.config.current_pid.Ki;
         case VPHASE_LIMIT:
-            return instance.config.Vphase_limit;
+            return instance.config.current_pid.limit;
         case CURRENT_RAMP_LIMIT:
-            return instance.config.current_ramp_limit;
+            return instance.config.current_pid.ramp_limit;
         case SPEED_KP:
-            return instance.config.speed_kp;
+            return instance.config.speed_pid.Kp;
         case SPEED_KI:
-            return instance.config.speed_ki;
+            return instance.config.speed_pid.Ki;
         case SPEED_KD:
-            return instance.config.speed_kd;
+            return instance.config.speed_pid.Kd;
         case SPEED_CURRENT_LIMIT:
-            return instance.config.speed_current_limit;
+            return instance.config.speed_pid.limit;
         case SPEED_RAMP_LIMIT:
-            return instance.config.speed_ramp_limit;
+            return instance.config.speed_pid.ramp_limit;
         case POS_KP:
-            return instance.config.position_kp;
+            return instance.config.position_pid.Kp;
         case POS_KI:
-            return instance.config.position_ki;
+            return instance.config.position_pid.Ki;
         case POS_KD:
-            return instance.config.position_kd;
+            return instance.config.position_pid.Kd;
         case POS_SPEED_LIMIT:
-            return instance.config.position_speed_limit;
+            return instance.config.position_pid.limit;
         case POS_RAMP_LIMIT:
-            return instance.config.position_ramp_limit;
+            return instance.config.position_pid.ramp_limit;
         case ELECTRIC_ANGLE_RAD:
-            return instance.est_output.electric_angle;
+            return instance.est_output->electric_angle;
         case ELECTRIC_ANGLE_DEG:
-            return RAD2DEG(instance.est_output.electric_angle);
+            return RAD2DEG(instance.est_output->electric_angle);
         case ESTIMATED_ANGLE_RAD:
             return normalize_rad(GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD));
         case ESTIMATED_ANGLE_DEG:
             return RAD2DEG(GetEndpointValue(ESTIMATED_ANGLE_RAD));
         case ESTIMATED_RAW_ANGLE_RAD:
-            return origin_to_shaft(instance.est_output.estimated_raw_angle, instance.config.motor.gear_ratio);
+            return origin_to_shaft(instance.est_output->estimated_raw_angle, instance.config.motor.gear_ratio);
         case ESTIMATED_RAW_ANGLE_DEG:
             return RAD2DEG(GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD));
         case ESTIMATED_SPEED:
-            return origin_to_shaft(instance.est_output.estimated_speed, instance.config.motor.gear_ratio);
+            return origin_to_shaft(instance.est_output->estimated_speed, instance.config.motor.gear_ratio);
         case BREAK_MODE:
             return instance.config.break_mode;
         case TRAJ_POS_STATE:
@@ -219,64 +219,46 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
         case POS_INC_DEG:
             return SetEndpointValue(POS_INC_RAD, DEG2RAD(set_value));
         case CURRENT_KP:
-            instance.config.current_kp = set_value;
-            instance.estimator->Iq_PID.Kp = set_value;
-            instance.estimator->Id_PID.Kp = set_value;
+            instance.config.current_pid.Kp = set_value;
             break;
         case CURRENT_KI:
-            instance.config.current_ki = set_value;
-            instance.estimator->Iq_PID.Ki = set_value;
-            instance.estimator->Id_PID.Ki = set_value;
+            instance.config.current_pid.Ki = set_value;
             break;
         case VPHASE_LIMIT:
-            instance.config.Vphase_limit = set_value;
-            instance.estimator->Iq_PID.limit = set_value;
-            instance.estimator->Id_PID.limit = set_value;
+            instance.config.current_pid.limit = set_value;
             break;
         case CURRENT_RAMP_LIMIT:
-            instance.config.current_ramp_limit = set_value;
-            instance.estimator->Iq_PID.ramp_limit = set_value;
-            instance.estimator->Id_PID.ramp_limit = set_value;
+            instance.config.current_pid.ramp_limit = set_value;
             break;
         case SPEED_KP:
-            instance.config.speed_kp = set_value;
-            instance.estimator->Speed_PID.Kp = set_value;
+            instance.config.speed_pid.Kp = set_value;
             break;
         case SPEED_KI:
-            instance.config.speed_ki = set_value;
-            instance.estimator->Speed_PID.Ki = set_value;
+            instance.config.speed_pid.Ki = set_value;
             break;
         case SPEED_KD:
-            instance.config.speed_kd = set_value;
-            instance.estimator->Speed_PID.Kd = set_value;
+            instance.config.speed_pid.Kd = set_value;
             break;
         case SPEED_CURRENT_LIMIT:
-            instance.config.speed_current_limit = set_value;
-            instance.estimator->Speed_PID.limit = set_value;
+            instance.config.speed_pid.limit = set_value;
             break;
         case SPEED_RAMP_LIMIT:
-            instance.config.speed_ramp_limit = set_value;
-            instance.estimator->Speed_PID.ramp_limit = set_value;
+            instance.config.speed_pid.ramp_limit = set_value;
             break;
         case POS_KP:
-            instance.config.position_kp = set_value;
-            instance.estimator->Position_PID.Kp = set_value;
+            instance.config.position_pid.Kp = set_value;
             break;
         case POS_KI:
-            instance.config.position_ki = set_value;
-            instance.estimator->Position_PID.Ki = set_value;
+            instance.config.position_pid.Ki = set_value;
             break;
         case POS_KD:
-            instance.config.position_kd = set_value;
-            instance.estimator->Position_PID.Kd = set_value;
+            instance.config.position_pid.Kd = set_value;
             break;
         case POS_SPEED_LIMIT:
-            instance.config.position_speed_limit = set_value;
-            instance.estimator->Position_PID.limit = set_value;
+            instance.config.position_pid.limit = set_value;
             break;
         case POS_RAMP_LIMIT:
-            instance.config.position_ramp_limit = set_value;
-            instance.estimator->Position_PID.ramp_limit = set_value;
+            instance.config.position_pid.ramp_limit = set_value;
             break;
         case GO_HOME:
             // instance.estimator->SetSubMode(SUBMODE_HOME);
@@ -291,8 +273,8 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             //     break;
             // }
             instance.trajController.PlanTrajectory(shaft_to_origin(set_value, instance.config.motor.gear_ratio), 
-                                                    instance.est_output.estimated_raw_angle, 
-                                                    instance.est_output.estimated_speed, 
+                                                    instance.est_output->estimated_raw_angle, 
+                                                    instance.est_output->estimated_speed, 
                                                     shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio),
                                                     instance.config.traj_max_accel,
                                                     instance.config.traj_max_decel);
@@ -302,8 +284,8 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             return SetEndpointValue(TRAJ_TARGET_RAD, DEG2RAD(set_value));
         case TRAJ_TARGET_INC_RAD:
             instance.trajController.PlanTrajectory(instance.trajController.GetFinalPos() + shaft_to_origin(set_value, instance.config.motor.gear_ratio), 
-                                                    instance.est_output.estimated_raw_angle, 
-                                                    instance.est_output.estimated_speed, 
+                                                    instance.est_output->estimated_raw_angle, 
+                                                    instance.est_output->estimated_speed, 
                                                     shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio),
                                                     instance.config.traj_max_accel,
                                                     instance.config.traj_max_decel);

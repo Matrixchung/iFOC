@@ -1,8 +1,8 @@
 #ifndef _FOC_ENCODER_PWM_BASE_H
 #define _FOC_ENCODER_PWM_BASE_H
 
-#include "encoder_base.h"
-#include "speed_pll.h"
+#include "encoder_base.hpp"
+#include "speed_pll.hpp"
 #include "sliding_filter.h"
 #include "lowpass_filter.h"
 
@@ -22,7 +22,7 @@
 class EncoderPWMBase : public EncoderBase
 {
 public:
-    bool Init(float max_vel) override;
+    bool Init() override;
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;
     bool IsCalibrated() override;
@@ -48,10 +48,9 @@ protected:
     
 };
 
-bool EncoderPWMBase::Init(float max_vel)
+bool EncoderPWMBase::Init()
 {
     // use_speed_pll = true;
-    max_velocity = max_vel;
     // speed_pll = SpeedPLL(700.0f, 90000.0f, max_velocity);
     // direction = _dir;
     return PortTIMInit();

@@ -9,7 +9,7 @@
 class DP_PID
 {
 public:
-    DP_PID(pid_config_t config)
+    DP_PID(pid_config_t& config)
     : Kp(config.Kp), Ki(config.Ki), Kd(config.Kd), limit(config.limit), ramp_limit(config.ramp_limit) {};
     float GetOutput(float error, float Ts);
     void Reset()

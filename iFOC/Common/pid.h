@@ -4,11 +4,6 @@
 #include "foc_header.h"
 #include "foc_math.h"
 
-typedef struct pid_config_t
-{
-    float Kp, Ki, Kd, limit, ramp_limit;
-}pid_config_t;
-
 class PID
 {
 public:

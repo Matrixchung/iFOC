@@ -28,7 +28,7 @@ class SoundInjector : public ModuleBase
 public:
     template<std::size_t _Nm>
     bool PlaySound(const std::array<Note, _Nm> &array, uint16_t BPM);
-    void Postprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts) final;
+    void Postprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts) final;
     float inject_voltage = 0.0f;
 private:
     bool play_complete = true;
@@ -52,7 +52,7 @@ bool SoundInjector::PlaySound(const std::array<Note, _Nm> &array, uint16_t BPM)
     return true;
 }
 
-void SoundInjector::Postprocess(foc_state_input_t &in, foc_state_output_t &out, float Ts)
+void SoundInjector::Postprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts)
 {
     if(!play_complete && iter_begin != nullptr && iter_end != nullptr && iter_begin <= iter_end)
     {
@@ -65,10 +65,10 @@ void SoundInjector::Postprocess(foc_state_input_t &in, foc_state_output_t &out, 
         }
         state_timer += Ts;
         note_timer += Ts;
-        if(note_timer < flip_time) out.Uqd.d += inject_voltage;
+        if(note_timer < flip_time) out->Uqd.d += inject_voltage;
         else
         {
-            out.Uqd.d -= inject_voltage;
+            out->Uqd.d -= inject_voltage;
             if(note_timer >= _sound_Ts[*iter_begin]) note_timer = 0;
         }
         if(state_timer >= beat_time)

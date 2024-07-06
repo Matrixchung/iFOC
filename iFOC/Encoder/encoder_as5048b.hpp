@@ -1,7 +1,7 @@
 #ifndef _FOC_ENCODER_AS5048B_BASE_H
 #define _FOC_ENCODER_AS5048B_BASE_H
 
-#include "encoder_base.h"
+#include "encoder_base.hpp"
 #include "i2c_base.h"
 
 template <typename T = I2CBase>
@@ -12,7 +12,7 @@ public:
     {
         static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
     };
-    bool Init(float max_vel) override;
+    bool Init() override;
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;
     bool IsCalibrated() override;
@@ -29,9 +29,8 @@ private:
 };
 
 template <typename T>
-bool EncoderAS5048B<T>::Init(float max_vel)
+bool EncoderAS5048B<T>::Init()
 {
-    max_velocity = max_vel;
     i2c.Init();
     return true;
 }

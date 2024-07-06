@@ -2,7 +2,8 @@
 #define _FOC_ESTIMATOR_SENSOR_H
 
 #include "estimator_base.hpp"
-#include "encoder_base.h"
+#include "encoder_base.hpp"
+#include "speed_pll.hpp"
 #include "limiter_base.hpp"
 
 #define FOC_SENSOR_ALIGN_PERIOD 500
@@ -11,7 +12,8 @@
 class EstimatorSensor : public EstimatorBase
 {
 public:
-    bool Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_config_t *_config) override;
+    EstimatorSensor(foc_state_input_t& _in, foc_config_t& _config) : EstimatorBase(_in, _config), speed_pll(config.speed_pll_config){};
+    bool Init() override;
     void AttachEncoder(EncoderBase *_encoder);
     void AttachAuxEncoder(EncoderBase *_aux_encoder);
     // void AttachLimiter(LimiterBase *_limiter);
@@ -19,6 +21,7 @@ public:
     void UpdateMidInterval(float Ts) override;
     FOC_ERROR_FLAG GetErrorFlag() override;
 private:
+    SpeedPLL speed_pll;
     EncoderBase *encoder = nullptr;
     EncoderBase *aux_encoder = nullptr;
     qd_t Iqd_align = {.q = 0.0f, .d = 0.0f,};
@@ -30,78 +33,69 @@ private:
     bool align_state = false;
 };
 
-bool EstimatorSensor::Init(foc_state_input_t *_in, foc_state_output_t *_out, foc_config_t *_config)
+bool EstimatorSensor::Init()
 {
-    type = ESTIMATOR_SENSOR;
     if(encoder == nullptr) return false;
-    EstimatorBase::_Init(_in, _out, _config);
     Iqd_align.q = 0.0f;
-    Iqd_align.d = config->align_current;
-    if(config->motor.zero_elec_angle > 0.0f)
+    Iqd_align.d = config.align_current;
+    if(config.motor.zero_elec_angle > 0.0f)
     {
         align_state = true;
-        zero_electric_angle = config->motor.zero_elec_angle;
+        zero_electric_angle = config.motor.zero_elec_angle;
     }
-    bool encoder1_init_state = encoder->Init(RPM_speed_to_rad(shaft_to_origin(config->motor.max_mechanic_speed, config->motor.gear_ratio), config->motor.pole_pair));
+    bool encoder1_init_state = encoder->Init();
     if(aux_encoder == nullptr) return encoder1_init_state;
-    return encoder1_init_state & aux_encoder->Init(RPM_speed_to_rad(shaft_to_origin(config->motor.max_mechanic_speed, config->motor.gear_ratio), config->motor.pole_pair));
+    return encoder1_init_state & aux_encoder->Init();
 }
 
 void EstimatorSensor::Update(float Ts)
 {
     encoder->Update(Ts);
-    output->estimated_angle = encoder->single_round_angle;
-    output->estimated_raw_angle = encoder->raw_angle;
-    output->estimated_speed = rad_speed_to_RPM(encoder->velocity, 1);
-    if(align_state) output->electric_angle = normalize_rad(output->estimated_angle * config->motor.pole_pair - zero_electric_angle);
-    output->Iqd_fb = FOC_Park(input->Ialphabeta_fb, output->electric_angle);
-    if(input->target > EST_TARGET_NONE)
+    output.estimated_angle = encoder->single_round_angle;
+    output.estimated_raw_angle = encoder->raw_angle;
+    if(config.use_speed_pll) output.estimated_speed = rad_speed_to_RPM(speed_pll.Calculate(output.estimated_angle, Ts), 1);
+    if(align_state) output.electric_angle = normalize_rad(output.estimated_angle * config.motor.pole_pair - zero_electric_angle);
+    output.Iqd_fb = FOC_Park(input.Ialphabeta_fb, output.electric_angle);
+    if(input.target > EST_TARGET_NONE)
     {
         if(align_state)
         {
-            if(input->target >= EST_TARGET_SPEED)
+            if(input.target >= EST_TARGET_SPEED)
             {
-                if(input->target == EST_TARGET_POS) output->set_speed = Position_PID.GetOutput(input->target_pos - output->estimated_raw_angle, Ts);
-                else output->set_speed = input->target_speed;
-                output->Iqd_set.q = Speed_PID.GetOutput(output->set_speed - output->estimated_speed, Ts);
-                output->Iqd_set.d = 0.0f;
+                if(input.target == EST_TARGET_POS) output.set_speed = Position_PID.GetOutput(input.target_pos - output.estimated_raw_angle, Ts);
+                else output.set_speed = input.target_speed;
+                output.Iqd_set.q = Speed_PID.GetOutput(output.set_speed - output.estimated_speed, Ts);
+                output.Iqd_set.d = 0.0f;
             }
-            else output->Iqd_set = input->Iqd_target;
+            else output.Iqd_set = input.Iqd_target;
         }
-        output->Uqd.q = Iq_PID.GetOutput(output->Iqd_set.q - output->Iqd_fb.q, Ts);
-        output->Uqd.d = Id_PID.GetOutput(output->Iqd_set.d - output->Iqd_fb.d, Ts);
+        output.Uqd.q = Iq_PID.GetOutput(output.Iqd_set.q - output.Iqd_fb.q, Ts);
+        output.Uqd.d = Id_PID.GetOutput(output.Iqd_set.d - output.Iqd_fb.d, Ts);
     }
 }
 
 void EstimatorSensor::UpdateMidInterval(float Ts)
 {
-    encoder->UpdateMidInterval(Ts);
-    // if(!encoder->UseSpeedPLL())
-    // {
-    //     output->estimated_speed = rad_speed_to_RPM(encoder->UpdateVelocity(Ts), 1);
-    //     if(mode == MODE_SPEED || mode == MODE_POSITION)
-    //     {
-    //         if(mode == MODE_POSITION) output->out_speed = Position_PID.GetOutput(input->set_abs_pos - output->estimated_raw_angle, Ts);
-    //         else output->out_speed = input->set_speed;
-    //         output->Iqd_out.q = Speed_PID.GetOutput(output->out_speed - output->estimated_speed, Ts);
-    //         output->Iqd_out.d = 0.0f;
-    //     }
-    // }
+    if(!config.use_speed_pll)
+    {
+        encoder->UpdateMidInterval(Ts);
+        output.estimated_speed = rad_speed_to_RPM(encoder->velocity, 1);
+    }
     // if(limiter != nullptr)
     // {
     //     limiter->Update();
     // }
-    if(input->target > EST_TARGET_NONE)
+    if(input.target > EST_TARGET_NONE)
     {
         // Pre-alignment process
-        if(!align_state && config->motor.pole_pair > 0)
+        if(!align_state && config.motor.pole_pair > 0)
         {
             state_timer += Ts;
             if(state_timer < align_time)
             {
                 // output->electric_angle = _3PI_2;
-                output->electric_angle = 0.0f;
-                output->Iqd_set = Iqd_align;
+                output.electric_angle = 0.0f;
+                output.Iqd_set = Iqd_align;
             }
             else if(state_timer < align_time + steady_time)
             {
@@ -116,23 +110,23 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             {
                 if(encoder->IsCalibrated())
                 {
-                    if(output->electric_angle != 0.0f)
+                    if(output.electric_angle != 0.0f)
                     {
                         state_timer = 0.0f;
                     }
                     else
                     {
-                        input->target_pos = output->estimated_raw_angle;
-                        zero_electric_angle = normalize_rad(encoder->single_round_angle * config->motor.pole_pair);
+                        input.target_pos = output.estimated_raw_angle;
+                        zero_electric_angle = normalize_rad(encoder->single_round_angle * config.motor.pole_pair);
                         align_state = true;
-                        output->Iqd_set = {0.0f, 0.0f};
+                        output.Iqd_set = {0.0f, 0.0f};
                         state_timer = 0.0f;
                     }
                 }
                 else
                 {
-                    output->electric_angle += 0.001f;
-                    output->electric_angle = normalize_rad(output->electric_angle);
+                    output.electric_angle += 0.001f;
+                    output.electric_angle = normalize_rad(output.electric_angle);
                 }
             }
         }

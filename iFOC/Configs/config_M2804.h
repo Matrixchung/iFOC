@@ -20,20 +20,9 @@ static foc_config_t config_m2804 =
     .align_current = 0.3f,
     .current_bandwidth = 0.0f,
     .current_damping_coefficient = 0.0f,
-    .current_kp = 0.08f,
-    .current_ki = 1500.0f,
-    .Vphase_limit = 12.0f,
-    .current_ramp_limit = 0.0f,
-    .speed_kp = 0.01f,
-    .speed_ki = 0.35f,
-    .speed_kd = 0.0f,
-    .speed_current_limit = 1.8f,
-    .speed_ramp_limit = 0.0f,
-    .position_kp = 80.0f,
-    .position_ki = 0.0f,
-    .position_kd = 0.0f,
-    .position_speed_limit = 3000.0f,
-    .position_ramp_limit = 0.0f,
+    .current_pid = {0.08f, 1500.0f, 0.0f, 12.0f, 0.0f},
+    .speed_pid = {0.01f, 0.35f, 0.0f, 1.8f, 0.0f},
+    .position_pid = {80.0f, 0.0f, 0.0f, 3000.0f, 0.0f},
     .home_speed = 1000.0f,
     .max_speed = 1000.0f,
     .overspeed_detect_time = 0.001f,
@@ -46,6 +35,12 @@ static foc_config_t config_m2804 =
     .break_mode = BREAK_MODE_ASC,
     .startup_mode = MODE_TORQUE,
     .apply_curr_feedforward = false,
+    .use_speed_pll = false,
+    .speed_pll_config = 
+    {
+        .pid_config = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
+        .Tlp = 0.001f,
+    }
 };
 
 #endif

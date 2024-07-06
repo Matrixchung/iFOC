@@ -33,17 +33,6 @@ typedef enum FOC_ERROR_FLAG
     FOC_ERROR_MCU_OVERTEMP   = 0x01 << 9,
 }FOC_ERROR_FLAG;
 
-typedef enum FOC_ESTIMATOR
-{
-    ESTIMATOR_NONE,
-    ESTIMATOR_IF,
-    ESTIMATOR_SENSOR,
-    ESTIMATOR_HFI,
-    ESTIMATOR_FLUX,
-    ESTIMATOR_SMO,
-    ESTIMATOR_EKF,
-}FOC_ESTIMATOR;
-
 typedef enum FOC_MODE
 {
     // MODE_INIT = 0,
@@ -87,6 +76,11 @@ typedef struct alphabeta_t
     float alpha;
     float beta;
 }alphabeta_t;
+
+typedef struct pid_config_t
+{
+    float Kp, Ki, Kd, limit, ramp_limit;
+}pid_config_t;
 
 typedef struct svpwm_t
 {

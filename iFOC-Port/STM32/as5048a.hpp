@@ -12,11 +12,8 @@
 class EncoderAS5048A : public EncoderAS5048ABase
 {
 public:
-    EncoderAS5048A(SPI_HandleTypeDef *_hspi, GPIO_TypeDef *_cs_port, uint32_t _cs_pin, float _max_vel)
-    :hspi(_hspi), CS_Port(_cs_port), CS_Pin(_cs_pin)
-    {
-        max_velocity = _max_vel;
-    };
+    EncoderAS5048A(SPI_HandleTypeDef *_hspi, GPIO_TypeDef *_cs_port, uint32_t _cs_pin)
+    :hspi(_hspi), CS_Port(_cs_port), CS_Pin(_cs_pin) {};
     bool PortSPIInit() override;
     void PortSetCS(uint8_t state) override;
     uint16_t PortSPIRead16(uint16_t reg, uint16_t *ret) override;
@@ -43,7 +40,7 @@ uint16_t EncoderAS5048A::PortSPIRead16(uint16_t reg, uint16_t *ret)
 {
     // return SPI_ReadReg16(hspi, reg, ret);
     uint8_t data_u8[2] = {(uint8_t)(reg >> 8), (uint8_t)reg};
-    HAL_StatusTypeDef status = HAL_SPI_TransmitReceive(hspi, (const uint8_t*)data_u8, data_u8, 2, 0xFFF);
+    HAL_StatusTypeDef status = HAL_SPI_TransmitReceive(hspi, data_u8, data_u8, 2, 0xFFF);
     *ret = (uint16_t)data_u8[0] << 8 | (uint16_t)data_u8[1];
     return status == HAL_OK;
 }

@@ -20,20 +20,9 @@ static foc_config_t config_ecu16036h12 =
     .align_current = 0.6f,
     .current_bandwidth = 0.0f,
     .current_damping_coefficient = 0.0f,
-    .current_kp = 0.051f,
-    .current_ki = 825.0f,
-    .Vphase_limit = 12.0f,
-    .current_ramp_limit = 0.0f,
-    .speed_kp = 0.0002f,
-    .speed_ki = 0.025f,
-    .speed_kd = 0.0f,
-    .speed_current_limit = 1.0f,
-    .speed_ramp_limit = 0.0f,
-    .position_kp = 3000.0f,
-    .position_ki = 0.0f,
-    .position_kd = 0.0f,
-    .position_speed_limit = 2000.0f,
-    .position_ramp_limit = 20000.0f,
+    .current_pid = {0.051f, 825.0f, 0.0f, 12.0f, 0.0f},
+    .speed_pid = {0.0002f, 0.025f, 0.0f, 1.0f, 0.0f},
+    .position_pid = {3000.0f, 0.0f, 0.0f, 2000.0f, 20000.0f},
     .home_speed = 1000.0f,
     .max_speed = 15000.0f,
     .overspeed_detect_time = 0.001f,
@@ -46,6 +35,12 @@ static foc_config_t config_ecu16036h12 =
     .break_mode = BREAK_MODE_ASC,
     .startup_mode = MODE_POSITION,
     .apply_curr_feedforward = false,
+    .use_speed_pll = true,
+    .speed_pll_config = 
+    {
+        .pid_config = {350.0f, 90000.0f, 0.0f, 0.0f, 0.0f},
+        .Tlp = 0.001f,
+    },
 };
 
 #endif

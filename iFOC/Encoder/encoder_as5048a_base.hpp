@@ -1,12 +1,12 @@
 #ifndef _FOC_ENCODER_AS5048A_BASE_H
 #define _FOC_ENCODER_AS5048A_BASE_H
 
-#include "encoder_base.h"
+#include "encoder_base.hpp"
 
 class EncoderAS5048ABase : public EncoderBase
 {
 public:
-    bool Init(float max_vel) override;
+    bool Init() override;
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;
     bool IsCalibrated() override;
@@ -22,9 +22,8 @@ protected:
     virtual uint16_t PortSPIRead16(uint16_t reg, uint16_t *ret) = 0;
 };
 
-bool EncoderAS5048ABase::Init(float max_vel)
+bool EncoderAS5048ABase::Init()
 {
-    max_velocity = max_vel;
     // direction = _dir;
     PortSetCS(1);
     if(!PortSPIInit()) return false;

@@ -20,6 +20,12 @@ typedef struct motor_param_t
     uint8_t pole_pair;
 }motor_param_t;
 
+typedef struct speed_pll_t
+{
+    pid_config_t pid_config;
+    float Tlp;
+}speed_pll_t;
+
 // typedef struct virtual_endstop_t
 // {
 //     float current_limit;
@@ -35,20 +41,9 @@ typedef struct foc_config_t
     float align_current;
     float current_bandwidth;           // if current_kp and current_ki is not set,
     float current_damping_coefficient; // those will be used to calculate current loop Kp/Ki
-    float current_kp;
-    float current_ki;
-    float Vphase_limit;
-    float current_ramp_limit;
-    float speed_kp;
-    float speed_ki;
-    float speed_kd;
-    float speed_current_limit;
-    float speed_ramp_limit;
-    float position_kp;
-    float position_ki;
-    float position_kd;
-    float position_speed_limit;
-    float position_ramp_limit;
+    pid_config_t current_pid;
+    pid_config_t speed_pid;
+    pid_config_t position_pid;
     float home_speed;
     float max_speed;  // max allowed speed, overspeed for *overspeed_detection_ms* cause OVERSPEED error.
     float overspeed_detect_time; // if speed above limit exceed this duration(ms), we will throw error. 
@@ -61,6 +56,8 @@ typedef struct foc_config_t
     uint8_t break_mode;
     FOC_MODE startup_mode;
     bool apply_curr_feedforward; // requires accurate Ld measurement
+    bool use_speed_pll;
+    speed_pll_t speed_pll_config;
 }foc_config_t;
 
 #endif

@@ -55,3 +55,11 @@
 * Added eeprom_interface with CRC algorithm.
 * Fixed BDC part
 * Modified Speed PLL and Lowpass Filter classes, enabling modification of parameters
+
+## 2024-06-16 ~ 2024-06-25
+* See GitHub commits
+
+## 2024-06-26
+* (TODO) Sync two motor timers
+* (TODO) Finish restructure of multiple encoder framework
+* (TODO) Add Regenerative Brake. Ref: https://zhuanlan.zhihu.com/p/583411792
