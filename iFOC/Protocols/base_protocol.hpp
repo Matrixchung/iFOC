@@ -5,10 +5,20 @@
 #include "foc.hpp"
 #include "foc_header.h"
 #include "endpoints_enum.h"
+#include "eeprom_interface.hpp"
 
 // All protocols share same UID(aka node_id) externed from BaseProtocol, which fits the CANSimple Protocol ID
 // ID range: 0x00 - 0x3E (0x3F is the unaddressed ID, also global broadcast ID)
 // BaseProtocol only process "Endpoints"
+
+// For EEPROM:
+// At init, we will read all packet based on given sud_dev_index, and check crc.
+// If CRC correct, then we will apply those settings to FOC config struct.
+// If CRC WRONG, we will writeback all default settings to EEPROM here.
+
+// Physical Address: sub_dev_index + EEPROM_ADDR_OFFSET, each of this called a 'packet'
+// uint8_t dummy[CRC8_BIT]
+// offset = key_base + sizeof(key_variable_type)
 
 PROTOCOL_ENDPOINT GetEndpointFromIndex(int i) { return static_cast<PROTOCOL_ENDPOINT>(i); }
 
@@ -17,8 +27,11 @@ class BaseProtocol
 {
 private:
     T_FOC& instance;
+    
 public:
     BaseProtocol(T_FOC& _ref, uint8_t _idx): instance(_ref), sub_dev_index(_idx) {};
+    EEPROM<I2CBase> *pROM = nullptr;
+    template<class T> void AttachEEPROM(EEPROM<T> *ptr);
     float GetEndpointValue(PROTOCOL_ENDPOINT endpoint);
     FOC_CMD_RET SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float set_value);
     uint8_t node_id = 0x3F;
@@ -26,6 +39,13 @@ public:
     uint64_t serial_number = 0;
     bool pos_target_sent = false;
 };
+
+template<typename U>
+template<class T>
+void BaseProtocol<U>::AttachEEPROM(EEPROM<T> *ptr)
+{
+    pROM = reinterpret_cast<EEPROM<I2CBase>*>(ptr);
+}
 
 template<typename U>
 float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
@@ -301,6 +321,9 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             break;
         case TRAJ_MAX_DECEL:
             instance.config.traj_max_decel = set_value;
+            break;
+        case SET_HOME:
+            
             break;
         default: 
             result = CMD_FORBIDDEN; 

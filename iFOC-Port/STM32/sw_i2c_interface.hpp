@@ -16,10 +16,10 @@ public:
     SWI2C(GPIO_TypeDef *_scl_port, uint32_t _scl_pin, GPIO_TypeDef *_sda_port, uint32_t _sda_pin)
     : scl_port(_scl_port), scl_pin(_scl_pin), sda_port(_sda_port), sda_pin(_sda_pin) {};
     void Init() override;
-    uint8_t CheckDevice(uint8_t addr); // 1 if the specific address returns ACK, else 0
-    uint8_t WriteBytes(uint8_t addr, uint8_t *data, uint8_t len) override; // return 1 if success, else 0
-    uint8_t ReadBytes(uint8_t addr, uint8_t *data, uint8_t len) override;
+    uint8_t WriteBytes(uint8_t addr, uint8_t *data, uint16_t len) override; // return 1 if success, else 0
+    uint8_t ReadBytes(uint8_t addr, uint8_t *data, uint16_t len) override;
     void DelayMs(uint32_t ms) override { delay_ms(ms); };
+    uint8_t CheckDevice(uint8_t addr); // 1 if the specific address returns ACK, else 0
 private:
     inline void SDAInputMode();
     inline void SDAOutputMode();
@@ -59,7 +59,7 @@ uint8_t SWI2C::CheckDevice(uint8_t addr)
     return 1;
 }
 
-uint8_t SWI2C::WriteBytes(uint8_t addr, uint8_t *data, uint8_t len)
+uint8_t SWI2C::WriteBytes(uint8_t addr, uint8_t *data, uint16_t len)
 {
     addr <<= 1;
     addr &= ~0x01; // R/W bit
@@ -71,7 +71,7 @@ uint8_t SWI2C::WriteBytes(uint8_t addr, uint8_t *data, uint8_t len)
         __enable_irq();
         return 0;
     }
-    for(uint8_t i = 0; i < len; i++)
+    for(uint16_t i = 0; i < len; i++)
     {
         SendByte(*(data + i));
         if(!WaitAck())
@@ -85,7 +85,7 @@ uint8_t SWI2C::WriteBytes(uint8_t addr, uint8_t *data, uint8_t len)
     return 1;
 }
 
-uint8_t SWI2C::ReadBytes(uint8_t addr, uint8_t *data, uint8_t len)
+uint8_t SWI2C::ReadBytes(uint8_t addr, uint8_t *data, uint16_t len)
 {
     addr <<= 1;
     addr |= 0x01; // R/W bit
@@ -97,7 +97,7 @@ uint8_t SWI2C::ReadBytes(uint8_t addr, uint8_t *data, uint8_t len)
         __enable_irq();
         return 0;
     }
-    for(uint8_t i = 0; i < len - 1; i++)
+    for(uint16_t i = 0; i < len - 1; i++)
     {
         *(data + i) = ReceiveByte();
         SendAck();

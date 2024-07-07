@@ -4,14 +4,20 @@
 #include "foc_header.h"
 #include "foc_config_type.h"
 #include "i2c_base.h"
+#include "string.h"
 
-// Physical Address: sub_dev_index + EEPROM_ADDR_OFFSET
-typedef enum EEPROM_ADDR_OFFSET
+// AT24C256C: 262144bits = 32768Bytes = 8192floats
+
+// use union to extract/save multiple-byte variables
+
+typedef enum EEPROM_CONFIG_PACKET
 {
-    NODE_ID = 0,
+    EEPROM_NODE_ID = 0, // uint8_t node_id
+    
+    EEPROM_ZERO_ELEC_ANGLE = EEPROM_NODE_ID + sizeof(uint8_t), // float zero_elec_angle, 4bytes
 
-    CRC_BIT, // last, will save CRC8 calculated value from all above(except itself)
-}EEPROM_ADDR_OFFSET;
+    EEPROM_CRC8_BIT, // last, will save CRC8 calculated value from all above(except itself)
+}EEPROM_CONFIG_PACKET;
 
 template<typename T = I2CBase>
 class EEPROM
@@ -21,10 +27,66 @@ public:
     {
         static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
     };
-    T& i2c;
-    void Init();
+    EEPROM(T& _i2c) : i2c(_i2c)
+    {
+        static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
+    };
+    template<typename U>
+    U ReadVar(uint16_t addr);
+    template<typename U>
+    void WriteVar(uint16_t addr, U var);
 private:
-    uint8_t device_addr = 0x80; // AT24C256C: 0x80
+    T& i2c;
+    void PageWrite(uint16_t start_addr, uint8_t *src, uint16_t len);
+    void SequentialRead(uint16_t start_addr, uint8_t *dst, uint16_t len);
+    uint8_t device_addr = 0x50; // AT24C256C: 0x50
+    uint8_t buffer[32];
 };
+
+template<typename T>
+template<typename U>
+U EEPROM<T>::ReadVar(uint16_t addr)
+{
+    static_assert(sizeof(U) < 32, "Length of required data type exceeds limit");
+    union
+    {
+        uint8_t u8[sizeof(U)];
+        U dest;
+    };
+    SequentialRead(addr, u8, sizeof(U));
+    return dest;
+}
+
+template<typename T>
+template<typename U>
+void EEPROM<T>::WriteVar(uint16_t addr, U var)
+{
+    static_assert(sizeof(U) < 32, "Length of required data type exceeds limit");
+    union
+    {
+        uint8_t u8[sizeof(U)];
+        U dest;
+    };
+    dest = var;
+    PageWrite(addr, u8, sizeof(U));
+}
+
+template<typename T>
+void EEPROM<T>::PageWrite(uint16_t start_addr, uint8_t *src, uint16_t len)
+{
+    buffer[0] = (uint8_t)(start_addr >> 8);
+    buffer[1] = (uint8_t)start_addr;
+    memcpy(buffer + 2, src, len);
+    i2c.WriteBytes(device_addr, buffer, len + 2);
+}
+
+template<typename T>
+void EEPROM<T>::SequentialRead(uint16_t start_addr, uint8_t *src, uint16_t len)
+{
+    buffer[0] = (uint8_t)(start_addr >> 8);
+    buffer[1] = (uint8_t)start_addr;
+    i2c.WriteBytes(device_addr, buffer, 2);
+    i2c.ReadBytes(device_addr, src, len);
+}
 
 #endif
