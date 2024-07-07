@@ -63,3 +63,7 @@
 * (TODO) Sync two motor timers
 * (TODO) Finish restructure of multiple encoder framework
 * (TODO) Add Regenerative Brake. Ref: https://zhuanlan.zhihu.com/p/583411792
+
+## 2024-07-07
+* Implemented Synchronous Timer Initialize in STM32.
+* Various bug fixes.

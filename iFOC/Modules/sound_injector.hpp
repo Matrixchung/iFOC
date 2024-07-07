@@ -49,6 +49,7 @@ bool SoundInjector::PlaySound(const std::array<Note, _Nm> &array, uint16_t BPM)
     beat_time = 60.0f / (float)BPM;
     iter_begin = array.begin();
     iter_end = array.end();
+    flip_time = _sound_Ts[*iter_begin] * 0.5f;
     return true;
 }
 
@@ -66,9 +67,11 @@ void SoundInjector::Postprocess(foc_state_input_t* in, foc_state_output_t* out, 
         state_timer += Ts;
         note_timer += Ts;
         if(note_timer < flip_time) out->Uqd.d += inject_voltage;
+        // if(note_timer < flip_time) in->Iqd_target.d += inject_current;
         else
         {
             out->Uqd.d -= inject_voltage;
+            // in->Iqd_target.d -= inject_current;
             if(note_timer >= _sound_Ts[*iter_begin]) note_timer = 0;
         }
         if(state_timer >= beat_time)

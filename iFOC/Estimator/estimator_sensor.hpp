@@ -60,14 +60,14 @@ void EstimatorSensor::Update(float Ts)
     {
         if(align_state)
         {
+            output.Iqd_set = input.Iqd_target; // Iqd_target acts as current bias
             if(input.target >= EST_TARGET_SPEED)
             {
                 if(input.target == EST_TARGET_POS) output.set_speed = Position_PID.GetOutput(input.target_pos - output.estimated_raw_angle, Ts);
                 else output.set_speed = input.target_speed;
-                output.Iqd_set.q = Speed_PID.GetOutput(output.set_speed - output.estimated_speed, Ts);
-                output.Iqd_set.d = 0.0f;
+                output.Iqd_set.q += Speed_PID.GetOutput(output.set_speed - output.estimated_speed, Ts);
+                // output.Iqd_set.d += 0.0f;
             }
-            else output.Iqd_set = input.Iqd_target;
         }
         output.Uqd.q = Iq_PID.GetOutput(output.Iqd_set.q - output.Iqd_fb.q, Ts);
         output.Uqd.d = Id_PID.GetOutput(output.Iqd_set.d - output.Iqd_fb.d, Ts);

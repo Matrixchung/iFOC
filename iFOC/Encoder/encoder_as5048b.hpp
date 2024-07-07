@@ -47,8 +47,9 @@ void EncoderAS5048B<T>::UpdateMidInterval(float Ts)
     uint8_t temp = 0xFE;
     i2c.WriteBytes(device_addr, &temp, 1);
     i2c.ReadBytes(device_addr, i2c_buffer, 2);
-    raw_14bit_angle = ((uint16_t)i2c_buffer[0] << 6) | (i2c_buffer[1] & 0x1F);
-    single_round_angle = normalize_rad((float)raw_14bit_angle / 16383.0f * PI2);
+    raw_14bit_angle = ((uint16_t)(i2c_buffer[1]) << 6); // the two bytes are f**king reversed
+    raw_14bit_angle += i2c_buffer[0] & 0x3F;
+    single_round_angle = normalize_rad((float)raw_14bit_angle / 16384.0f * PI2);
     if(single_round_angle_prev >= 0.0f)
     {
         float delta = single_round_angle - single_round_angle_prev;
@@ -62,7 +63,6 @@ void EncoderAS5048B<T>::UpdateMidInterval(float Ts)
         velocity = sliding_filter.GetOutput(vel);
     }
     single_round_angle_prev = single_round_angle;
-    // repeat_counter = 0;
 }
 
 template <typename T>
