@@ -12,7 +12,7 @@ public:
 //        max_compare = (uint16_t)(((uint32_t)tim_clk_mhz * (uint32_t)1000000u / ((uint32_t)(pwm_freq_hz))) & (uint16_t)0xFFFE);
 //        half_compare = max_compare / 2u;
 //    };
-    inline bool DriverInit() { return static_cast<T*>(this)->Init(); };
+    inline bool DriverInit(bool initCNT) { return static_cast<T*>(this)->Init(initCNT); };
     // bool DriverIsEnabled() { return static_cast<T*>(this)->IsEnabledOutput(); };
     inline void DriverEnableOutput() { static_cast<T*>(this)->EnableOutput(); };
     inline void DriverDisableOutput() { static_cast<T*>(this)->DisableOutput(); };

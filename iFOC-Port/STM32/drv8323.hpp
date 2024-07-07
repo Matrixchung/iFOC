@@ -32,15 +32,15 @@ public:
     void DisableOutput();
     void SetLSIdleState(uint8_t state);
     bool PortSPIInit();
-    bool PortTIMInit();
+    bool PortTIMInit(bool initCNT);
     uint16_t PortSPIRead16(uint16_t reg, uint16_t *data);
     void PortSetEN(uint8_t state);
     void PortSetCS(uint8_t state);
     bool PortReadFAULT();
     void PortDelayUs(uint32_t us);
     void PortSetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3);
-private:
     TIM_TypeDef *htim = nullptr;
+private:
     SPI_TypeDef *hspi = nullptr;
     GPIO_TypeDef *CS_Port = nullptr;
     uint32_t CS_Pin;
@@ -80,7 +80,7 @@ bool STM32_DRV8323::PortSPIInit()
     return true;
 }
 
-bool STM32_DRV8323::PortTIMInit()
+bool STM32_DRV8323::PortTIMInit(bool initCNT)
 {
     if(htim == nullptr || CS_Port == nullptr || EN_Port == nullptr || nFAULT_Port == nullptr) return false;
     max_compare = LL_TIM_GetAutoReload(htim);
@@ -99,8 +99,11 @@ bool STM32_DRV8323::PortTIMInit()
     LL_TIM_OC_SetIdleState(htim, LL_TIM_CHANNEL_CH1N, LL_TIM_OCIDLESTATE_HIGH);
     LL_TIM_OC_SetIdleState(htim, LL_TIM_CHANNEL_CH2N, LL_TIM_OCIDLESTATE_HIGH);
     LL_TIM_OC_SetIdleState(htim, LL_TIM_CHANNEL_CH3N, LL_TIM_OCIDLESTATE_HIGH);
-    LL_TIM_EnableAllOutputs(htim);
-    LL_TIM_EnableCounter(htim);
+    if(initCNT)
+    {
+        LL_TIM_EnableAllOutputs(htim);
+        LL_TIM_EnableCounter(htim);
+    }
     return true;
 }
 

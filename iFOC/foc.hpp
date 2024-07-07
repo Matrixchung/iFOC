@@ -1,6 +1,9 @@
 #ifndef _FOC_H
 #define _FOC_H
 
+#pragma GCC push_options
+#pragma GCC optimize (3)
+
 // Brushless DC Motor(BLDC)
 #include "foc_header.h"
 #include "driver_base.hpp"
@@ -31,7 +34,7 @@ class FOC
 {
 public:
     FOC(T_DriverBase& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus);
-    bool Init();
+    bool Init(bool initTIM = true);
     void AttachMCUTempProbe(float *ptr) { mcu_temp = ptr; };
     void AttachMotorTempProbe(float *ptr) { motor_temp = ptr; };
     void AttachFETTempProbe(float *ptr) { mosfet_temp = ptr; };
@@ -51,10 +54,11 @@ public:
     void EmergencyStop();
     bool GetTrajPosState();
     foc_config_t config;
-    SoundInjector soundInjector;
+    // SoundInjector soundInjector;
     TrajController trajController;
 private:
     template<typename U> friend class BaseProtocol;
+    template<typename ... T> friend void SyncStartTimer(T&... inst);
     T_DriverBase& driver;
     T_CurrentSenseBase& current_sense;
     T_BusSenseBase& bus_sense;
@@ -74,7 +78,7 @@ private:
     bool output_state = false;
     // uint8_t limiter_count = 0; // 0, 1 - one direction, 2 - bidirection virtual/hardware, 3 - bi-dir + mid
     // will first try to meet limiter[0], 
-    LimiterBase *limiters[3] = {nullptr};
+    // LimiterBase *limiters[3] = {nullptr};
 };
 
 template<typename A, typename B, typename C>
@@ -93,7 +97,7 @@ void FOC<A, B, C>::SwitchEstimator(uint8_t index)
 }
 
 template<typename A, typename B, typename C>
-bool FOC<A, B, C>::Init()
+bool FOC<A, B, C>::Init(bool initTIM) // if initTIM set to false, then we will synchronously start all timers later.
 {
     if(config.motor.gear_ratio <= 0.0f) config.motor.gear_ratio = 1.0f; // fix gear ratio
     if((config.current_pid.Kp == 0.0f && config.current_pid.Ki == 0.0f) && 
@@ -107,7 +111,7 @@ bool FOC<A, B, C>::Init()
     }
     config.current_pid.Kd = 0.0f;
     config.speed_pll_config.pid_config.limit = RPM_speed_to_rad(shaft_to_origin(config.motor.max_mechanic_speed, config.motor.gear_ratio), config.motor.pole_pair);
-    if( driver.DriverInit() == false ||
+    if(driver.DriverInit(initTIM) == false ||
        (main_estimator == nullptr || !main_estimator->Init()) ||
        (aux_estimator != nullptr && !aux_estimator->Init()))
     {
@@ -121,7 +125,7 @@ bool FOC<A, B, C>::Init()
     output_state = config.startup_state;
     mode = config.startup_mode;
     error_code = FOC_ERROR_NONE;
-    soundInjector.inject_voltage = config.current_pid.limit / 2.0f;
+    // soundInjector.inject_voltage = config.current_pid.limit / 3.0f;
     return true;
 }
 
@@ -164,7 +168,7 @@ void FOC<A, B, C>::Update(float Ts)
         if(extra_module != nullptr) extra_module->Postprocess(&est_input, est_output, Ts);
         else 
         {
-            soundInjector.Postprocess(&est_input, est_output, Ts);
+            // soundInjector.Postprocess(&est_input, est_output, Ts);
             if(config.apply_curr_feedforward) // apply current loop feedforward
             {
                 float omega = RPM_speed_to_rad(est_output->estimated_speed, 1);
@@ -368,18 +372,6 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
             .Tlp = 0.001f,
         },
     };
-
-    // est_output = {
-    //     .Iqd_set = {.q = 0.0f, .d = 0.0f},
-    //     .Iqd_fb = {.q = 0.0f, .d = 0.0f,},
-    //     .Uqd = {.q = 0.0f, .d = 0.0f,},
-    //     .electric_angle = 0.0f,
-    //     .estimated_angle = 0.0f,
-    //     .estimated_raw_angle = 0.0f,
-    //     .set_speed = 0.0f,
-    //     .estimated_speed = 0.0f,
-    // };
-
     est_input = {
         .Iqd_target = {.q = 0.0f, .d = 0.0f},
         .Ialphabeta_fb = {.alpha = 0.0f, .beta = 0.0f},
@@ -398,5 +390,7 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
 }
 
 #include "base_protocol.hpp"
+
+#pragma GCC pop_options
 
 #endif

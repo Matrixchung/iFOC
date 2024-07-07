@@ -8,17 +8,18 @@ class Driver3PWM : public DriverPWMBase<Driver3PWM>
 {
 public:
     explicit Driver3PWM(TIM_TypeDef *_htim) : htim(_htim) {};
-    bool PortTIMInit();
+    bool PortTIMInit(bool initCNT);
     void PortSetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3);
     void EnableOutput() {LL_TIM_EnableAllOutputs(htim);};
     void DisableOutput() {LL_TIM_DisableAllOutputs(htim);}; // route noises cause motor unexpectedly spin
     // void DisableOutput() {};
     void SetLSIdleState(uint8_t state) {};
-private:
     TIM_TypeDef *htim;
+// private:
+//     TIM_TypeDef *htim;
 };
 
-bool Driver3PWM::PortTIMInit()
+bool Driver3PWM::PortTIMInit(bool initCNT)
 {
     max_compare = LL_TIM_GetAutoReload(htim);
     half_compare = max_compare / 2u;
@@ -27,8 +28,11 @@ bool Driver3PWM::PortTIMInit()
     LL_TIM_CC_EnableChannel(htim, LL_TIM_CHANNEL_CH3);
     LL_TIM_CC_EnableChannel(htim, LL_TIM_CHANNEL_CH4);
     __attribute__((unused)) uint32_t tmpsmcr = htim->SMCR & TIM_SMCR_SMS;
-    EnableOutput();
-    LL_TIM_EnableCounter(htim);
+    if(initCNT)
+    {
+        EnableOutput();
+        LL_TIM_EnableCounter(htim);
+    }
     return true;
 }
 

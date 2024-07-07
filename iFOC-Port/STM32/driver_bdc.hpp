@@ -9,20 +9,20 @@ class DriverBDC : public DriverBDCBase<DriverBDC>
 public:
     DriverBDC(TIM_TypeDef *_htim, uint32_t channel, GPIO_TypeDef *_ph_port, uint32_t _ph_pin):
     DriverBDCBase(LL_TIM_GetAutoReload(_htim)), htim(_htim), tim_channel(channel), ph_port(_ph_port), ph_pin(_ph_pin) {};
-    bool Init();
+    bool Init(bool initCNT);
     void SetOutputRaw(uint16_t ch_1, uint8_t dir);
     void EnableOutput() {LL_TIM_EnableAllOutputs(htim);};
     void DisableOutput() {LL_TIM_DisableAllOutputs(htim);};
+    TIM_TypeDef *htim;
 private:
     typedef void (*_set_compare)(TIM_TypeDef *TIMx, uint32_t compare);
     _set_compare set_cmp;
-    TIM_TypeDef *htim;
     uint32_t tim_channel = LL_TIM_CHANNEL_CH1;
     GPIO_TypeDef *ph_port;
     uint32_t ph_pin;
 };
 
-bool DriverBDC::Init()
+bool DriverBDC::Init(bool initCNT)
 {
     LL_GPIO_ResetOutputPin(ph_port, ph_pin);
     switch(tim_channel)
@@ -39,9 +39,12 @@ bool DriverBDC::Init()
     }   
     LL_TIM_CC_EnableChannel(htim, tim_channel);
     __attribute__((unused)) uint32_t tmpsmcr = htim->SMCR & TIM_SMCR_SMS;
-    EnableOutput();
-    LL_TIM_EnableCounter(htim);
     max_compare = LL_TIM_GetAutoReload(htim);
+    if(initCNT)
+    {
+        EnableOutput();
+        LL_TIM_EnableCounter(htim);
+    }
     return true;
 }
 

@@ -15,7 +15,7 @@ class DriverDRV8323Base : public DriverBase<DriverDRV8323Base<T>>
 public:
     DriverDRV8323Base(const uint16_t _reg_hs, const uint16_t _reg_ls)
     : reg_hs_value(_reg_hs), reg_ls_value(_reg_ls) {};
-    bool Init();
+    bool Init(bool initCNT);
     inline void SetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3) { static_cast<T*>(this)->PortSetOutputRaw(ch_1, ch_2, ch_3); };
     inline void DriverSetLSIdleState(uint8_t state) { static_cast<T*>(this)->SetLSIdleState(state); };
     void nFAULT_IRQHandler();
@@ -31,7 +31,7 @@ private:
         while(ms--)DelayUs(1000);
     };
     inline bool SPIInit() { return static_cast<T*>(this)->PortSPIInit(); };
-    inline bool TIMInit() { return static_cast<T*>(this)->PortTIMInit(); };
+    inline bool TIMInit(bool initCNT) { return static_cast<T*>(this)->PortTIMInit(initCNT); };
     inline uint16_t SPIRead16(uint16_t reg, uint16_t *data) { return static_cast<T*>(this)->PortSPIRead16(reg, data); };
     inline void SetEN(uint8_t state) { return static_cast<T*>(this)->PortSetEN(state); };
     inline void SetCS(uint8_t state) { return static_cast<T*>(this)->PortSetCS(state); }; // CS is low valid
@@ -40,7 +40,7 @@ private:
 };
 
 template <typename T>
-bool DriverDRV8323Base<T>::Init()
+bool DriverDRV8323Base<T>::Init(bool initCNT)
 {
     SetCS(1);
     DelayMs(50);
@@ -72,7 +72,7 @@ bool DriverDRV8323Base<T>::Init()
     DelayMs(20);
     WriteReg16(0x06, DRV8323_REG_DEFAULT_0x06);
     // Init PWM
-    return TIMInit();
+    return TIMInit(initCNT);
 }
 
 template <typename T>
