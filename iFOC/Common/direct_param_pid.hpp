@@ -33,7 +33,8 @@ float DP_PID::GetOutput(float error, float Ts)
 {
     float integral = 0.0f;
     float output = Kp * error;
-    if(enable_integral)
+    output = _constrain(output, -limit, limit);
+    if(Ki != 0.0f && enable_integral)
     {
         integral = _constrain(integral_prev + (Ki * Ts * 0.5f * (error + error_prev)), -limit - output, limit - output);
         integral_prev = integral;
