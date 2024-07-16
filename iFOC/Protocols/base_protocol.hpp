@@ -292,9 +292,9 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             //     break;
             // }
             instance.trajController.PlanTrajectory(shaft_to_origin(set_value, instance.config.motor.gear_ratio), // rad 
-                                                    instance.est_output->estimated_raw_angle,                    // rad
-                                                    RPM_speed_to_rad(instance.est_output->estimated_speed, 1),                        // rpm -> rad/s
-                                                    shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio),
+                                                    instance.est_input.target_pos,                            // rad, use target
+                                                    RPM_speed_to_rad(instance.est_output->estimated_speed, 1),   // rpm -> rad/s
+                                                    RPM_speed_to_rad(shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio), 1), // rpm -> rad/s
                                                     instance.config.traj_max_accel,
                                                     instance.config.traj_max_decel);
             pos_target_sent = true;

@@ -46,8 +46,8 @@ void TrajController::PlanTrajectory(float target_pos, float current_pos, float c
     if(max_accel < 0.0f) max_accel = -max_accel;
     if(max_decel < 0.0f) max_decel = -max_decel; // make sure positive acc limits
     if(max_accel == 0.0f || max_decel == 0.0f) return;
-    Reset();
     task_done = false;
+    state_timer = 0.0f;
     float dX = target_pos - current_pos; // distance to travel
     float min_stop_dist = (current_speed * current_speed) / (2.0f * max_decel); // minimum stopping distance from current_speed to 0
     float dX_stop = current_speed >= 0 ? min_stop_dist : -min_stop_dist; // if current_speed >= 0, then we need to move forward and decel, vise versa
