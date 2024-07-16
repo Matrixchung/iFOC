@@ -10,13 +10,10 @@ public:
     explicit Driver3PWM(TIM_TypeDef *_htim) : htim(_htim) {};
     bool PortTIMInit(bool initCNT);
     void PortSetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3);
-    void EnableOutput() {LL_TIM_EnableAllOutputs(htim);};
-    void DisableOutput() {LL_TIM_DisableAllOutputs(htim);}; // route noises cause motor unexpectedly spin
-    // void DisableOutput() {};
+    void EnableOutput() { LL_TIM_EnableAllOutputs(htim); };
+    void DisableOutput() { LL_TIM_DisableAllOutputs(htim); }; // route noises cause motor unexpectedly spin
     void SetLSIdleState(uint8_t state) {};
     TIM_TypeDef *htim;
-// private:
-//     TIM_TypeDef *htim;
 };
 
 bool Driver3PWM::PortTIMInit(bool initCNT)
@@ -27,6 +24,9 @@ bool Driver3PWM::PortTIMInit(bool initCNT)
     LL_TIM_CC_EnableChannel(htim, LL_TIM_CHANNEL_CH2);
     LL_TIM_CC_EnableChannel(htim, LL_TIM_CHANNEL_CH3);
     LL_TIM_CC_EnableChannel(htim, LL_TIM_CHANNEL_CH4);
+    LL_TIM_OC_SetIdleState(htim, LL_TIM_CHANNEL_CH1, LL_TIM_OCIDLESTATE_LOW);
+    LL_TIM_OC_SetIdleState(htim, LL_TIM_CHANNEL_CH2, LL_TIM_OCIDLESTATE_LOW);
+    LL_TIM_OC_SetIdleState(htim, LL_TIM_CHANNEL_CH3, LL_TIM_OCIDLESTATE_LOW);
     __attribute__((unused)) uint32_t tmpsmcr = htim->SMCR & TIM_SMCR_SMS;
     if(initCNT)
     {

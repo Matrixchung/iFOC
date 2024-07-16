@@ -14,7 +14,16 @@ class EstimatorBase
 {
 public:
     EstimatorBase(foc_state_input_t& _in, foc_config_t& _config)
-    : input(_in), config(_config), Iq_PID(_config.current_pid), Id_PID(_config.current_pid), Speed_PID(_config.speed_pid), Position_PID(_config.position_pid) {};
+    : input(_in), config(_config), Iq_PID(_config.current_pid), Id_PID(_config.current_pid), Speed_PID(_config.speed_pid), Position_PID(_config.position_pid) 
+    {
+        output.Uqd = {.q = 0.0f, .d = 0.0f};
+        output.Iqd_set = {.q = 0.0f, .d = 0.0f};
+        output.set_speed = 0.0f;
+        output.electric_angle = 0.0f;
+        output.estimated_angle = 0.0f;
+        output.estimated_raw_angle = 0.0f;
+        output.estimated_speed = 0.0f;
+    };
     virtual bool Init() = 0;
     virtual void Update(float Ts) = 0;
     virtual void UpdateMidInterval(float Ts) {};
