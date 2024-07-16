@@ -22,12 +22,11 @@
 
 PROTOCOL_ENDPOINT GetEndpointFromIndex(int i) { return static_cast<PROTOCOL_ENDPOINT>(i); }
 
-template<typename T_FOC>
+template<class T_FOC>
 class BaseProtocol
 {
 private:
     T_FOC& instance;
-    
 public:
     BaseProtocol(T_FOC& _ref, uint8_t _idx): instance(_ref), sub_dev_index(_idx) {};
     EEPROM<I2CBase> *pROM = nullptr;
@@ -40,14 +39,14 @@ public:
     bool pos_target_sent = false;
 };
 
-template<typename U>
+template<class U>
 template<class T>
 void BaseProtocol<U>::AttachEEPROM(EEPROM<T> *ptr)
 {
     pROM = reinterpret_cast<EEPROM<I2CBase>*>(ptr);
 }
 
-template<typename U>
+template<class U>
 float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
 {
     switch(endpoint)
@@ -176,7 +175,7 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
     }
     return 0.0f;
 }
-template<typename U>
+template<class U>
 FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float set_value)
 {
     FOC_CMD_RET result = CMD_SUCCESS;
@@ -292,9 +291,9 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             //     result = CMD_FORBIDDEN;
             //     break;
             // }
-            instance.trajController.PlanTrajectory(shaft_to_origin(set_value, instance.config.motor.gear_ratio), 
-                                                    instance.est_output->estimated_raw_angle, 
-                                                    instance.est_output->estimated_speed, 
+            instance.trajController.PlanTrajectory(shaft_to_origin(set_value, instance.config.motor.gear_ratio), // rad 
+                                                    instance.est_output->estimated_raw_angle,                    // rad
+                                                    RPM_speed_to_rad(instance.est_output->estimated_speed, 1),                        // rpm -> rad/s
                                                     shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio),
                                                     instance.config.traj_max_accel,
                                                     instance.config.traj_max_decel);
@@ -303,14 +302,7 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
         case TRAJ_TARGET_DEG:
             return SetEndpointValue(TRAJ_TARGET_RAD, DEG2RAD(set_value));
         case TRAJ_TARGET_INC_RAD:
-            instance.trajController.PlanTrajectory(instance.trajController.GetFinalPos() + shaft_to_origin(set_value, instance.config.motor.gear_ratio), 
-                                                    instance.est_output->estimated_raw_angle, 
-                                                    instance.est_output->estimated_speed, 
-                                                    shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio),
-                                                    instance.config.traj_max_accel,
-                                                    instance.config.traj_max_decel);
-            pos_target_sent = true;
-            break;
+            return SetEndpointValue(TRAJ_TARGET_RAD, instance.trajController.GetFinalPos() + set_value);
         case TRAJ_TARGET_INC_DEG:
             return SetEndpointValue(TRAJ_TARGET_INC_RAD, DEG2RAD(set_value));
         case TRAJ_CRUISE_SPEED:
@@ -331,5 +323,17 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
     }
     return result;
 }
+
+template<size_t N>
+class ProtocolSerializer
+{
+public:
+    template<class...U>
+    ProtocolSerializer(BaseProtocol<U>&... inst) : instances{ {(BaseProtocol<FOC<DriverDefault, CurrentSenseDefault, BusSenseDefault>>*)(&inst)...} } 
+    {
+        static_assert(sizeof...(inst) == N, "Number of BaseProtocol instances must match size N.");
+    };
+    std::array<BaseProtocol<FOC<DriverDefault, CurrentSenseDefault, BusSenseDefault>>*, N> instances;
+};
 
 #endif
