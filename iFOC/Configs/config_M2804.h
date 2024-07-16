@@ -40,7 +40,7 @@ static foc_config_t config_m2804 =
     {
         .pid_config = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
         .Tlp = 0.001f,
-    }
+    },
 };
 
 #endif
