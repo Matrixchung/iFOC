@@ -30,6 +30,7 @@ public:
     virtual void UpdateIdleTask(float Ts) {};
     virtual FOC_ERROR_FLAG GetErrorFlag() {return FOC_ERROR_NONE;};
     foc_state_output_t output;
+    float abs_raw_angle_offset = 0.0f;
 protected:
     foc_state_input_t& input;
     foc_config_t& config;

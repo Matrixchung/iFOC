@@ -52,9 +52,10 @@ void EstimatorSensor::Update(float Ts)
 {
     encoder->Update(Ts);
     output.estimated_angle = encoder->single_round_angle;
-    output.estimated_raw_angle = encoder->raw_angle;
+    output.estimated_raw_angle = encoder->raw_angle - abs_raw_angle_offset;
     if(config.use_speed_pll) output.estimated_speed = rad_speed_to_RPM(speed_pll.Calculate(output.estimated_angle, Ts), 1);
     if(align_state) output.electric_angle = normalize_rad(output.estimated_angle * config.motor.pole_pair - zero_electric_angle);
+    else output.estimated_speed = 0.0f; // pll calculated, but not used
     output.Iqd_fb = FOC_Park(input.Ialphabeta_fb, output.electric_angle);
     if(input.target > EST_TARGET_NONE)
     {
@@ -79,7 +80,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
     if(!config.use_speed_pll)
     {
         encoder->UpdateMidInterval(Ts);
-        output.estimated_speed = rad_speed_to_RPM(encoder->velocity, 1);
+        if(align_state) output.estimated_speed = rad_speed_to_RPM(encoder->velocity, 1);
     }
     // if(limiter != nullptr)
     // {
@@ -93,7 +94,6 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             state_timer += Ts;
             if(state_timer < align_time)
             {
-                // output->electric_angle = _3PI_2;
                 output.electric_angle = 0.0f;
                 output.Iqd_set = Iqd_align;
             }
@@ -110,23 +110,24 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             {
                 if(encoder->IsCalibrated())
                 {
-                    if(output.electric_angle != 0.0f)
+                    // encoder->Update(Ts);
+                    if(zero_electric_angle == 0.0f)
                     {
-                        state_timer = 0.0f;
-                    }
-                    else
-                    {
-                        input.target_pos = output.estimated_raw_angle;
                         zero_electric_angle = normalize_rad(encoder->single_round_angle * config.motor.pole_pair);
-                        align_state = true;
                         output.Iqd_set = {0.0f, 0.0f};
+                    }
+                    if(state_timer > align_time + steady_time * 2.0f)
+                    {
+                        abs_raw_angle_offset = encoder->raw_angle;
+                        align_state = true;
                         state_timer = 0.0f;
                     }
                 }
                 else
                 {
-                    output.electric_angle += 0.001f;
+                    output.electric_angle -= 0.01f;
                     output.electric_angle = normalize_rad(output.electric_angle);
+                    if(output.electric_angle < 0.01f) error_flag = 1; // search for over one round, still no zero signal
                 }
             }
         }
