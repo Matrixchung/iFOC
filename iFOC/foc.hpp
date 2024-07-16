@@ -29,7 +29,7 @@
 // Using CRTP for zero-overhead polymorphism at *compile-time*
 // See: https://stackoverflow.com/questions/18174441/crtp-and-multilevel-inheritance/18174442#18174442
 
-template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
+template<class T_DriverBase, class T_CurrentSenseBase, class T_BusSenseBase>
 class FOC
 {
 public:
@@ -57,8 +57,8 @@ public:
     // SoundInjector soundInjector;
     TrajController trajController;
 private:
-    template<typename U> friend class BaseProtocol;
-    template<typename ... T> friend void SyncStartTimer(T&... inst);
+    template<class U> friend class BaseProtocol;
+    template<class ... T> friend void SyncStartTimer(T&... inst);
     T_DriverBase& driver;
     T_CurrentSenseBase& current_sense;
     T_BusSenseBase& bus_sense;
@@ -81,22 +81,22 @@ private:
     // LimiterBase *limiters[3] = {nullptr};
 };
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 void FOC<A, B, C>::SwitchEstimator(uint8_t index)
 {
     if(index == 0)
     {
         is_main_est = true;
-        est_output = &main_estimator->output;
+        est_output = &main_estimator.get()->output;
     }
     else if(aux_estimator != nullptr)
     {
         is_main_est = false;
-        est_output = &aux_estimator->output;
+        est_output = &main_estimator.get()->output;
     }
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 bool FOC<A, B, C>::Init(bool initTIM) // if initTIM set to false, then we will synchronously start all timers later.
 {
     if(config.motor.gear_ratio <= 0.0f) config.motor.gear_ratio = 1.0f; // fix gear ratio
@@ -118,7 +118,7 @@ bool FOC<A, B, C>::Init(bool initTIM) // if initTIM set to false, then we will s
         error_code = FOC_ERROR_INITIALIZE;
         return false;
     }
-    est_output = &main_estimator->output;
+    est_output = &main_estimator.get()->output;
     svpwm.max_compare = driver.GetMaxCompare();
     current_sense.CurrentSenseUpdate();
     bus_sense.BusSenseUpdate();
@@ -129,14 +129,14 @@ bool FOC<A, B, C>::Init(bool initTIM) // if initTIM set to false, then we will s
     return true;
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 void FOC<A, B, C>::Update(float Ts)
 {
     current_sense.CurrentSenseUpdate();
     est_input.Ialphabeta_fb = FOC_Clark_ABC(current_sense.Iabc);
     if(output_state)
     {
-        if(extra_module != nullptr) extra_module->Preprocess(&est_input, est_output, Ts);
+        if(extra_module.get() != nullptr) extra_module->Preprocess(&est_input, est_output, Ts);
         else
         {
             switch(mode)
@@ -165,7 +165,7 @@ void FOC<A, B, C>::Update(float Ts)
     error_code |= main_estimator->GetErrorFlag();
     if(output_state)
     {
-        if(extra_module != nullptr) extra_module->Postprocess(&est_input, est_output, Ts);
+        if(extra_module.get() != nullptr) extra_module->Postprocess(&est_input, est_output, Ts);
         else 
         {
             // soundInjector.Postprocess(&est_input, est_output, Ts);
@@ -186,7 +186,7 @@ void FOC<A, B, C>::Update(float Ts)
     }
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 void FOC<A, B, C>::UpdateMidInterval(float Ts)
 {
     main_estimator->UpdateMidInterval(Ts);
@@ -220,14 +220,14 @@ void FOC<A, B, C>::UpdateMidInterval(float Ts)
     }
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 void FOC<A, B, C>::UpdateIdleTask(float Ts)
 {
     bus_sense.BusSenseUpdate();
     main_estimator->UpdateIdleTask(Ts);
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 bool FOC<A, B, C>::GetTrajPosState()
 {
     if(output_state)
@@ -247,7 +247,7 @@ bool FOC<A, B, C>::GetTrajPosState()
     return false;
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 void FOC<A, B, C>::SetOutputState(bool state)
 {
     output_state = state;
@@ -262,7 +262,7 @@ void FOC<A, B, C>::SetOutputState(bool state)
     }
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 void FOC<A, B, C>::EmergencyStop()
 {
     output_state = false;
@@ -282,7 +282,7 @@ void FOC<A, B, C>::EmergencyStop()
     }
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 template<class T>
 void FOC<A, B, C>::AttachMainEstimator()
 {
@@ -290,7 +290,7 @@ void FOC<A, B, C>::AttachMainEstimator()
     main_estimator = std::make_unique<T>(est_input, config);
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 template<class T>
 T* FOC<A, B, C>::GetMainEstimator()
 {
@@ -298,7 +298,7 @@ T* FOC<A, B, C>::GetMainEstimator()
     return static_cast<T*>(main_estimator.get());
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 template<class T>
 void FOC<A, B, C>::AttachAuxEstimator()
 {
@@ -306,7 +306,7 @@ void FOC<A, B, C>::AttachAuxEstimator()
     aux_estimator = std::make_unique<T>(est_input, config);
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 template<class T>
 T* FOC<A, B, C>::GetAuxEstimator()
 {
@@ -314,7 +314,7 @@ T* FOC<A, B, C>::GetAuxEstimator()
     return static_cast<T*>(aux_estimator.get());
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 template<class T>
 void FOC<A, B, C>::AppendModule()
 {
@@ -322,7 +322,7 @@ void FOC<A, B, C>::AppendModule()
     extra_module = std::make_unique<T>();
 }
 
-template<typename A, typename B, typename C>
+template<class A, class B, class C>
 template<class T>
 T* FOC<A, B, C>::GetModule()
 {
@@ -331,7 +331,7 @@ T* FOC<A, B, C>::GetModule()
 }
 
 // init structs
-template<typename T_DriverBase, typename T_CurrentSenseBase, typename T_BusSenseBase>
+template<class T_DriverBase, class T_CurrentSenseBase, class T_BusSenseBase>
 FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus) 
 : driver(_driver), current_sense(_curr), bus_sense(_bus)
 {
@@ -389,8 +389,9 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
     };
 }
 
-#include "base_protocol.hpp"
-
 #pragma GCC pop_options
+
+#include "base_protocol.hpp"
+#include "ascii_protocol.hpp"
 
 #endif

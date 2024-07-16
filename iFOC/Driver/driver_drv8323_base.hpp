@@ -9,7 +9,7 @@
 #define DRV8323_REG_DEFAULT_0x06 0x283
 #define DRV8323_REG_CAL_0x06     0x29F // 0010 1001 1111(when calibrating three shunts amplifier)
 
-template <typename T>
+template <class T>
 class DriverDRV8323Base : public DriverBase<DriverDRV8323Base<T>>
 {
 public:
@@ -17,7 +17,7 @@ public:
     : reg_hs_value(_reg_hs), reg_ls_value(_reg_ls) {};
     bool Init(bool initCNT);
     inline void SetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3) { static_cast<T*>(this)->PortSetOutputRaw(ch_1, ch_2, ch_3); };
-    inline void DriverSetLSIdleState(uint8_t state) { static_cast<T*>(this)->SetLSIdleState(state); };
+    inline void SetLSIdleState(uint8_t state) { static_cast<T*>(this)->SetLSIdleState(state); };
     void nFAULT_IRQHandler();
     uint8_t bus_fault_flag = 0;
     uint8_t nFAULT_flag = 0;
@@ -39,7 +39,7 @@ private:
     inline void DelayUs(uint32_t us) { return static_cast<T*>(this)->PortDelayUs(us); };
 };
 
-template <typename T>
+template <class T>
 bool DriverDRV8323Base<T>::Init(bool initCNT)
 {
     SetCS(1);
@@ -75,7 +75,7 @@ bool DriverDRV8323Base<T>::Init(bool initCNT)
     return TIMInit(initCNT);
 }
 
-template <typename T>
+template <class T>
 void DriverDRV8323Base<T>::nFAULT_IRQHandler()
 {
     bool state = ReadFAULT();
@@ -87,7 +87,7 @@ void DriverDRV8323Base<T>::nFAULT_IRQHandler()
     else nFAULT_flag = 0;
 }
 
-template <typename T>
+template <class T>
 uint16_t DriverDRV8323Base<T>::ReadReg16(uint16_t reg, uint16_t *data)
 {
     SetCS(0);
@@ -100,7 +100,7 @@ uint16_t DriverDRV8323Base<T>::ReadReg16(uint16_t reg, uint16_t *data)
     return state;
 }
 
-template <typename T>
+template <class T>
 uint16_t DriverDRV8323Base<T>::WriteReg16(uint16_t reg, uint16_t data)
 {
     SetCS(0);

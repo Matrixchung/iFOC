@@ -9,7 +9,7 @@ class BusSenseMirror : public BusSenseBase<BusSenseMirror>
 {
 public:
     BusSenseMirror(float *_pVbus, float *_pIbus): pVbus(_pVbus), pIbus(_pIbus) {};
-    template<typename T>
+    template<class T>
     BusSenseMirror(T *base)
     {
         pVbus = &base->Vbus;

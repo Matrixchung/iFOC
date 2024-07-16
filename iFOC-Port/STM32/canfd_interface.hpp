@@ -11,11 +11,11 @@ public:
     void ConfigFilter(uint32_t id, uint32_t mask, uint8_t fifo_index, uint8_t filter_index) override;
     void InitHW() override;
     void SendPayload(uint32_t id, uint8_t *payload, uint8_t len) override;
-    template<typename ... instances>
+    template<class ... instances>
     void OnIRQ(uint32_t fifo_index, instances&... args);
 private:
     FDCAN_HandleTypeDef *hcan;
-    template<typename T>
+    template<class T>
     void _irq(T instance, uint8_t &id, FDCAN_RxHeaderTypeDef& rx_header);
 };
 
@@ -57,7 +57,7 @@ void STM32CANFD::SendPayload(uint32_t id, uint8_t *payload, uint8_t len)
     HAL_FDCAN_AddMessageToTxFifoQ(hcan, &header, payload);
 }
 
-template<typename ... instances>
+template<class ... instances>
 void STM32CANFD::OnIRQ(uint32_t fifo_index, instances&... args)
 {
     FDCAN_RxHeaderTypeDef rx_header;
@@ -66,7 +66,7 @@ void STM32CANFD::OnIRQ(uint32_t fifo_index, instances&... args)
     (_irq(args, id, rx_header), ...);
 }
 
-template<typename T>
+template<class T>
 void STM32CANFD::_irq(T instance, uint8_t& id, FDCAN_RxHeaderTypeDef& rx_header)
 {
     if(id == instance.GetNodeID() || id == 0x3F)

@@ -4,7 +4,7 @@
 #include "foc_header.h"
 #include "sliding_filter.h"
 
-template <typename T>
+template <class T>
 class BusSenseBase
 {
 public:

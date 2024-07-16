@@ -19,7 +19,7 @@ typedef enum EEPROM_CONFIG_PACKET
     EEPROM_CRC8_BIT, // last, will save CRC8 calculated value from all above(except itself)
 }EEPROM_CONFIG_PACKET;
 
-template<typename T = I2CBase>
+template<class T = I2CBase>
 class EEPROM
 {
 public:
@@ -31,9 +31,9 @@ public:
     {
         static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
     };
-    template<typename U>
+    template<class U>
     U ReadVar(uint16_t addr);
-    template<typename U>
+    template<class U>
     void WriteVar(uint16_t addr, U var);
 private:
     T& i2c;
@@ -43,8 +43,8 @@ private:
     uint8_t buffer[32];
 };
 
-template<typename T>
-template<typename U>
+template<class T>
+template<class U>
 U EEPROM<T>::ReadVar(uint16_t addr)
 {
     static_assert(sizeof(U) < 32, "Length of required data type exceeds limit");
@@ -57,8 +57,8 @@ U EEPROM<T>::ReadVar(uint16_t addr)
     return dest;
 }
 
-template<typename T>
-template<typename U>
+template<class T>
+template<class U>
 void EEPROM<T>::WriteVar(uint16_t addr, U var)
 {
     static_assert(sizeof(U) < 32, "Length of required data type exceeds limit");
@@ -71,7 +71,7 @@ void EEPROM<T>::WriteVar(uint16_t addr, U var)
     PageWrite(addr, u8, sizeof(U));
 }
 
-template<typename T>
+template<class T>
 void EEPROM<T>::PageWrite(uint16_t start_addr, uint8_t *src, uint16_t len)
 {
     buffer[0] = (uint8_t)(start_addr >> 8);
@@ -80,7 +80,7 @@ void EEPROM<T>::PageWrite(uint16_t start_addr, uint8_t *src, uint16_t len)
     i2c.WriteBytes(device_addr, buffer, len + 2);
 }
 
-template<typename T>
+template<class T>
 void EEPROM<T>::SequentialRead(uint16_t start_addr, uint8_t *src, uint16_t len)
 {
     buffer[0] = (uint8_t)(start_addr >> 8);

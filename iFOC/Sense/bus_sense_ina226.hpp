@@ -6,7 +6,7 @@
 
 // https://blog.csdn.net/weixin_50257954/article/details/133635534
 
-template <typename T = I2CBase>
+template <class T = I2CBase>
 class BusSenseINA226 : public BusSenseBase<BusSenseINA226<T>>
 {
 public:
@@ -39,7 +39,7 @@ private:
     float power_lsb = 0.025f;
 };
 
-template <typename T>
+template <class T>
 void BusSenseINA226<T>::Init()
 {
     i2c.Init();
@@ -54,7 +54,7 @@ void BusSenseINA226<T>::Init()
     i2c.WriteBytes(device_addr, i2c_buffer, 3);
 }
 
-template <typename T>
+template <class T>
 void BusSenseINA226<T>::Update()
 {
     i2c_buffer[0] = 0x02;

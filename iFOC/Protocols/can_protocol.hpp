@@ -9,7 +9,7 @@ uint8_t GetCANNodeID(uint32_t id) { return (uint8_t)((id & 0x7E0) >> 5); };
 uint8_t GetCANCmdID(uint32_t id) { return (uint8_t)(id & 0x1F); };
 uint16_t GetCANFrameID(uint8_t node_id, uint16_t id) { return (uint16_t)((uint16_t)node_id << 5) | id; };
 
-template<typename Intf, typename U>
+template<class Intf, class U>
 class CANProtocol
 {
 public:
@@ -28,7 +28,7 @@ private:
     uint8_t tx_buffer[8] = {0x00};
 };
 
-template<typename Intf, typename U>
+template<class Intf, class U>
 void CANProtocol<Intf, U>::Init(bool initHW)
 {
     if(base.node_id != 0x3F) interface.ConfigFilter(base.node_id, 0x7E0, 0, base.sub_dev_index * 2);
@@ -36,7 +36,7 @@ void CANProtocol<Intf, U>::Init(bool initHW)
     if(initHW) interface.InitHW();
 }
 
-template<typename Intf, typename U>
+template<class Intf, class U>
 void CANProtocol<Intf, U>::Tick(float Ts)
 {
     if(base.pos_target_sent && base.GetEndpointValue(TRAJ_POS_STATE))
@@ -53,7 +53,7 @@ void CANProtocol<Intf, U>::Tick(float Ts)
     }
 }
 
-template<typename Intf, typename U>
+template<class Intf, class U>
 void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t len)
 {
     CAN_OPCODES opcode = static_cast<CAN_OPCODES>(GetCANCmdID(id));
@@ -168,7 +168,7 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
     }
 }
 
-template<typename Intf, typename U>
+template<class Intf, class U>
 void CANProtocol<Intf, U>::OnRemoteFrame(uint32_t id)
 {
     CAN_OPCODES opcode = static_cast<CAN_OPCODES>(GetCANCmdID(id));

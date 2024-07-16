@@ -4,7 +4,7 @@
 #include "encoder_base.hpp"
 #include "i2c_base.h"
 
-template <typename T = I2CBase>
+template <class T = I2CBase>
 class EncoderAS5048B : public EncoderBase
 {
 public:
@@ -28,20 +28,20 @@ private:
     // uint8_t repeat_counter = 0; // runs at 2KHz
 };
 
-template <typename T>
+template <class T>
 bool EncoderAS5048B<T>::Init()
 {
     i2c.Init();
     return true;
 }
 
-template <typename T>
+template <class T>
 void EncoderAS5048B<T>::Update(float Ts)
 {
     ; // update interval may be too short for I2C communication
 }
 
-template <typename T>
+template <class T>
 void EncoderAS5048B<T>::UpdateMidInterval(float Ts)
 {
     uint8_t temp = 0xFE;
@@ -65,7 +65,7 @@ void EncoderAS5048B<T>::UpdateMidInterval(float Ts)
     single_round_angle_prev = single_round_angle;
 }
 
-template <typename T>
+template <class T>
 bool EncoderAS5048B<T>::IsCalibrated()
 {
     return true;

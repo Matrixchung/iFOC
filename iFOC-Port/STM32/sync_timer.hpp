@@ -43,7 +43,7 @@ void _SyncStartTimer_impl(std::array<TIM_TypeDef*, T> timers, std::index_sequenc
     __enable_irq();
 }
 
-template<typename ... T>
+template<class ... T>
 void SyncStartTimer(T&... inst)
 {
     _SyncStartTimer_impl(std::array<TIM_TypeDef*, sizeof...(T)>{inst.driver.htim...},  std::make_index_sequence<sizeof...(T)>());
@@ -53,33 +53,3 @@ void SyncStartTimer(T&... inst)
 #pragma GCC pop_options
 
 #endif
-
-// #pragma GCC push_options
-// #pragma GCC optimize (3)
-// void SyncStartTimer()
-// {
-//     LL_TIM_DisableCounter(motor_1.driver.htim);
-//     LL_TIM_DisableIT_UPDATE(motor_1.driver.htim);
-//     LL_TIM_GenerateEvent_UPDATE(motor_1.driver.htim);
-//     LL_TIM_ClearFlag_UPDATE(motor_1.driver.htim);
-
-//     LL_TIM_DisableCounter(motor_2.driver.htim);
-//     LL_TIM_DisableIT_UPDATE(motor_2.driver.htim);
-//     LL_TIM_GenerateEvent_UPDATE(motor_2.driver.htim);
-//     LL_TIM_ClearFlag_UPDATE(motor_2.driver.htim);
-
-//     volatile uint32_t* cr_addr[2];
-//     volatile uint32_t cr_value[2];
-//     cr_addr[0] = &motor_1.driver.htim->CR1;
-//     cr_value[0] = motor_1.driver.htim->CR1 | TIM_CR1_CEN;
-//     cr_addr[1] = &motor_2.driver.htim->CR1;
-//     cr_value[1] = motor_2.driver.htim->CR1 | TIM_CR1_CEN;
-
-//     __disable_irq();
-//     *cr_addr[0] = cr_value[0];
-//     *cr_addr[1] = cr_value[1];
-//     LL_TIM_EnableAllOutputs(motor_1.driver.htim);
-//     LL_TIM_EnableAllOutputs(motor_2.driver.htim);
-//     __enable_irq();
-// }
-// #pragma GCC pop_options
