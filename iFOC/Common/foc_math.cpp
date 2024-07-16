@@ -267,7 +267,9 @@ uint8_t getCRC8(uint8_t* data, uint16_t len)
   return crc;
 }
 
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 //---------------------------------------------------------------------------------------------------
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -282,6 +284,7 @@ float fast_inv_sqrt(float x)
 	y = y * (1.5f - (halfx * y * y));
 	return y;
 }
+#pragma GCC diagnostic pop
 
 float origin_to_shaft(float origin, float gear_ratio)
 {
