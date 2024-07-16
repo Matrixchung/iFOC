@@ -44,13 +44,15 @@ void EncoderABZ::PortZeroSignalIRQ()
     zero_signal = true;
     if(LL_TIM_GetDirection(htim) == LL_TIM_COUNTERDIRECTION_UP)
     {
-        LL_TIM_SetCounter(htim, 0);
-        full_rotations++;
+        LL_TIM_SetCounter(htim, LL_TIM_GetCounter(htim) - cpr);
+        // full_rotations++;
+        last_rotations++;
     }
     else
     {
-        LL_TIM_SetCounter(htim, cpr);
-        full_rotations--;
+        LL_TIM_SetCounter(htim, LL_TIM_GetCounter(htim) + cpr);
+        // full_rotations--;
+        last_rotations--;
     }
 }
 

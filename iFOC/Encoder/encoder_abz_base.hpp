@@ -48,6 +48,13 @@ void EncoderABZBase::Update(float Ts)
     // PortUpdateDirPulse(): update direction, pulse
     PortUpdateDirPulse();
     single_round_angle = normalize_rad(((float)pulse / (float)cpr) * PI2);
+    if(zero_signal)
+    {
+        float delta = single_round_angle - last_angle;
+        if(delta > 0.6f * PI2) full_rotations--;
+        else if(delta < -0.6f * PI2) full_rotations++;
+    }
+    last_angle = single_round_angle;
     raw_angle = full_rotations * PI2 + single_round_angle;
 }
 
