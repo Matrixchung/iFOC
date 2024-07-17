@@ -18,18 +18,17 @@ protected:
 // #if ENCODER_ABZ_USE_PLL
 //     SpeedPLL speed_pll;
 // #else
-    SlidingFilter sliding_filter = SlidingFilter(20);
-    LowpassFilter speed_filter = LowpassFilter(0.0001f);
-    int last_rotations = 0;
+    // SlidingFilter sliding_filter = SlidingFilter(20);
+    // LowpassFilter speed_filter = LowpassFilter(0.0001f);
+    // int last_rotations = 0;
     float last_angle = 0.0f;
-    float last_velocity = 0.0f;
+    // float last_velocity = 0.0f;
 // #endif
     uint32_t cpr = 4095;
     short pulse = 0;
     bool zero_signal = false;
     virtual bool PortInit() = 0;
     virtual void PortUpdateDirPulse() = 0;
-    virtual void PortZeroSignalIRQ() = 0;
 };
 
 bool EncoderABZBase::Init()

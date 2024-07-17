@@ -11,7 +11,7 @@ public:
     EncoderABZBase(_cpr), htim(_htim) {};
     bool PortInit() override;
     void PortUpdateDirPulse() override;
-    void PortZeroSignalIRQ() override;
+    void ZeroSignalIRQ();
 protected:
     TIM_TypeDef *htim;
 };
@@ -39,20 +39,18 @@ void EncoderABZ::PortUpdateDirPulse()
     pulse = (short)(LL_TIM_GetCounter(htim));
 }
 
-void EncoderABZ::PortZeroSignalIRQ()
+void EncoderABZ::ZeroSignalIRQ()
 {
     zero_signal = true;
     if(LL_TIM_GetDirection(htim) == LL_TIM_COUNTERDIRECTION_UP)
     {
         LL_TIM_SetCounter(htim, LL_TIM_GetCounter(htim) - cpr);
         // full_rotations++;
-        last_rotations++;
     }
     else
     {
         LL_TIM_SetCounter(htim, LL_TIM_GetCounter(htim) + cpr);
         // full_rotations--;
-        last_rotations--;
     }
 }
 
