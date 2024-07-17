@@ -4,7 +4,7 @@
 #include "encoder_base.hpp"
 #include "i2c_base.h"
 
-template <class T = I2CBase>
+template<class T = I2CBase>
 class EncoderAS5600 : public EncoderBase
 {
 public:
@@ -32,20 +32,20 @@ private:
     // uint8_t repeat_counter = 0; // runs at 2KHz
 };
 
-template <class T>
+template<class T>
 bool EncoderAS5600<T>::Init()
 {
     i2c.Init();
     return true;
 }
 
-template <class T>
+template<class T>
 void EncoderAS5600<T>::Update(float Ts)
 {
     ; // update interval may be too short for I2C communication
 }
 
-template <class T>
+template<class T>
 void EncoderAS5600<T>::UpdateMidInterval(float Ts)
 {
     uint8_t temp = 0x0C;
@@ -69,7 +69,7 @@ void EncoderAS5600<T>::UpdateMidInterval(float Ts)
     // repeat_counter = 0;
 }
 
-template <class T>
+template<class T>
 bool EncoderAS5600<T>::IsCalibrated()
 {
     return true;

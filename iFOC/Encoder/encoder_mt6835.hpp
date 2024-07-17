@@ -1,9 +1,10 @@
-#ifndef _FOC_ENCODER_MT6835_BASE_H
-#define _FOC_ENCODER_MT6835_BASE_H
+#ifndef _FOC_ENCODER_MT6835_H
+#define _FOC_ENCODER_MT6835_H
 
 #include "encoder_base.hpp"
 #include "sliding_filter.h"
 #include "lowpass_filter.h"
+#include "spi_base.h"
 
 // enum MT6835_CMD
 // {
@@ -35,9 +36,14 @@
 // Write: 4 bit COMMAND + 12 bit REGISTER + 8 bit DATA
 // Read:  --------------------------------+ 8 bit RETR
 
-class EncoderMT6835Base : public EncoderBase
+template<class T = SPIBase>
+class EncoderMT6835 : public EncoderBase
 {
 public:
+    EncoderMT6835(T& _spi) : spi(_spi)
+    {
+        static_assert(std::is_base_of<SPIBase, T>::value, "SPI Implementation must be derived from SPIBase");
+    };
     bool Init() override;
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;
@@ -47,7 +53,8 @@ public:
     uint8_t low_magnetic_flag = 0;
     uint8_t undervoltage_flag = 0;
     uint32_t raw_21bit_angle = 0;
-protected:
+private:
+    T& spi;
     uint8_t crc_mismatch_count = 0;
     uint8_t last_angle_valid = 0;
     float single_round_angle_prev = -1.0f;
@@ -60,18 +67,18 @@ protected:
     SlidingFilter angle_filter = SlidingFilter(10);
     // LowpassFilter angle_filter = LowpassFilter(0.001f);
 
-    virtual bool PortSPIInit() = 0;
-    virtual void PortSetCS(uint8_t state) = 0; // CS is low valid
-    virtual uint16_t PortSPIRead16(uint16_t reg, uint16_t *ret) = 0;
-    virtual uint16_t PortSPIRead8(uint8_t reg, uint8_t *ret) = 0;
+    // virtual bool PortSPIInit() = 0;
+    // virtual void PortSetCS(uint8_t state) = 0; // CS is low valid
+    // virtual uint16_t PortSPIRead16(uint16_t reg, uint16_t *ret) = 0;
+    // virtual uint16_t PortSPIRead8(uint8_t reg, uint8_t *ret) = 0;
 };
 
-bool EncoderMT6835Base::Init()
+template<class T>
+bool EncoderMT6835<T>::Init()
 {
     // direction = _dir;
     // max_velocity = max_vel;
-    PortSetCS(1);
-    if(!PortSPIInit()) return false;
+    spi.ResetCS();
     // Turn off ABZ output
     // SPIWrite24Read8(0x06, 0x008, 0x02);
     // Turn off UVW output
@@ -80,30 +87,32 @@ bool EncoderMT6835Base::Init()
     // SPIWrite24Read8(0x06, 0x011, 0x01);
     // Set Hysteresis Window
     // SPIWrite24Read8(0x06, 0x00D, 0x3);
-    ReadAngleContinuousStart();
+    // ReadAngleContinuousStart();
     return true;
 }
 
-uint8_t EncoderMT6835Base::SPIWrite24Read8(uint8_t cmd, uint16_t reg, uint8_t data)
+template<class T>
+uint8_t EncoderMT6835<T>::SPIWrite24Read8(uint8_t cmd, uint16_t reg, uint8_t data)
 {
-    PortSetCS(0);
+    // PortSetCS(0);
     uint16_t segment = ((uint16_t)cmd << 12) | (reg & 0xFFF);
     uint8_t ret = 0;
     uint8_t txbuf[2] = {(uint8_t)(segment >> 8), (uint8_t)(segment & 0x00FF)};
-    PortSPIRead8(txbuf[0], &ret);
-    PortSetCS(1);
-    PortSetCS(0);
-    PortSPIRead8(txbuf[1], &ret);
-    PortSetCS(1);
-    PortSetCS(0);
-    PortSPIRead8(0x00, &ret);
+    spi.WriteBytes(txbuf[0], 1);
+    // PortSetCS(1);
+    // PortSetCS(0);
+    spi.WriteBytes(txbuf[1], 1);
+    // PortSetCS(1);
+    // PortSetCS(0);
+    spi.ReadWriteBytes(&ret, &ret, 1);
     // PortSPIRead16(segment, &ret);
     // PortSPIRead16((uint16_t)data, &ret);
-    PortSetCS(1);
+    // PortSetCS(1);
     return (uint8_t)ret;
 }
 
-uint8_t EncoderMT6835Base::ReadAngle()
+template<class T>
+uint8_t EncoderMT6835<T>::ReadAngle()
 {
     // PortSetCS(0);
     // uint8_t result = 0;
@@ -133,7 +142,7 @@ uint8_t EncoderMT6835Base::ReadAngle()
     // // crc_mismatch_count++;
     // raw_21bit_angle = 0;
     // return 1;
-    PortSetCS(0);
+    spi.SetCS();
     uint8_t angle[3] = {0x00};
     // PortSPIRead8(0x003, &angle[0]);
     // PortSPIRead8(0x004, &angle[1]);
@@ -142,7 +151,7 @@ uint8_t EncoderMT6835Base::ReadAngle()
     angle[1] = SPIWrite24Read8(0x03, 0x004, 0);
     angle[2] = SPIWrite24Read8(0x03, 0x005, 0);
     raw_21bit_angle = angle[2] << 12 | angle[1] << 4 | angle[0] >> 4;
-    PortSetCS(1);
+    spi.ResetCS();
     // if(result)
     // {
     //     raw_21bit_angle = 0;
@@ -162,17 +171,23 @@ uint8_t EncoderMT6835Base::ReadAngle()
     return 0;
 }
 
-uint8_t EncoderMT6835Base::ReadAngleContinuous()
+template<class T>
+uint8_t EncoderMT6835<T>::ReadAngleContinuous()
 {
     uint16_t ret = 0;
-    uint8_t temp[3] = {0};
-    PortSPIRead16(0x0000, &ret);
-    temp[0] = (uint8_t)(ret >> 8);
-    temp[1] = (uint8_t)ret;
+    uint8_t temp[2] = {0};
+    uint8_t temp_crc[3] = {0};
+    // PortSPIRead16(0x0000, &ret);
+    spi.ReadBytes(temp, 2);
+    ret = (uint16_t)(temp[0] << 8) | (uint16_t)(temp[1]);
+    temp_crc[0] = (uint8_t)(ret >> 8);
+    temp_crc[1] = (uint8_t)ret;
     raw_21bit_angle = (uint32_t)(ret << 5);
-    PortSPIRead16(0x0000, &ret);
-    temp[2] = (uint8_t)(ret >> 8);
-    if(getCRC8(temp, 3) == (uint8_t)ret)
+    // PortSPIRead16(0x0000, &ret);
+    spi.ReadBytes(temp, 2);
+    ret = (uint16_t)(temp[0] << 8) | (uint16_t)(temp[1]);
+    temp_crc[2] = (uint8_t)(ret >> 8);
+    if(getCRC8(temp_crc, 3) == (uint8_t)ret)
     {
         raw_21bit_angle |= (uint32_t)(ret & 0xF800);
         overspeed_flag = (uint8_t)(ret & 0x100);
@@ -185,22 +200,28 @@ uint8_t EncoderMT6835Base::ReadAngleContinuous()
     return 1;
 }
 
-uint8_t EncoderMT6835Base::ReadAngleContinuousStart()
+template<class T>
+uint8_t EncoderMT6835<T>::ReadAngleContinuousStart()
 {
-    PortSetCS(0);
-    uint16_t ret = 0;
-    return (uint8_t)PortSPIRead16(0xA003, &ret);
+    spi.SetCS();
+    // uint16_t ret = 0;
+    // return (uint8_t)PortSPIRead16(0xA003, &ret);
+    uint8_t temp = {0xA0, 0x03};
+    return spi.WriteBytes(temp, 2);
 }
 
-uint8_t EncoderMT6835Base::ReadAngleContinuousEnd()
+template<class T>
+uint8_t EncoderMT6835<T>::ReadAngleContinuousEnd()
 {
-    PortSetCS(1);
+    spi.ResetCS();
     return 0;
 }
 
-void EncoderMT6835Base::Update(float Ts)
+template<class T>
+void EncoderMT6835<T>::Update(float Ts)
 {
-    if(!ReadAngleContinuous()) // read angle continuously
+    // if(!ReadAngleContinuous()) // read angle continuously
+    if(!ReadAngle())
     {
         // single_round_angle = normalize_rad((float)direction * ((float)raw_21bit_angle / 2097152.0f * PI2));
         single_round_angle = normalize_rad(((float)raw_21bit_angle / 2097152.0f * PI2));
@@ -226,12 +247,14 @@ void EncoderMT6835Base::Update(float Ts)
     }
 }
 
-void EncoderMT6835Base::UpdateMidInterval(float Ts)
+template<class T>
+void EncoderMT6835<T>::UpdateMidInterval(float Ts)
 {
     // velocity = speed_pll.Calculate(single_round_angle, Ts);
 }
 
-bool EncoderMT6835Base::IsCalibrated()
+template<class T>
+bool EncoderMT6835<T>::IsCalibrated()
 {
     return true;
 }

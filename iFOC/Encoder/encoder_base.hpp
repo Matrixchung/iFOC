@@ -20,7 +20,6 @@ public:
     virtual void UpdateMidInterval(float Ts) = 0;
     virtual bool IsCalibrated() = 0;
     virtual bool IsError() {return false;};
-
 };
 
 #endif

@@ -1,11 +1,17 @@
-#ifndef _FOC_ENCODER_AS5048A_BASE_H
-#define _FOC_ENCODER_AS5048A_BASE_H
+#ifndef _FOC_ENCODER_AS5048A_H
+#define _FOC_ENCODER_AS5048A_H
 
 #include "encoder_base.hpp"
+#include "spi_base.h"
 
-class EncoderAS5048ABase : public EncoderBase
+template<class T = SPIBase>
+class EncoderAS5048A : public EncoderBase
 {
 public:
+    EncoderAS5048A(T& _spi) : spi(_spi)
+    {
+        static_assert(std::is_base_of<SPIBase, T>::value, "SPI Implementation must be derived from SPIBase");
+    };
     bool Init() override;
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;
@@ -13,30 +19,38 @@ public:
     uint16_t raw_14bit_angle = 0;
     uint8_t parity_error_flag = 0;
     uint8_t comm_error_flag = 0;
-protected:
+private:
+    T& spi;
     uint8_t last_angle_valid = 0;
     float single_round_angle_prev = -1.0f;
     uint8_t ReadAngle();
-    virtual bool PortSPIInit() = 0;
-    virtual void PortSetCS(uint8_t state) = 0; // CS is low valid
-    virtual uint16_t PortSPIRead16(uint16_t reg, uint16_t *ret) = 0;
 };
 
-bool EncoderAS5048ABase::Init()
+template<class T>
+bool EncoderAS5048A<T>::Init()
 {
-    // direction = _dir;
-    PortSetCS(1);
-    if(!PortSPIInit()) return false;
+    spi.ResetCS();
     if(ReadAngle()) return false;
     return true;
 }
 
-uint8_t EncoderAS5048ABase::ReadAngle()
+template<class T>
+uint8_t EncoderAS5048A<T>::ReadAngle()
 {   
-    PortSetCS(0);
+    spi.SetCS();
+    uint8_t data_u8[2] = {0xFF, 0xFF};
     uint16_t ret = 0;
-    if(PortSPIRead16(0xFFFF, &ret)) ret |= 0x4000;
-    PortSetCS(1);
+    if(spi.ReadWriteBytes(data_u8, data_u8, 2))
+    {
+        ret = (uint16_t)data_u8[0] << 8 | (uint16_t)data_u8[1];
+        ret |= 0x4000;
+    }
+    else
+    {
+        spi.ResetCS();
+        return 1;
+    }
+    spi.ResetCS();
     comm_error_flag = (uint8_t)(ret & 0x4000);
     if(comm_error_flag) return 1;
     uint8_t parity = 0;
@@ -51,7 +65,8 @@ uint8_t EncoderAS5048ABase::ReadAngle()
     return 1;
 }
 
-void EncoderAS5048ABase::Update(float Ts)
+template<class T>
+void EncoderAS5048A<T>::Update(float Ts)
 {
     if(!ReadAngle())
     {
@@ -73,12 +88,14 @@ void EncoderAS5048ABase::Update(float Ts)
     }
 }
 
-void EncoderAS5048ABase::UpdateMidInterval(float Ts)
+template<class T>
+void EncoderAS5048A<T>::UpdateMidInterval(float Ts)
 {
-    velocity = 0.0f;
+    // velocity = 0.0f;
 }
 
-bool EncoderAS5048ABase::IsCalibrated()
+template<class T>
+bool EncoderAS5048A<T>::IsCalibrated()
 {
     return true;
 }
