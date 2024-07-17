@@ -205,7 +205,7 @@ void FOC<A, B, C>::UpdateMidInterval(float Ts)
     // Overspeed protection
     if(config.max_speed > 0.0f)
     {
-        if(ABS(est_output->estimated_speed) > config.max_speed)
+        if(ABS(est_output->estimated_speed) > shaft_to_origin(config.max_speed, config.motor.gear_ratio))
         {
             overspeed_timer += Ts;
             if(overspeed_timer > config.overspeed_detect_time) error_code |= FOC_ERROR_OVERSPEED;
@@ -215,6 +215,7 @@ void FOC<A, B, C>::UpdateMidInterval(float Ts)
     // Sync target with current pos
     if(!output_state)
     {
+        trajController.task_done = true;
         est_input.target_pos = est_output->estimated_raw_angle;
         trajController.final_pos = est_output->estimated_raw_angle;
     }
@@ -389,9 +390,9 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
     };
 }
 
-#pragma GCC pop_options
-
 #include "base_protocol.hpp"
 #include "ascii_protocol.hpp"
+
+#pragma GCC pop_options
 
 #endif
