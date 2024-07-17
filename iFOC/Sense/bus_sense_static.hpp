@@ -3,6 +3,8 @@
 
 #include "bus_sense_base.hpp"
 
+#define BusSenseDefault BusSenseStatic
+
 class BusSenseStatic : public BusSenseBase<BusSenseStatic>
 {
 public:

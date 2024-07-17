@@ -324,7 +324,7 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
     return result;
 }
 
-template<size_t N>
+template<typename T, size_t N>
 class ProtocolSerializer
 {
 public:
@@ -333,6 +333,16 @@ public:
     {
         static_assert(sizeof...(inst) == N, "Number of BaseProtocol instances must match size N.");
     };
+    BaseProtocol<T>* get(size_t index)
+    {
+        auto ptr = instances.at(index);
+        return reinterpret_cast<BaseProtocol<T>*>(ptr);
+    }
+    size_t size()
+    {
+        return instances.size();
+    }
+private:
     std::array<BaseProtocol<FOC<DriverDefault, CurrentSenseDefault, BusSenseDefault>>*, N> instances;
 };
 
