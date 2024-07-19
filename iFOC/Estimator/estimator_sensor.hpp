@@ -88,6 +88,12 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
     // }
     if(input.target > EST_TARGET_NONE)
     {
+        if(align_state && zero_electric_angle != config.motor.zero_elec_angle) // need recalibration
+        {
+            align_state = false;
+            state_timer = 0.0f;
+            zero_electric_angle = 0.0f;
+        }
         // Pre-alignment process
         if(!align_state && config.motor.pole_pair > 0)
         {
@@ -114,6 +120,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
                     if(zero_electric_angle == 0.0f)
                     {
                         zero_electric_angle = normalize_rad(encoder->single_round_angle * config.motor.pole_pair);
+                        config.motor.zero_elec_angle = zero_electric_angle;
                         output.Iqd_set = {0.0f, 0.0f};
                     }
                     if(state_timer > align_time + steady_time * 2.0f)

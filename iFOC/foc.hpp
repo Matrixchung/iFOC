@@ -70,15 +70,13 @@ private:
     std::unique_ptr<EstimatorBase> aux_estimator = nullptr;
     svpwm_t svpwm;
     float overspeed_timer = 0.0f;
+    float overcurrent_timer = 0.0f;
     uint16_t error_code = FOC_ERROR_NONE;
     float *mcu_temp = nullptr;    // in degree
     float *motor_temp = nullptr;  // in degree
     float *mosfet_temp = nullptr; // in degree
     FOC_MODE mode = MODE_TORQUE;
     bool output_state = false;
-    // uint8_t limiter_count = 0; // 0, 1 - one direction, 2 - bidirection virtual/hardware, 3 - bi-dir + mid
-    // will first try to meet limiter[0], 
-    // LimiterBase *limiters[3] = {nullptr};
 };
 
 template<class A, class B, class C>
@@ -110,7 +108,7 @@ bool FOC<A, B, C>::Init(bool initTIM) // if initTIM set to false, then we will s
         config.current_pid.Ki = config.current_bandwidth * config.motor.Rs * damping_coeff;
     }
     config.current_pid.Kd = 0.0f;
-    config.speed_pll_config.pid_config.limit = RPM_speed_to_rad(shaft_to_origin(config.motor.max_mechanic_speed, config.motor.gear_ratio), config.motor.pole_pair);
+    config.speed_pll_config.pid_config.limit = RPM_speed_to_rad(shaft_to_origin(config.motor.max_mechanic_speed * 1.2f, config.motor.gear_ratio), config.motor.pole_pair);
     if(driver.DriverInit(initTIM) == false ||
        (main_estimator == nullptr || !main_estimator->Init()) ||
        (aux_estimator != nullptr && !aux_estimator->Init()))
@@ -136,8 +134,7 @@ void FOC<A, B, C>::Update(float Ts)
     est_input.Ialphabeta_fb = FOC_Clark_ABC(current_sense.Iabc);
     if(output_state)
     {
-        if(extra_module.get() != nullptr) extra_module->Preprocess(&est_input, est_output, Ts);
-        else
+        if(extra_module.get() == nullptr || (extra_module.get() != nullptr && extra_module->Preprocess(&est_input, est_output, Ts)))
         {
             switch(mode)
             {
@@ -165,8 +162,19 @@ void FOC<A, B, C>::Update(float Ts)
     error_code |= main_estimator->GetErrorFlag();
     if(output_state)
     {
-        if(extra_module.get() != nullptr) extra_module->Postprocess(&est_input, est_output, Ts);
-        else 
+        if(ABS(est_output->Iqd_fb.q) >= config.speed_pid.limit * 0.95 || ABS(est_output->Iqd_fb.d) >= config.speed_pid.limit * 0.95)
+        {
+            overcurrent_timer += Ts;
+            if(overcurrent_timer > 1.0f)
+            {
+                error_code = FOC_ERROR_OVER_CURRENT;
+                config.motor.zero_elec_angle = 0.0f; // need recalibration
+                overcurrent_timer = 0.0f;
+                EmergencyStop();
+                return;
+            }
+        }
+        if(extra_module.get() == nullptr || (extra_module.get() != nullptr && extra_module->Postprocess(&est_input, est_output, Ts)))
         {
             // soundInjector.Postprocess(&est_input, est_output, Ts);
             if(config.apply_curr_feedforward) // apply current loop feedforward
@@ -203,6 +211,8 @@ void FOC<A, B, C>::UpdateMidInterval(float Ts)
         if(*mosfet_temp > config.motor_temp_limit) error_code |= FOC_ERROR_MOTOR_OVERTEMP;
     }
     // Overspeed protection
+    float temp = shaft_to_origin(config.motor.max_mechanic_speed, config.motor.gear_ratio);
+    est_input.target_speed = _constrain(est_input.target_speed, -temp, temp);
     if(config.max_speed > 0.0f)
     {
         if(ABS(est_output->estimated_speed) > shaft_to_origin(config.max_speed, config.motor.gear_ratio))
@@ -267,6 +277,10 @@ template<class A, class B, class C>
 void FOC<A, B, C>::EmergencyStop()
 {
     output_state = false;
+    est_output->Uqd.q = 0.0f;
+    est_output->Uqd.d = 0.0f;
+    svpwm.Ualphabeta.alpha = 0.0f;
+    svpwm.Ualphabeta.beta = 0.0f;
     switch(config.break_mode)
     {
         case BREAK_MODE_SPO: // SPO
