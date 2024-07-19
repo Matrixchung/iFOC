@@ -7,8 +7,10 @@
 class ModuleBase
 {
 public:
-    virtual void Preprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts)  {}; // will be called before estimator updates
-    virtual void Postprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts) {}; // will be called after estimator updated
+    // @return: true if this module allows other modules to work, false if monopolized
+    virtual bool Preprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts)  { return true; }; // will be called before estimator updates
+    // @return: true if this module allows other modules to work, false if monopolized
+    virtual bool Postprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts) { return true; }; // will be called after estimator updated
     virtual ~ModuleBase(){};
 };
 
