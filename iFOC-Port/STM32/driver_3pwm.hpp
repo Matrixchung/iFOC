@@ -19,7 +19,6 @@ public:
 bool Driver3PWM::PortTIMInit(bool initCNT)
 {
     max_compare = LL_TIM_GetAutoReload(htim);
-    half_compare = max_compare / 2u;
     LL_TIM_CC_EnableChannel(htim, LL_TIM_CHANNEL_CH1);
     LL_TIM_CC_EnableChannel(htim, LL_TIM_CHANNEL_CH2);
     LL_TIM_CC_EnableChannel(htim, LL_TIM_CHANNEL_CH3);

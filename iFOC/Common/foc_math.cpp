@@ -53,6 +53,7 @@ alphabeta_t FOC_Rev_Park(qd_t input, float theta)
     output.beta = _cos * input.q + _sin * input.d;
     return output;
 }
+
 void FOC_SVPWM(svpwm_t *svpwm, float Vbus)
 {
     svpwm->sector = 0;
@@ -69,10 +70,34 @@ void FOC_SVPWM(svpwm_t *svpwm, float Vbus)
     if(Uabc_Pu[1] > 0.0f) svpwm->sector += 2;
     if(Uabc_Pu[2] > 0.0f) svpwm->sector += 4;
     float Ucom_Pu = 0.5f * (max3(Uabc_Pu) + min3(Uabc_Pu));
-    svpwm->compare_a = (uint16_t)((Uabc_Pu[0] - Ucom_Pu + 0.5f) * 0.5f * (float)svpwm->max_compare);
-    svpwm->compare_b = (uint16_t)((Uabc_Pu[1] - Ucom_Pu + 0.5f) * 0.5f * (float)svpwm->max_compare);
-    svpwm->compare_c = (uint16_t)((Uabc_Pu[2] - Ucom_Pu + 0.5f) * 0.5f * (float)svpwm->max_compare);
+    float tX[3] = {Uabc_Pu[0] - Ucom_Pu + 0.5f, Uabc_Pu[1] - Ucom_Pu + 0.5f, Uabc_Pu[2] - Ucom_Pu + 0.5f};
+    float tMin = min3(tX);
+    if(tMin < 0.0f) // Minimum-phase-error Modulation
+    {
+        if(tMin == tX[0])
+        {
+            tX[0] = 0.0f;
+            tX[1] = tX[1] / (tX[1] + tX[2]);
+            tX[2] = 1.0f - tX[1];
+        }
+        else if(tMin == tX[1])
+        {
+            tX[1] = 0.0f;
+            tX[0] = tX[0] / (tX[0] + tX[2]);
+            tX[2] = 1.0f - tX[0];
+        }
+        else
+        {
+            tX[2] = 0.0f;
+            tX[1] = tX[1] / (tX[0] + tX[1]);
+            tX[0] = 1.0f - tX[1];
+        }
+    }
+    svpwm->compare_a = (uint16_t)(tX[0] * (float)svpwm->max_compare);
+    svpwm->compare_b = (uint16_t)(tX[1] * (float)svpwm->max_compare);
+    svpwm->compare_c = (uint16_t)(tX[2] * (float)svpwm->max_compare);
 }
+
 float normalize_rad(float radian)
 {
     float a = fmodf(radian, PI2);

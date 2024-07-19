@@ -19,14 +19,12 @@ public:
     inline void DriverSetLSIdleState(uint8_t state) { static_cast<T*>(this)->SetLSIdleState(state); };
     inline void SetOutput(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3) { static_cast<T*>(this)->SetOutputRaw(ch_1, ch_2, ch_3); };
     inline uint16_t GetMaxCompare() {return max_compare;};
-    inline void SetOutputPct(float pct_1, float pct_2, float pct_3)
+    inline void SetOutputPct(float pct_1, float pct_2, float pct_3) // [0 - 1]
     {
-        // Q: Why half_compare? A: FOC Algorithm usually uses PWM Center Aligned Mode
-        return SetOutput((uint16_t)(pct_1 * (uint16_t)half_compare), (uint16_t)(pct_2 * (uint16_t)half_compare), (uint16_t)(pct_3 * (uint16_t)half_compare));
+        return SetOutput((uint16_t)(pct_1 * (uint16_t)max_compare), (uint16_t)(pct_2 * (uint16_t)max_compare), (uint16_t)(pct_3 * (uint16_t)max_compare));
     }
 protected:
     uint16_t max_compare = 0;
-    uint16_t half_compare = 0;
 private:
 
 };
