@@ -11,7 +11,7 @@ static foc_config_t config_ecu16036h12 =
         .Ld = 0.0000102f,
         .flux = 0.0115585f,
         .gear_ratio = 21.0f,
-        .max_mechanic_speed = 850.0f,
+        .max_mechanic_speed = 650.0f,
         .zero_elec_angle = 0.0f,
         .pole_pair = 1,
     },
@@ -20,11 +20,12 @@ static foc_config_t config_ecu16036h12 =
     .align_current = 0.6f,
     .current_bandwidth = 0.0f,
     .current_damping_coefficient = 0.0f,
-    .current_pid = {0.051f, 825.0f, 0.0f, 12.0f, 0.0f},
+    // .current_pid = {0.051f, 825.0f, 0.0f, 12.0f / SQRT_3, 0.0f},
+    .current_pid = {0.068f, 1000.0f, 0.0f, 12.0f / SQRT_3, 0.0f},
     .speed_pid = {0.0002f, 0.02f, 0.0f, 1.5f, 0.0f},
     .position_pid = {600.0f, 0.0f, 0.0f, 15000.0f, 0.0f},
     .home_speed = 100.0f,
-    .max_speed = 600.0f,
+    .max_speed = 750.0f, // overspeed protection
     .overspeed_detect_time = 0.01f,
     .traj_cruise_speed = 400.0f,
     .traj_max_accel = 2000.0f,
@@ -36,9 +37,14 @@ static foc_config_t config_ecu16036h12 =
     .startup_mode = MODE_TRAJECTORY,
     .apply_curr_feedforward = false,
     .use_speed_pll = true,
+    // .speed_pll_config = 
+    // {
+    //     .pid_config = {500.0f, 150000.0f, 0.0f, 0.0f, 0.0f},
+    //     .Tlp = 0.001f,
+    // },
     .speed_pll_config = 
     {
-        .pid_config = {350.0f, 90000.0f, 0.0f, 0.0f, 0.0f},
+        .pid_config = {1495.0f, 150000.0f, 0.0f, 0.0f, 0.0f},
         .Tlp = 0.001f,
     },
 };
