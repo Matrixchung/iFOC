@@ -4,6 +4,8 @@
 #pragma GCC push_options
 #pragma GCC optimize (3)
 
+#include "foc_conf.h"
+
 // Brushless DC Motor(BLDC)
 #include "foc_header.h"
 #include "driver_base.hpp"
@@ -35,18 +37,8 @@ class FOC
 public:
     FOC(T_DriverBase& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus);
     bool Init(bool initTIM = true);
-    void AttachMCUTempProbe(float *ptr) { mcu_temp = ptr; };
-    void AttachMotorTempProbe(float *ptr) { motor_temp = ptr; };
-    void AttachFETTempProbe(float *ptr) { mosfet_temp = ptr; };
     template<class T> void AttachMainEstimator();
     template<class T> T* GetMainEstimator();
-    template<class T> void AttachAuxEstimator();
-    template<class T> T* GetAuxEstimator();
-    template<class T> void AppendModule();
-    template<class T> T* GetModule();
-    void SwitchEstimator(uint8_t index);
-    bool IsMainEstimatorActive() { return is_main_est; };
-    void ResetModule() { extra_module.reset(); };
     void Update(float Ts);
     void UpdateMidInterval(float Ts);
     void UpdateIdleTask(float Ts);
@@ -54,7 +46,6 @@ public:
     void EmergencyStop();
     bool GetTrajPosState();
     foc_config_t config;
-    // SoundInjector soundInjector;
     TrajController trajController;
 private:
     template<class U> friend class BaseProtocol;
@@ -63,36 +54,46 @@ private:
     T_CurrentSenseBase& current_sense;
     T_BusSenseBase& bus_sense;
     foc_state_input_t est_input;
-    bool is_main_est = true;
     foc_state_output_t *est_output;
-    std::unique_ptr<ModuleBase> extra_module = nullptr;
     std::unique_ptr<EstimatorBase> main_estimator = nullptr;
-    std::unique_ptr<EstimatorBase> aux_estimator = nullptr;
     svpwm_t svpwm;
     float overspeed_timer = 0.0f;
     float overcurrent_timer = 0.0f;
     uint16_t error_code = FOC_ERROR_NONE;
+    FOC_MODE mode = MODE_TORQUE;
+    bool output_state = false;
+#ifdef FOC_USING_TEMP_PROBE
+public:
+    void AttachMCUTempProbe(float *ptr) { mcu_temp = ptr; };
+    void AttachMotorTempProbe(float *ptr) { motor_temp = ptr; };
+    void AttachFETTempProbe(float *ptr) { mosfet_temp = ptr; };
+private:
     float *mcu_temp = nullptr;    // in degree
     float *motor_temp = nullptr;  // in degree
     float *mosfet_temp = nullptr; // in degree
-    FOC_MODE mode = MODE_TORQUE;
-    bool output_state = false;
+#endif
+#ifdef FOC_USING_AUX_ESTIMATOR
+public:
+    template<class T> void AttachAuxEstimator();
+    template<class T> T* GetAuxEstimator();
+    void SwitchEstimator(uint8_t index);
+    bool IsMainEstimatorActive() { return is_main_est; };
+private:
+    std::unique_ptr<EstimatorBase> aux_estimator = nullptr;
+    bool is_main_est = true;
+#else
+public:
+    bool IsMainEstimatorActive() { return true; };
+#endif
+#ifdef FOC_USING_EXTRA_MODULE
+public:
+    template<class T> void AppendModule();
+    template<class T> T* GetModule();
+    void ResetModule() { extra_module.reset(); };
+private:
+    std::unique_ptr<ModuleBase> extra_module = nullptr;
+#endif
 };
-
-template<class A, class B, class C>
-void FOC<A, B, C>::SwitchEstimator(uint8_t index)
-{
-    if(index == 0)
-    {
-        is_main_est = true;
-        est_output = &main_estimator.get()->output;
-    }
-    else if(aux_estimator != nullptr)
-    {
-        is_main_est = false;
-        est_output = &main_estimator.get()->output;
-    }
-}
 
 template<class A, class B, class C>
 bool FOC<A, B, C>::Init(bool initTIM) // if initTIM set to false, then we will synchronously start all timers later.
@@ -109,9 +110,12 @@ bool FOC<A, B, C>::Init(bool initTIM) // if initTIM set to false, then we will s
     }
     config.current_pid.Kd = 0.0f;
     config.speed_pll_config.pid_config.limit = RPM_speed_to_rad(shaft_to_origin(config.motor.max_mechanic_speed * 1.2f, config.motor.gear_ratio), config.motor.pole_pair);
-    if(driver.DriverInit(initTIM) == false ||
-       (main_estimator == nullptr || !main_estimator->Init()) ||
-       (aux_estimator != nullptr && !aux_estimator->Init()))
+    if(driver.DriverInit(initTIM) == false
+       || (main_estimator == nullptr || !main_estimator->Init())
+#ifdef FOC_USING_AUX_ESTIMATOR
+       || (aux_estimator != nullptr && !aux_estimator->Init())
+#endif
+    )
     {
         error_code = FOC_ERROR_INITIALIZE;
         return false;
@@ -134,7 +138,9 @@ void FOC<A, B, C>::Update(float Ts)
     est_input.Ialphabeta_fb = FOC_Clark_ABC(current_sense.Iabc);
     if(output_state)
     {
+#ifdef FOC_USING_EXTRA_MODULE
         if(extra_module.get() == nullptr || (extra_module.get() != nullptr && extra_module->Preprocess(&est_input, est_output, Ts)))
+#endif 
         {
             switch(mode)
             {
@@ -157,7 +163,9 @@ void FOC<A, B, C>::Update(float Ts)
             }
         }
     }
+#ifdef FOC_USING_EXTRA_MODULE
     else est_input.target = EST_TARGET_NONE;
+#endif
     main_estimator->Update(Ts);
     error_code |= main_estimator->GetErrorFlag();
     if(output_state)
@@ -174,7 +182,9 @@ void FOC<A, B, C>::Update(float Ts)
                 return;
             }
         }
+#ifdef FOC_USING_EXTRA_MODULE
         if(extra_module.get() == nullptr || (extra_module.get() != nullptr && extra_module->Postprocess(&est_input, est_output, Ts)))
+#endif        
         {
             // soundInjector.Postprocess(&est_input, est_output, Ts);
             if(config.apply_curr_feedforward) // apply current loop feedforward
@@ -198,6 +208,7 @@ template<class A, class B, class C>
 void FOC<A, B, C>::UpdateMidInterval(float Ts)
 {
     main_estimator->UpdateMidInterval(Ts);
+#ifdef FOC_USING_TEMP_PROBE
     if(mcu_temp != nullptr)
     {
         if(*mcu_temp > config.mcu_temp_limit) error_code |= FOC_ERROR_MCU_OVERTEMP;
@@ -210,6 +221,7 @@ void FOC<A, B, C>::UpdateMidInterval(float Ts)
     {
         if(*mosfet_temp > config.motor_temp_limit) error_code |= FOC_ERROR_MOTOR_OVERTEMP;
     }
+#endif
     // Overspeed protection
     float temp = shaft_to_origin(config.motor.max_mechanic_speed, config.motor.gear_ratio);
     est_input.target_speed = _constrain(est_input.target_speed, -temp, temp);
@@ -313,6 +325,7 @@ T* FOC<A, B, C>::GetMainEstimator()
     return static_cast<T*>(main_estimator.get());
 }
 
+#ifdef FOC_USING_AUX_ESTIMATOR
 template<class A, class B, class C>
 template<class T>
 void FOC<A, B, C>::AttachAuxEstimator()
@@ -330,6 +343,23 @@ T* FOC<A, B, C>::GetAuxEstimator()
 }
 
 template<class A, class B, class C>
+void FOC<A, B, C>::SwitchEstimator(uint8_t index)
+{
+    if(index == 0)
+    {
+        is_main_est = true;
+        est_output = &main_estimator.get()->output;
+    }
+    else if(aux_estimator != nullptr)
+    {
+        is_main_est = false;
+        est_output = &main_estimator.get()->output;
+    }
+}
+#endif
+
+#ifdef FOC_USING_EXTRA_MODULE
+template<class A, class B, class C>
 template<class T>
 void FOC<A, B, C>::AppendModule()
 {
@@ -344,6 +374,7 @@ T* FOC<A, B, C>::GetModule()
     static_assert(std::is_base_of<ModuleBase, T>::value, "Extra module must be derived from ModuleBase");
     return static_cast<T*>(extra_module.get());
 }
+#endif
 
 // init structs
 template<class T_DriverBase, class T_CurrentSenseBase, class T_BusSenseBase>
