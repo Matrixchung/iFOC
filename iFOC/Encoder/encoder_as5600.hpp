@@ -12,10 +12,7 @@ public:
     {
         static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
     };
-    EncoderAS5600(T& _i2c) : i2c(_i2c)
-    {
-        static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
-    };
+    EncoderAS5600(T& _i2c) : EncoderAS5600(_i2c, device_addr) {};
     bool Init() override;
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;

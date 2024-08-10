@@ -27,10 +27,7 @@ public:
     {
         static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
     };
-    EEPROM(T& _i2c) : i2c(_i2c)
-    {
-        static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
-    };
+    EEPROM(T& _i2c) : EEPROM(_i2c, 0x50) {};
     template<class U>
     U ReadVar(uint16_t addr);
     template<class U>
