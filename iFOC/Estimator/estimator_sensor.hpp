@@ -4,7 +4,7 @@
 #include "estimator_base.hpp"
 #include "encoder_base.hpp"
 #include "speed_pll.hpp"
-#include "limiter_base.hpp"
+#include "limiter.hpp"
 
 #define FOC_SENSOR_ALIGN_PERIOD 500
 #define FOC_SENSOR_ALIGN_STEADY_PERIOD 250 // in this period(ms) we check for overspeed.

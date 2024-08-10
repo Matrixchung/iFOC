@@ -3,8 +3,6 @@
 
 #include "encoder_base.hpp"
 
-// #define ENCODER_ABZ_USE_PLL 1
-
 class EncoderABZBase : public EncoderBase
 {
 public:
