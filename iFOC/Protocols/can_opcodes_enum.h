@@ -27,7 +27,7 @@ typedef enum CAN_OPCODES
     GET_TEMP = 0x15,
     REBOOT = 0x16,
     GET_BUS_SENSE = 0x17,
-    CLEAR_ERRORS = 0x18,
+    IDENTIFY = 0x18,
     SET_ABS_POSITION = 0x19,
     SET_POS_PID_PARAMS = 0x1A,
     SET_VEL_PID_PARAMS = 0x1B,

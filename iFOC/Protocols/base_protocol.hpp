@@ -36,7 +36,6 @@ public:
     uint8_t node_id = 0x3F;
     uint8_t sub_dev_index = 0; // used to mark the index among same physical device, for example motor1, motor2, ...
     uint64_t serial_number = 0;
-    bool pos_target_sent = false;
 };
 
 template<class U>
@@ -227,11 +226,9 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             break;
         case POS_ABS_SET_RAD:
             instance.est_input.target_pos = shaft_to_origin(set_value, instance.config.motor.gear_ratio);
-            pos_target_sent = true;
             break;
         case POS_INC_RAD:
             instance.est_input.target_pos += shaft_to_origin(set_value, instance.config.motor.gear_ratio);
-            pos_target_sent = true;
             break;
         case POS_ABS_SET_DEG:
             return SetEndpointValue(POS_ABS_SET_RAD, DEG2RAD(set_value));
@@ -297,7 +294,6 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
                                                     RPM_speed_to_rad(shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio), 1), // rpm -> rad/s
                                                     instance.config.traj_max_accel,
                                                     instance.config.traj_max_decel);
-            pos_target_sent = true;
             break;
         case TRAJ_TARGET_DEG:
             return SetEndpointValue(TRAJ_TARGET_RAD, DEG2RAD(set_value));
@@ -317,6 +313,21 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
         case SET_HOME:
             
             break;
+#ifdef FOC_USING_INDICATOR
+        case INDICATOR_STATE:
+            if(instance.error_code) break; // Modifying indicator state when ERROR_CODE present is not allowed
+            if(instance.indicator != nullptr)
+            {
+                instance.indicator.get()->SetState(set_value != 0.0f);
+            }
+            break;
+        case INDICATOR_TOGGLE:
+            if(instance.indicator != nullptr)
+            {
+                instance.indicator.get()->Toggle();
+            }
+            break;
+#endif
         default: 
             result = CMD_FORBIDDEN; 
             break;

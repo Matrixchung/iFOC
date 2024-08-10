@@ -79,6 +79,9 @@ typedef enum PROTOCOL_ENDPOINT
     MOTOR_TEMP,
     MOSFET_TEMP,
     
+    SET_HOME, // Writeonly
+    INDICATOR_STATE,  // Writeonly
+    INDICATOR_TOGGLE, // Writeonly
     LAST_EP_PLACEHOLDER // For auto-detect endpoints count
 }PROTOCOL_ENDPOINT;
 

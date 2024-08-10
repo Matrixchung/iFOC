@@ -26,6 +26,7 @@
 #include "sound_injector.hpp"
 #include "trajectory_controller.hpp"
 #include "param_ident.hpp"
+#include "indicator.hpp"
 
 // Unit agreements: all angle are radius, while speed is RPM at output shaft of motor
 // Using CRTP for zero-overhead polymorphism at *compile-time*
@@ -62,6 +63,11 @@ private:
     uint16_t error_code = FOC_ERROR_NONE;
     FOC_MODE mode = MODE_TORQUE;
     bool output_state = false;
+#ifdef FOC_USING_INDICATOR
+public:
+    std::unique_ptr<Indicator<GPIOBase>> indicator = nullptr;
+    template <class T = GPIOBase> void SetIndicator(T& gpio);
+#endif
 #ifdef FOC_USING_TEMP_PROBE
 public:
     void AttachMCUTempProbe(float *ptr) { mcu_temp = ptr; };
@@ -308,6 +314,16 @@ void FOC<A, B, C>::EmergencyStop()
             break;
     }
 }
+
+#ifdef FOC_USING_INDICATOR
+template<class A, class B, class C>
+template<class T>
+void FOC<A, B, C>::SetIndicator(T& gpio)
+{
+    static_assert(std::is_base_of<GPIOBase, T>::value, "GPIO must be derived from GPIOBase");
+    indicator = std::make_unique<Indicator<GPIOBase>>(gpio);
+}
+#endif
 
 template<class A, class B, class C>
 template<class T>
