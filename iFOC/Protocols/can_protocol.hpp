@@ -5,11 +5,17 @@
 #include "can_base.h"
 #include "can_opcodes_enum.h"
 
-#define CAN_IDENTIFIER_BLINK_TIME 0.5f
+// Identifier will flash for (x) times in BLINK_TIME, x = sub_dev_index + 1
+
+#define CAN_IDENTIFIER_BLINK_TIME 1.0f
+#define CAN_IDENTIFIER_FLASH_TIME 0.1f
 
 uint8_t GetCANNodeID(uint32_t id) { return (uint8_t)((id & 0x7E0) >> 5); };
 uint8_t GetCANCmdID(uint32_t id) { return (uint8_t)(id & 0x1F); };
 uint16_t GetCANFrameID(uint8_t node_id, uint16_t id) { return (uint16_t)((uint16_t)node_id << 5) | id; };
+
+uint8_t is_identifying = 0;
+uint8_t delay_send_addr_flag = 0;
 
 template<class Intf, class U>
 class CANProtocol
@@ -29,7 +35,7 @@ private:
     BaseProtocol<U>& base;
     uint8_t tx_buffer[8] = {0x00};
     float identify_blink_timer = 0.0f;
-    bool is_identifying = false;
+    uint8_t flash_timer = 0;
 };
 
 template<class Intf, class U>
@@ -43,16 +49,33 @@ void CANProtocol<Intf, U>::Init(bool initHW)
 template<class Intf, class U>
 void CANProtocol<Intf, U>::Tick(float Ts)
 {
-    if(is_identifying)
+    if(is_identifying == base.sub_dev_index + 1)
     {
         identify_blink_timer += Ts;
-        if(identify_blink_timer >= CAN_IDENTIFIER_BLINK_TIME)
+        if(identify_blink_timer >= CAN_IDENTIFIER_BLINK_TIME - 2.0f * ((float)base.sub_dev_index * CAN_IDENTIFIER_FLASH_TIME))
         {
             base.SetEndpointValue(INDICATOR_TOGGLE, 0.0f);
-            identify_blink_timer = 0.0f;
+            identify_blink_timer -= CAN_IDENTIFIER_FLASH_TIME;
+            flash_timer++;
+            if(flash_timer > (base.sub_dev_index * 2) + 1)
+            {
+                identify_blink_timer = 0.0f;
+                flash_timer = 0;
+            }
         }
     }
-    else identify_blink_timer = 0.0f;
+    else 
+    {
+        identify_blink_timer = 0.0f;
+        flash_timer = 0;
+    }
+    if(delay_send_addr_flag & (1 << base.sub_dev_index))
+    {
+        tx_buffer[0] = base.node_id;
+        memcpy(tx_buffer + 1, &base.serial_number, 6);
+        interface.SendPayload(GetCANFrameID(base.node_id, ADDRESS), tx_buffer, 7);
+        delay_send_addr_flag &= ~(1 << base.sub_dev_index);
+    }
     // if(base.pos_target_sent && base.GetEndpointValue(TRAJ_POS_STATE))
     // {
     //     base.pos_target_sent = false;
@@ -188,12 +211,12 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
             {
                 if(payload[0] == 0)
                 {
-                    is_identifying = false;
+                    is_identifying = 0;
                     base.SetEndpointValue(INDICATOR_STATE, 0.0f);
                 }
-                else
+                else if(base.node_id != 0x3F)
                 {
-                    is_identifying = true;
+                    is_identifying = base.sub_dev_index + 1;
                 }
             }
             break;
@@ -214,9 +237,10 @@ void CANProtocol<Intf, U>::OnRemoteFrame(uint32_t id)
     switch(opcode)
     {
         case ADDRESS:
-            tx_buffer[0] = base.node_id;
-            memcpy(tx_buffer + 1, &base.serial_number, 6);
-            interface.SendPayload(GetCANFrameID(base.node_id, ADDRESS), tx_buffer, 7);
+            delay_send_addr_flag |= (1 << base.sub_dev_index);
+            // tx_buffer[0] = base.node_id;
+            // memcpy(tx_buffer + 1, &base.serial_number, 6);
+            // interface.SendPayload(GetCANFrameID(base.node_id, ADDRESS), tx_buffer, 7);
             break;
         default: break;
     }
