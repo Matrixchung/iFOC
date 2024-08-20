@@ -56,4 +56,5 @@ float shaft_to_origin(float shaft, float gear_ratio);
 float sat(float s, float delta);
 uint8_t getCRC8(uint8_t* data, uint16_t len);
 float fast_inv_sqrt(float x);
+float euclid_distance(float x1, float y1, float x2, float y2);
 #endif

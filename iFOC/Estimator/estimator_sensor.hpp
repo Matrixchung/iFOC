@@ -95,7 +95,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
     // {
     //     limiter->Update();
     // }
-    if(input.target > EST_TARGET_NONE)
+    if(input.target > EST_TARGET_NONE && config.debug_mode != FOC_DEBUG_GATE_DRIVER)
     {
         if(align_state && zero_electric_angle != config.motor.zero_elec_angle) // need recalibration
         {
@@ -120,6 +120,11 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             else if(state_timer < align_time + steady_time)
             {
                 output.Iqd_set = Iqd_align;
+                if(euclid_distance(output.Iqd_fb.q, output.Iqd_fb.d, output.Iqd_set.q, output.Iqd_set.d) >= 
+                   euclid_distance(0.0f, 0.0f, output.Iqd_set.q, output.Iqd_set.d) * 0.5f) // current response not works as expected, or current feedback route unavailable
+                {
+                    error_flag = 1;
+                }
                 // if(ABS(output->estimated_speed) >= 10.0f) // align failure check logic
                 // {
                 //     error_flag = 1;

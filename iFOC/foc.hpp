@@ -213,6 +213,14 @@ void FOC<A, B, C>::Update(float Ts)
 template<class A, class B, class C>
 void FOC<A, B, C>::UpdateMidInterval(float Ts)
 {
+    switch(config.debug_mode)
+    {
+        case FOC_DEBUG_GATE_DRIVER:
+            mode = MODE_TORQUE;
+            break;
+        case FOC_DEBUG_NONE:
+        default: break;
+    }
     main_estimator->UpdateMidInterval(Ts);
 #ifdef FOC_USING_TEMP_PROBE
     if(mcu_temp != nullptr)
@@ -228,17 +236,20 @@ void FOC<A, B, C>::UpdateMidInterval(float Ts)
         if(*mosfet_temp > config.motor_temp_limit) error_code |= FOC_ERROR_MOTOR_OVERTEMP;
     }
 #endif
-    // Overspeed protection
-    float temp = shaft_to_origin(config.motor.max_mechanic_speed, config.motor.gear_ratio);
-    est_input.target_speed = _constrain(est_input.target_speed, -temp, temp);
-    if(config.max_speed > 0.0f)
+    // Overspeed protection, disabled in debug mode
+    if(config.debug_mode == FOC_DEBUG_NONE)
     {
-        if(ABS(est_output->estimated_speed) > shaft_to_origin(config.max_speed, config.motor.gear_ratio))
+        float temp = shaft_to_origin(config.motor.max_mechanic_speed, config.motor.gear_ratio);
+        est_input.target_speed = _constrain(est_input.target_speed, -temp, temp);
+        if(config.max_speed > 0.0f)
         {
-            overspeed_timer += Ts;
-            if(overspeed_timer > config.overspeed_detect_time) error_code |= FOC_ERROR_OVERSPEED;
+            if(ABS(est_output->estimated_speed) > shaft_to_origin(config.max_speed, config.motor.gear_ratio))
+            {
+                overspeed_timer += Ts;
+                if(overspeed_timer > config.overspeed_detect_time) error_code |= FOC_ERROR_OVERSPEED;
+            }
+            else overspeed_timer = 0.0f;
         }
-        else overspeed_timer = 0.0f;
     }
     // Sync target with current pos
     if(!output_state)
@@ -426,6 +437,7 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
         .startup_state = false,
         .break_mode = BREAK_MODE_ASC,
         .startup_mode = MODE_TORQUE,
+        .debug_mode = FOC_DEBUG_NONE,
         .apply_curr_feedforward = false,
         .use_speed_pll = false,
         .speed_pll_config = 

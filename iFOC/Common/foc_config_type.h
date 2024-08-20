@@ -55,6 +55,7 @@ typedef struct foc_config_t
     bool startup_state;
     uint8_t break_mode;
     FOC_MODE startup_mode;
+    FOC_DEBUG_MODE debug_mode;
     bool apply_curr_feedforward; // requires accurate Ld measurement
     bool use_speed_pll;
     speed_pll_t speed_pll_config;

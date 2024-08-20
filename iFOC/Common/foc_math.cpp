@@ -319,3 +319,8 @@ float shaft_to_origin(float shaft, float gear_ratio)
 {
     return (float)(shaft * gear_ratio);
 }
+
+float euclid_distance(float x1, float y1, float x2, float y2)
+{
+    return sqrtf(SQ(x2 - x1) + SQ(y2 - y1));
+}

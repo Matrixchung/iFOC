@@ -52,6 +52,12 @@ typedef enum FOC_EST_TARGET
     EST_TARGET_POS = 3,
 }FOC_EST_TARGET;
 
+typedef enum FOC_DEBUG_MODE
+{
+    FOC_DEBUG_NONE = 0,
+    FOC_DEBUG_GATE_DRIVER = 1,
+}FOC_DEBUG_MODE;
+
 typedef struct qd_t
 {
     float q;
