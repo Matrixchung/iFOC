@@ -182,7 +182,7 @@ void FOC<A, B, C>::Update(float Ts)
             if(overcurrent_timer > 1.0f)
             {
                 error_code = FOC_ERROR_OVER_CURRENT;
-                config.motor.zero_elec_angle = 0.0f; // need recalibration
+                // config.motor.zero_elec_angle = 0.0f; // need recalibration
                 overcurrent_timer = 0.0f;
                 EmergencyStop();
                 return;
