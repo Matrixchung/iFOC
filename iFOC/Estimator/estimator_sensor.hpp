@@ -6,8 +6,8 @@
 #include "speed_pll.hpp"
 #include "limiter.hpp"
 
-#define FOC_SENSOR_ALIGN_PERIOD 500
-#define FOC_SENSOR_ALIGN_STEADY_PERIOD 250 // in this period(ms) we check for overspeed.
+#define FOC_SENSOR_ALIGN_PERIOD 850
+#define FOC_SENSOR_ALIGN_STEADY_PERIOD 150 // in this period(ms) we check for overspeed.
 
 class EstimatorSensor : public EstimatorBase
 {
@@ -15,7 +15,6 @@ public:
     EstimatorSensor(foc_state_input_t& _in, foc_config_t& _config) : EstimatorBase(_in, _config), speed_pll(config.speed_pll_config){};
     bool Init() override;
     void AttachEncoder(EncoderBase *_encoder);
-    void AttachAuxEncoder(EncoderBase *_aux_encoder);
     // void AttachLimiter(LimiterBase *_limiter);
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;
@@ -23,7 +22,7 @@ public:
 private:
     SpeedPLL speed_pll;
     EncoderBase *encoder = nullptr;
-    EncoderBase *aux_encoder = nullptr;
+    
     qd_t Iqd_align = {.q = 0.0f, .d = 0.0f,};
     float state_timer = 0.0f;
     float zero_electric_angle = 0.0f;
@@ -31,6 +30,12 @@ private:
     const float steady_time = FOC_SENSOR_ALIGN_STEADY_PERIOD * 1e-3f;
     uint8_t error_flag = 0;
     bool align_state = false;
+#ifdef FOC_SENSORED_USING_AUX_ENCODER
+public:
+    void AttachAuxEncoder(EncoderBase *_aux_encoder);
+private:
+    EncoderBase *aux_encoder = nullptr;
+#endif
 };
 
 bool EstimatorSensor::Init()
@@ -44,8 +49,12 @@ bool EstimatorSensor::Init()
         zero_electric_angle = config.motor.zero_elec_angle;
     }
     bool encoder1_init_state = encoder->Init();
+#ifdef FOC_SENSORED_USING_AUX_ENCODER
     if(aux_encoder == nullptr) return encoder1_init_state;
     return encoder1_init_state & aux_encoder->Init();
+#else
+    return encoder1_init_state;
+#endif
 }
 
 void EstimatorSensor::Update(float Ts)
@@ -101,10 +110,16 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             if(state_timer < align_time)
             {
                 output.electric_angle = 0.0f;
-                output.Iqd_set = Iqd_align;
+                float Iq_step = Iqd_align.q * Ts / align_time; // SOFT START
+                float Id_step = Iqd_align.d * Ts / align_time;
+                output.Iqd_set.q += Iq_step;
+                output.Iqd_set.d += Id_step;
+                output.Iqd_set.q = _constrain(output.Iqd_set.q, 0.0f, Iqd_align.q);
+                output.Iqd_set.d = _constrain(output.Iqd_set.d, 0.0f, Iqd_align.d);
             }
             else if(state_timer < align_time + steady_time)
             {
+                output.Iqd_set = Iqd_align;
                 // if(ABS(output->estimated_speed) >= 10.0f) // align failure check logic
                 // {
                 //     error_flag = 1;
@@ -183,10 +198,12 @@ void EstimatorSensor::AttachEncoder(EncoderBase *_encoder)
     encoder = _encoder;
 }
 
+#ifdef FOC_SENSORED_USING_AUX_ENCODER
 void EstimatorSensor::AttachAuxEncoder(EncoderBase *_aux_encoder)
 {
     aux_encoder = _aux_encoder;
 }
+#endif
 
 // void EstimatorSensor::AttachLimiter(LimiterBase *_limiter)
 // {
@@ -201,7 +218,9 @@ FOC_ERROR_FLAG EstimatorSensor::GetErrorFlag()
     // return FOC_ERROR_NONE;
     uint16_t ret = FOC_ERROR_NONE;
     if(encoder == nullptr || encoder->IsError()) ret |= FOC_ERROR_FEEDBACK; // lost primary encoder
+#ifdef FOC_SENSORED_USING_AUX_ENCODER
     if(aux_encoder != nullptr && aux_encoder->IsError()) ret |= FOC_ERROR_FEEDBACK; // lost auxiliary encoder
+#endif
     if(error_flag == 1) ret |= FOC_ERROR_ALIGN;
     return static_cast<FOC_ERROR_FLAG>(ret);
 }
