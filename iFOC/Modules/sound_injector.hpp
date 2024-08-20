@@ -15,7 +15,7 @@
 
 typedef enum Note
 {
-    L1 = 0, L15, L2, L25, L3, L4, L45, L5, L55, L6, L65, L7,
+    L01 = 0, L15, L2, L25, L3, L4, L45, L05, L55, L6, L65, L7,
     M1, M15, M2, M25, M3, M4, M45, M5, M55, M6, M65, M7,
     H1, H15, H2, H25, H3, H4, H45, H5, H55, H6, H65, H7,
 }Note;
