@@ -14,7 +14,8 @@ public:
     Indicator(T& _gpio) : Indicator(_gpio, true) {};
     void SetState(bool state)
     {
-        gpio.SetState(~(state ^ enable_state));
+        if(state) gpio.SetState(enable_state);
+        else gpio.SetState(!enable_state);
     }
     void Toggle()
     {
