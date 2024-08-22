@@ -221,6 +221,8 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
             return instance.trajController.GetSpeed();
         case TRAJ_CURRENT_ACCEL:
             return instance.trajController.GetAccel();
+        case MECHANIC_SPEED_LIMIT:
+            return instance.config.motor.max_mechanic_speed;
         default: break;
     }
     return 0.0f;
@@ -369,6 +371,9 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             break;
         case SET_HOME:
             
+            break;
+        case MECHANIC_SPEED_LIMIT:
+            instance.config.motor.max_mechanic_speed = set_value;
             break;
 #ifdef FOC_USING_INDICATOR
         case INDICATOR_STATE:

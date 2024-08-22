@@ -131,9 +131,9 @@ void CANProtocol<Intf, U>::SendPacket(CAN_OPCODES opcode)
         case GET_ESTIMATES:
             {
                 memset(tx_buffer, 0, 8);
-                float temp1 = base.GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD);
+                float temp1 = base.GetEndpointValue(ESTIMATED_RAW_ANGLE_DEG);
                 memcpy(tx_buffer, &temp1, 4);
-                temp1 = base.GetEndpointValue(ESTIMATED_SPEED);
+                temp1 = base.GetEndpointValue(ESTIMATED_SPEED); // shaft, RPM
                 memcpy(tx_buffer + 4, &temp1, 4);
                 interface.SendPayload(GetCANFrameID(base.node_id, GET_ESTIMATES), tx_buffer, 8);
             }
@@ -159,8 +159,18 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
             break;
         case SET_INPUT_POS:
             {
-                int32_t temp_i32 = (int32_t)(payload[0] | (payload[1] << 8) | (payload[2] << 16) | (payload[3] << 24));
-                base.SetEndpointValue(POS_INC_DEG, (float)temp_i32);
+                float temp1 = 0.0f;
+                memcpy(&temp1, payload, 4);
+                base.SetEndpointValue(DRIVE_MODE, MODE_TRAJECTORY);
+                base.SetEndpointValue(TRAJ_TARGET_DEG, temp1);
+            }
+            break;
+        case SET_INPUT_VEL:
+            {
+                float temp1 = 0.0f;
+                memcpy(&temp1, payload, 4);
+                base.SetEndpointValue(DRIVE_MODE, MODE_SPEED);
+                base.SetEndpointValue(SPEED_TARGET, temp1);
             }
             break;
         case ACCESS_ENDPOINT:
@@ -175,9 +185,12 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
                 tx_buffer[2] = payload[2];
                 interface.SendPayload(GetCANFrameID(base.node_id, RESPONSE_ENDPOINT), tx_buffer, 8);
             }
-            else if(len == 8) // WRITE endpoint
+            else if(payload[0] == 1 && len == 8) // WRITE endpoint
             {
-
+                uint16_t temp_u16 = (uint16_t)payload[1] | ((uint16_t)payload[2] << 8);
+                float request = 0.0f;
+                memcpy(&request, payload + 4, 4);
+                base.SetEndpointValue(GetEndpointFromIndex(temp_u16), request);
             }
             break;
         case ADDRESS:
@@ -227,6 +240,16 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
             SendPacket(GET_ESTIMATES);
             break;
         case SET_LIMITS:
+            {
+                if(len != 8) break;
+                // [0:3] velocity_limit (rpm)
+                // [4:7] current_limit (ampere)
+                float temp1 = 0.0f;
+                memcpy(&temp1, payload, 4);
+                base.SetEndpointValue(MECHANIC_SPEED_LIMIT, temp1);
+                memcpy(&temp1, payload + 4, 4);
+                base.SetEndpointValue(SPEED_CURRENT_LIMIT, temp1);
+            }
             break;
         case SET_TRAJ_VEL_LIMIT:
             {
@@ -295,9 +318,6 @@ void CANProtocol<Intf, U>::OnRemoteFrame(uint32_t id)
     {
         case ADDRESS:
             delay_send_addr_flag |= (1 << base.sub_dev_index);
-            // tx_buffer[0] = base.node_id;
-            // memcpy(tx_buffer + 1, &base.serial_number, 6);
-            // interface.SendPayload(GetCANFrameID(base.node_id, ADDRESS), tx_buffer, 7);
             break;
         default: break;
     }
