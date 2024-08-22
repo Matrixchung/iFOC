@@ -7,7 +7,7 @@
 typedef enum PROTOCOL_ENDPOINT
 {
     NODE_ID = 0,
-    IS_NODE_ID_SET,
+    CONFIGURATION, // Writeonly
     VBUS,
     IBUS,
     POWER,

@@ -10,15 +10,6 @@
 
 // use union to extract/save multiple-byte variables
 
-typedef enum EEPROM_CONFIG_PACKET
-{
-    EEPROM_NODE_ID = 0, // uint8_t node_id
-    
-    EEPROM_ZERO_ELEC_ANGLE = EEPROM_NODE_ID + sizeof(uint8_t), // float zero_elec_angle, 4bytes
-
-    EEPROM_CRC8_BIT, // last, will save CRC8 calculated value from all above(except itself)
-}EEPROM_CONFIG_PACKET;
-
 template<class T = I2CBase>
 class EEPROM
 {
@@ -32,6 +23,7 @@ public:
     U ReadVar(uint16_t addr);
     template<class U>
     void WriteVar(uint16_t addr, U var);
+    void FlushPage(uint16_t addr);
 private:
     T& i2c;
     void PageWrite(uint16_t start_addr, uint8_t *src, uint16_t len);
@@ -66,6 +58,13 @@ void EEPROM<T>::WriteVar(uint16_t addr, U var)
     };
     dest = var;
     PageWrite(addr, u8, sizeof(U));
+}
+
+template<class T>
+void EEPROM<T>::FlushPage(uint16_t addr)
+{
+    uint8_t dummy[31] = {0};
+    PageWrite(addr, dummy, 31);
 }
 
 template<class T>

@@ -16,9 +16,12 @@
 // If CRC correct, then we will apply those settings to FOC config struct.
 // If CRC WRONG, we will writeback all default settings to EEPROM here.
 
-// Physical Address: sub_dev_index + EEPROM_ADDR_OFFSET, each of this called a 'packet'
-// uint8_t dummy[CRC8_BIT]
-// offset = key_base + sizeof(key_variable_type)
+typedef struct config_blob_t
+{
+    uint8_t crc_8;           // CRC8 checksum of all variables below
+    uint8_t node_id;
+    uint32_t serial_number_lsb;
+}config_blob_t;
 
 PROTOCOL_ENDPOINT GetEndpointFromIndex(int i) { return static_cast<PROTOCOL_ENDPOINT>(i); }
 
@@ -36,13 +39,60 @@ public:
     uint8_t node_id = 0x3F;
     uint8_t sub_dev_index = 0; // used to mark the index among same physical device, for example motor1, motor2, ...
     uint64_t serial_number = 0;
+private:
+    config_blob_t config_blob;
+    bool ReadConfig();
+    bool SaveConfig();
+    bool EraseConfig();
 };
 
 template<class U>
 template<class T>
 void BaseProtocol<U>::AttachEEPROM(EEPROM<T> *ptr)
 {
-    pROM = reinterpret_cast<EEPROM<I2CBase>*>(ptr);
+    pROM = reinterpret_cast<EEPROM<I2CBase>*>(ptr); // physical address: sub_dev_index * sizeof(config_blob_t)
+    if(pROM != nullptr) ReadConfig();
+}
+
+template<class U>
+bool BaseProtocol<U>::ReadConfig()
+{
+    if(pROM == nullptr) return false;
+    config_blob = pROM->ReadVar<config_blob_t>(sub_dev_index * sizeof(config_blob_t));
+    uint8_t buffer[sizeof(config_blob_t) - sizeof(uint8_t)];
+    uint8_t *ptr = (uint8_t*)&config_blob;
+    memcpy(buffer, ptr + 1, sizeof(buffer));
+    if(config_blob.crc_8 == getCRC8(buffer, sizeof(buffer)) &&   // checksum valid
+       config_blob.serial_number_lsb == (uint32_t)serial_number  // serial number match
+    ) 
+    {
+        node_id = config_blob.node_id;
+        return true;
+    }
+    return false;
+}
+
+template<class U>
+bool BaseProtocol<U>::SaveConfig()
+{
+    if(pROM == nullptr) return false;
+    config_blob.node_id = node_id;
+    config_blob.serial_number_lsb = (uint32_t)serial_number;
+    uint8_t buffer[sizeof(config_blob_t) - sizeof(uint8_t)];
+    uint8_t *ptr = (uint8_t*)&config_blob;
+    memcpy(buffer, ptr + 1, sizeof(buffer));
+    config_blob.crc_8 = getCRC8(buffer, sizeof(buffer));
+    pROM->WriteVar<config_blob_t>(sub_dev_index * sizeof(config_blob_t), config_blob);
+    return true;
+}
+
+template<class U>
+bool BaseProtocol<U>::EraseConfig()
+{
+    if(pROM == nullptr) return false;
+    pROM->FlushPage(0x00);
+    node_id = 0x3F;
+    return true;
 }
 
 template<class U>
@@ -57,6 +107,7 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
         case IBUS:
             return instance.bus_sense.Ibus;
         case POWER:
+            return instance.bus_sense.Vbus * instance.bus_sense.Ibus;
             break;
         // case SERIAL_NUMBER:
         //     return (float)serial_number;
@@ -192,6 +243,12 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
                 // node_id_configured = true;
             }
             break;
+        case CONFIGURATION:
+            if(set_value == 0.0f) result = ReadConfig() ? CMD_SUCCESS : CMD_UNKNOWN_FAILURE;
+            else if(set_value == 1.0f) result = SaveConfig() ? CMD_SUCCESS : CMD_UNKNOWN_FAILURE;
+            else if(set_value == 2.0f) result = EraseConfig() ? CMD_SUCCESS : CMD_UNKNOWN_FAILURE;
+            else result = CMD_NOT_SUPPORTED;
+            break;
         // case SERIAL_NUMBER:
         //     if(serial_number == 0) // can be set only once from startup
         //     {
@@ -315,7 +372,7 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             break;
 #ifdef FOC_USING_INDICATOR
         case INDICATOR_STATE:
-            if(instance.error_code) break; // Modifying indicator state when ERROR_CODE present is not allowed
+            // if(instance.error_code) break; // Modifying indicator state when ERROR_CODE present is not allowed
             if(instance.indicator != nullptr)
             {
                 instance.indicator.get()->SetState(set_value != 0.0f);

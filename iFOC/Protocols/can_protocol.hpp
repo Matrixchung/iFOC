@@ -4,11 +4,14 @@
 #include "base_protocol.hpp"
 #include "can_base.h"
 #include "can_opcodes_enum.h"
+#include "platform.hpp"
 
 // Identifier will flash for (x) times in BLINK_TIME, x = sub_dev_index + 1
 
 #define CAN_IDENTIFIER_BLINK_TIME 1.0f
 #define CAN_IDENTIFIER_FLASH_TIME 0.1f
+#define CAN_HEARTBEAT_INTERVAL 0.1f
+#define CAN_GET_ESTIMATES_INTERVAL 0.01f
 
 uint8_t GetCANNodeID(uint32_t id) { return (uint8_t)((id & 0x7E0) >> 5); };
 uint8_t GetCANCmdID(uint32_t id) { return (uint8_t)(id & 0x1F); };
@@ -29,12 +32,15 @@ public:
     void Tick(float Ts);
     void OnDataFrame(uint32_t id, uint8_t *payload, uint8_t len);
     void OnRemoteFrame(uint32_t id);
+    void SendPacket(CAN_OPCODES opcode);
     uint8_t GetNodeID() { return base.node_id; };
 private:
     Intf& interface;
     BaseProtocol<U>& base;
     uint8_t tx_buffer[8] = {0x00};
     float identify_blink_timer = 0.0f;
+    float heartbeat_timer = 0.0f;
+    float estimates_timer = 0.0f;
     uint8_t flash_timer = 0;
 };
 
@@ -49,51 +55,52 @@ void CANProtocol<Intf, U>::Init(bool initHW)
 template<class Intf, class U>
 void CANProtocol<Intf, U>::Tick(float Ts)
 {
-    if(is_identifying == base.sub_dev_index + 1)
+    if(base.node_id != 0x3F)
     {
-        identify_blink_timer += Ts;
-        if(identify_blink_timer >= CAN_IDENTIFIER_BLINK_TIME - 2.0f * ((float)base.sub_dev_index * CAN_IDENTIFIER_FLASH_TIME))
+        if(is_identifying == base.sub_dev_index + 1)
         {
-            base.SetEndpointValue(INDICATOR_TOGGLE, 0.0f);
-            identify_blink_timer -= CAN_IDENTIFIER_FLASH_TIME;
-            flash_timer++;
-            if(flash_timer > (base.sub_dev_index * 2) + 1)
+            identify_blink_timer += Ts;
+            if(identify_blink_timer >= CAN_IDENTIFIER_BLINK_TIME - 2.0f * ((float)base.sub_dev_index * CAN_IDENTIFIER_FLASH_TIME))
             {
-                identify_blink_timer = 0.0f;
-                flash_timer = 0;
+                base.SetEndpointValue(INDICATOR_TOGGLE, 0.0f);
+                identify_blink_timer -= CAN_IDENTIFIER_FLASH_TIME;
+                flash_timer++;
+                if(flash_timer > (base.sub_dev_index * 2) + 1)
+                {
+                    identify_blink_timer = 0.0f;
+                    flash_timer = 0;
+                }
             }
         }
-    }
-    else 
-    {
-        identify_blink_timer = 0.0f;
-        flash_timer = 0;
+        else 
+        {
+            identify_blink_timer = 0.0f;
+            flash_timer = 0;
+        }
+        estimates_timer += Ts;
+        heartbeat_timer += Ts;
+        if(estimates_timer >= CAN_GET_ESTIMATES_INTERVAL)
+        {
+            SendPacket(GET_ESTIMATES);
+            estimates_timer = 0.0f;
+        }
+        else if(heartbeat_timer >= CAN_HEARTBEAT_INTERVAL)
+        {
+            SendPacket(HEARTBEAT);
+            heartbeat_timer = 0.0f;
+        }
     }
     if(delay_send_addr_flag & (1 << base.sub_dev_index))
     {
-        tx_buffer[0] = base.node_id;
-        memcpy(tx_buffer + 1, &base.serial_number, 6);
-        interface.SendPayload(GetCANFrameID(base.node_id, ADDRESS), tx_buffer, 7);
+        SendPacket(ADDRESS);
         delay_send_addr_flag &= ~(1 << base.sub_dev_index);
     }
-    // if(base.pos_target_sent && base.GetEndpointValue(TRAJ_POS_STATE))
-    // {
-    //     base.pos_target_sent = false;
-    //     memset(tx_buffer, 0, 8);
-    //     uint16_t temp_u16 = 0;
-    //     temp_u16 = (uint16_t)base.GetEndpointValue(DRIVE_ERROR_CODE);
-    //     tx_buffer[0] = (uint8_t)temp_u16;
-    //     tx_buffer[1] = (uint8_t)(temp_u16 << 8);
-    //     tx_buffer[4] = (uint8_t)base.GetEndpointValue(OUTPUT_STATE);
-    //     tx_buffer[6] = (uint8_t)base.GetEndpointValue(TRAJ_POS_STATE);
-    //     interface.SendPayload(GetCANFrameID(base.node_id, HEARTBEAT), tx_buffer, 8);
-    // }
+
 }
 
 template<class Intf, class U>
-void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t len)
+void CANProtocol<Intf, U>::SendPacket(CAN_OPCODES opcode)
 {
-    CAN_OPCODES opcode = static_cast<CAN_OPCODES>(GetCANCmdID(id));
     switch(opcode)
     {
         case HEARTBEAT:
@@ -107,9 +114,6 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
                 interface.SendPayload(GetCANFrameID(base.node_id, HEARTBEAT), tx_buffer, 8);
             }
             break;
-        case ESTOP:
-            base.SetEndpointValue(OUTPUT_STATE, 0.0f);
-            break;
         case GET_ERROR:
             {
                 memset(tx_buffer, 0, 8);
@@ -118,6 +122,40 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
                 tx_buffer[1] = (uint8_t)(temp_u16 << 8);
                 interface.SendPayload(GetCANFrameID(base.node_id, GET_ERROR), tx_buffer, 8);
             }
+            break;
+        case ADDRESS:
+            tx_buffer[0] = base.node_id;
+            memcpy(tx_buffer + 1, &base.serial_number, 6);
+            interface.SendPayload(GetCANFrameID(base.node_id, ADDRESS), tx_buffer, 7);
+            break;
+        case GET_ESTIMATES:
+            {
+                memset(tx_buffer, 0, 8);
+                float temp1 = base.GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD);
+                memcpy(tx_buffer, &temp1, 4);
+                temp1 = base.GetEndpointValue(ESTIMATED_SPEED);
+                memcpy(tx_buffer + 4, &temp1, 4);
+                interface.SendPayload(GetCANFrameID(base.node_id, GET_ESTIMATES), tx_buffer, 8);
+            }
+            break;
+        default: break;
+    }
+}
+
+template<class Intf, class U>
+void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t len)
+{
+    CAN_OPCODES opcode = static_cast<CAN_OPCODES>(GetCANCmdID(id));
+    switch(opcode)
+    {
+        case HEARTBEAT:
+            SendPacket(HEARTBEAT);
+            break;
+        case ESTOP:
+            base.SetEndpointValue(OUTPUT_STATE, 0.0f);
+            break;
+        case GET_ERROR:
+            SendPacket(GET_ERROR);
             break;
         case SET_INPUT_POS:
             {
@@ -145,25 +183,40 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
         case ADDRESS:
             if(len == 0)
             {
-                tx_buffer[0] = base.node_id;
-                memcpy(tx_buffer + 1, &base.serial_number, 6);
-                interface.SendPayload(GetCANFrameID(base.node_id, ADDRESS), tx_buffer, 7);
+                SendPacket(ADDRESS);
             }
             else if(len >= 7)
             {
-                uint16_t temp_u16 = payload[0];
-                uint64_t temp_u64 = 0;
+                uint8_t temp_u8 = payload[0]; // Node_ID
+                uint64_t temp_u64 = 0; // Serial_Number
                 memcpy(&temp_u64, payload + 1, 6);
-                if(temp_u64 == base.serial_number)
+                uint8_t caller_id = GetCANNodeID(id);
+                if(caller_id == 0x3F)
                 {
-                    base.node_id = (uint8_t)temp_u16;
-                    Init();
+                    if(temp_u64 == base.serial_number)
+                    {
+                        base.node_id = temp_u8;
+                        Init();
+                    }
                 }
-                else if(temp_u16 == base.node_id)
+                else
                 {
-                    base.node_id = 0x3F;
-                    Init();
+                    if(temp_u64 == base.serial_number || base.serial_number == 0)
+                    {
+                        base.node_id = temp_u8;
+                        Init();
+                    }
                 }
+                // if(temp_u64 == base.serial_number)
+                // {
+                //     base.node_id = (uint8_t)temp_u16;
+                //     Init();
+                // }
+                // else if(temp_u16 == base.node_id)
+                // {
+                //     base.node_id = 0x3F;
+                //     Init();
+                // }
             }
             break;
         case SET_STATE:
@@ -171,14 +224,7 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
             else base.SetEndpointValue(OUTPUT_STATE, 1.0f);
             break;
         case GET_ESTIMATES:
-            {
-                memset(tx_buffer, 0, 8);
-                float temp1 = base.GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD);
-                memcpy(tx_buffer, &temp1, 4);
-                temp1 = base.GetEndpointValue(ESTIMATED_SPEED);
-                memcpy(tx_buffer + 4, &temp1, 4);
-                interface.SendPayload(GetCANFrameID(base.node_id, GET_ESTIMATES), tx_buffer, 8);
-            }
+            SendPacket(GET_ESTIMATES);
             break;
         case SET_LIMITS:
             break;
@@ -221,10 +267,21 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
             }
             break;
         case REBOOT:
-            if(len != 1) break;
-            if(payload[0] == 0) NVIC_SystemReset();
-            else if(payload[0] == 1) ; // Save config
-            else if(payload[0] == 2) ; // Erase config
+            {
+                if(len != 1) break;
+                if(payload[0] == 0) NVIC_SystemReset();
+                else if(payload[0] == 1) 
+                {
+                    base.SetEndpointValue(CONFIGURATION, 1.0f); // Save config
+                }
+                else if(payload[0] == 2) 
+                {
+                    base.SetEndpointValue(CONFIGURATION, 2.0f); // Erase config
+                }
+            }
+            break;
+        case BOOTLOADER:
+            JumpToBootloader();
             break;
         default: break;
     }

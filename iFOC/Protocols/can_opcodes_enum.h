@@ -34,6 +34,7 @@ typedef enum CAN_OPCODES
     GET_TORQUES = 0x1C,
     GET_POWERS = 0x1D,
     HOME = 0x1E,
+    BOOTLOADER = 0x1F,
 }CAN_OPCODES;
 
 #endif
