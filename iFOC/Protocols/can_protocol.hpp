@@ -124,9 +124,11 @@ void CANProtocol<Intf, U>::SendPacket(CAN_OPCODES opcode)
             }
             break;
         case ADDRESS:
-            tx_buffer[0] = base.node_id;
-            memcpy(tx_buffer + 1, &base.serial_number, 6);
-            interface.SendPayload(GetCANFrameID(base.node_id, ADDRESS), tx_buffer, 7);
+            {
+                tx_buffer[0] = base.node_id;
+                memcpy(tx_buffer + 1, &base.serial_number, 6);
+                interface.SendPayload(GetCANFrameID(base.node_id, ADDRESS), tx_buffer, 7);
+            }   
             break;
         case GET_ESTIMATES:
             {
@@ -136,6 +138,31 @@ void CANProtocol<Intf, U>::SendPacket(CAN_OPCODES opcode)
                 temp1 = base.GetEndpointValue(ESTIMATED_SPEED); // shaft, RPM
                 memcpy(tx_buffer + 4, &temp1, 4);
                 interface.SendPayload(GetCANFrameID(base.node_id, GET_ESTIMATES), tx_buffer, 8);
+            }
+            break;
+        case GET_IQ:
+            {
+                float temp1 = base.GetEndpointValue(IQ_SET);
+                memcpy(tx_buffer, &temp1, 4);
+                temp1 = base.GetEndpointValue(CURRENT_IQ);
+                memcpy(tx_buffer + 4, &temp1, 4);
+                interface.SendPayload(GetCANFrameID(base.node_id, GET_IQ), tx_buffer, 8);
+            }
+            break;
+        case GET_BUS_SENSE:
+            {
+                float temp1 = base.GetEndpointValue(VBUS);
+                memcpy(tx_buffer, &temp1, 4);
+                temp1 = base.GetEndpointValue(IBUS);
+                memcpy(tx_buffer + 4, &temp1, 4);
+                interface.SendPayload(GetCANFrameID(base.node_id, GET_BUS_SENSE), tx_buffer, 8);
+            }
+            break;
+        case GET_POWERS:
+            {
+                float temp1 = base.GetEndpointValue(POWER);
+                memcpy(tx_buffer, &temp1, 4);
+                interface.SendPayload(GetCANFrameID(base.node_id, GET_POWERS), tx_buffer, 8);
             }
             break;
         default: break;
@@ -220,16 +247,6 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
                         Init();
                     }
                 }
-                // if(temp_u64 == base.serial_number)
-                // {
-                //     base.node_id = (uint8_t)temp_u16;
-                //     Init();
-                // }
-                // else if(temp_u16 == base.node_id)
-                // {
-                //     base.node_id = 0x3F;
-                //     Init();
-                // }
             }
             break;
         case SET_STATE:
@@ -259,22 +276,10 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
             }
             break;
         case GET_IQ:
-            {
-                float temp1 = base.GetEndpointValue(IQ_SET);
-                memcpy(tx_buffer, &temp1, 4);
-                temp1 = base.GetEndpointValue(CURRENT_IQ);
-                memcpy(tx_buffer + 4, &temp1, 4);
-                interface.SendPayload(GetCANFrameID(base.node_id, GET_IQ), tx_buffer, 8);
-            }
+            SendPacket(GET_IQ);
             break;
         case GET_BUS_SENSE:
-            {
-                float temp1 = base.GetEndpointValue(VBUS);
-                memcpy(tx_buffer, &temp1, 4);
-                temp1 = base.GetEndpointValue(IBUS);
-                memcpy(tx_buffer + 4, &temp1, 4);
-                interface.SendPayload(GetCANFrameID(base.node_id, GET_BUS_SENSE), tx_buffer, 8);
-            }
+            SendPacket(GET_BUS_SENSE);
             break;
         case IDENTIFY:
             {
@@ -303,6 +308,9 @@ void CANProtocol<Intf, U>::OnDataFrame(uint32_t id, uint8_t *payload, uint8_t le
                 }
             }
             break;
+        case GET_POWERS:
+            SendPacket(GET_POWERS);
+            break;
         case BOOTLOADER:
             JumpToBootloader();
             break;
@@ -318,6 +326,21 @@ void CANProtocol<Intf, U>::OnRemoteFrame(uint32_t id)
     {
         case ADDRESS:
             delay_send_addr_flag |= (1 << base.sub_dev_index);
+            break;
+        case GET_ERROR:
+            if(base.node_id != 0x3F) SendPacket(GET_ERROR);
+            break;
+        case GET_ESTIMATES:
+            if(base.node_id != 0x3F) SendPacket(GET_ESTIMATES);
+            break;
+        case GET_IQ:
+            if(base.node_id != 0x3F) SendPacket(GET_ESTIMATES);
+            break;
+        case GET_BUS_SENSE:
+            if(base.node_id != 0x3F) SendPacket(GET_BUS_SENSE);
+            break;
+        case GET_POWERS:
+            if(base.node_id != 0x3F) SendPacket(GET_POWERS);
             break;
         default: break;
     }
