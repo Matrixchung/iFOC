@@ -4,13 +4,13 @@
 #include "bdc.hpp"
 #include "base_protocol.hpp"
 
-template<typename T1, typename T2, typename T3>
-class BaseProtocol<BDC<T1, T2, T3>>
+template<class A, class B, class C>
+class BaseProtocol<FOC<DriverBDCBase<A>, B, C>>
 {
 private:
-    BDC<T1, T2, T3>& instance;
+    FOC<DriverBDCBase<A>, B, C>& instance;
 public:
-    BaseProtocol(BDC<T1, T2, T3>& _ref, uint8_t _idx): instance(_ref), sub_dev_index(_idx) {};
+    BaseProtocol(FOC<DriverBDCBase<A>, B, C>& _ref, uint8_t _idx): instance(_ref), sub_dev_index(_idx) {};
     float GetEndpointValue(PROTOCOL_ENDPOINT endpoint);
     FOC_CMD_RET SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float set_value);
     uint8_t node_id = 0x3F;
@@ -18,8 +18,8 @@ public:
     uint64_t serial_number = 0;
 };
 
-template<typename T1, typename T2, typename T3>
-float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
+template<class A, class B, class C>
+float BaseProtocol<FOC<DriverBDCBase<A>, B, C>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
 {
     switch(endpoint)
     {
@@ -30,7 +30,7 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
         case IBUS:
             return instance.bus_sense.Ibus;
         case POWER:
-            break;
+            return instance.bus_sense.Vbus * instance.bus_sense.Ibus;
         case DRIVE_ERROR_CODE:
             return (float)instance.error_code;
         case OUTPUT_STATE:
@@ -49,7 +49,13 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
         case VD_OUT:
         case VALPHA_OUT:
         case VBETA_OUT:
-            return instance.est_output.Uqd.q;
+            return instance.est_output->Uqd.q;
+        case IQ_TARGET:
+        case ID_TARGET:
+            return instance.est_input.Iqd_target.q;
+        case IQ_SET:
+        case ID_SET:
+            return instance.est_output->Iqd_set.q;
         case SPEED_TARGET:
             return origin_to_shaft(instance.est_input.target_speed, instance.config.motor.gear_ratio);
         case POS_ABS_SET_RAD:
@@ -98,10 +104,6 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
             return origin_to_shaft(instance.est_output.estimated_speed, instance.config.motor.gear_ratio);
         // case ESTIMATED_ACCELERATION:
         //     return instance.est_output.estimated_acceleration;
-        case BREAK_MODE:
-            return instance.config.break_mode;
-        case TRAJ_STATE:
-            return instance.trajController.GetState();
         case TRAJ_TARGET_RAD:
             return instance.trajController.GetFinalPos();
         case TRAJ_TARGET_DEG:
@@ -118,13 +120,15 @@ float BaseProtocol<BDC<T1, T2, T3>>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint
             return rad_speed_to_RPM(instance.trajController.GetSpeed(), 1) * instance.config.motor.gear_ratio;
         case TRAJ_CURRENT_ACCEL:
             return rad_speed_to_RPM(instance.trajController.GetAccel(), 1) * instance.config.motor.gear_ratio;
+        case MECHANIC_SPEED_LIMIT:
+            return instance.config.motor.max_mechanic_speed;
         default: break;
     }
     return 0.0f;
 }
 
-template<typename T1, typename T2, typename T3>
-FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float set_value)
+template<class A, class B, class C>
+FOC_CMD_RET BaseProtocol<FOC<DriverBDCBase<A>, B, C>>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float set_value)
 {
     FOC_CMD_RET result = CMD_SUCCESS;
     switch(endpoint)
@@ -141,35 +145,16 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
                 // node_id_configured = true;
             }
             break;
-        // case SERIAL_NUMBER:
-        //     if(serial_number == 0) // can be set only once from startup
-        //     {
-        //         serial_number = (uint64_t)set_value;
-        //     }
-        //     else
-        //     {
-        //         result = CMD_FORBIDDEN;
-        //     }
-        //     break;
         case OUTPUT_STATE:
             instance.SetOutputState((bool)((uint8_t)set_value == 1));
             break;
         case DRIVE_MODE:
-            if((FOC_MODE)set_value < LAST_MODE_PLACEHOLDER)
-            {
-                instance.mode = (FOC_MODE)set_value;
-            }
-            else result = CMD_NOT_SUPPORTED;
+            if((FOC_MODE)set_value >= LAST_MODE_PLACEHOLDER) result = CMD_NOT_SUPPORTED;
+            else instance.mode = (FOC_MODE)set_value;
             break;
-        // case IQ_SET:
-        //     instance.est_input.Iqd_set.q = set_value;
-        //     break;
-        // case ID_SET:
-        //     instance.est_input.Iqd_set.d = set_value;
-        //     break;
-        case IQ_SET:
-        case ID_SET:
-            instance.est_output.Uqd.q = set_value;
+        case IQ_TARGET:
+        case ID_TARGET:
+            instance.est_input.Iqd_target.q = set_value;
             break;
         case SPEED_TARGET:
             instance.est_input.target_speed = shaft_to_origin(set_value, instance.config.motor.gear_ratio);
@@ -181,66 +166,52 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
             instance.est_input.target_pos += shaft_to_origin(set_value, instance.config.motor.gear_ratio);
             break;
         case POS_ABS_SET_DEG:
-            instance.est_input.target_pos = DEG2RAD(shaft_to_origin(set_value, instance.config.motor.gear_ratio));
+            return SetEndpointValue(POS_ABS_SET_RAD, DEG2RAD(set_value));
             break;
         case POS_INC_DEG:
-            instance.est_input.target_pos += DEG2RAD(shaft_to_origin(set_value, instance.config.motor.gear_ratio));
+            return SetEndpointValue(POS_INC_RAD, DEG2RAD(set_value));
             break;
         case CURRENT_KP:
-            instance.config.current_kp = set_value;
-            instance.estimator.Idc_PID.Kp = set_value;
+            instance.config.current_pid.Kp = set_value;
             break;
         case CURRENT_KI:
-            instance.config.current_ki = set_value;
-            instance.estimator.Idc_PID.Ki = set_value;
+            instance.config.current_pid.Ki = set_value;
             break;
         case VPHASE_LIMIT:
-            instance.config.Vphase_limit = set_value;
-            instance.estimator.Idc_PID.limit = set_value;
+            instance.config.current_pid.limit = set_value;
             break;
         case CURRENT_RAMP_LIMIT:
-            instance.config.current_ramp_limit = set_value;
-            instance.estimator.Idc_PID.ramp_limit = set_value;
+            instance.config.current_pid.ramp_limit = set_value;
             break;
         case SPEED_KP:
-            instance.config.speed_kp = set_value;
-            instance.estimator.Speed_PID.Kp = set_value;
+            instance.config.speed_pid.Kp = set_value;
             break;
         case SPEED_KI:
-            instance.config.speed_ki = set_value;
-            instance.estimator.Speed_PID.Ki = set_value;
+            instance.config.speed_pid.Ki = set_value;
             break;
         case SPEED_KD:
-            instance.config.speed_kd = set_value;
-            instance.estimator.Speed_PID.Kd = set_value;
+            instance.config.speed_pid.Kd = set_value;
             break;
         case SPEED_CURRENT_LIMIT:
-            instance.config.speed_current_limit = set_value;
-            instance.estimator.Speed_PID.limit = set_value;
+            instance.config.speed_pid.limit = set_value;
             break;
         case SPEED_RAMP_LIMIT:
-            instance.config.speed_ramp_limit = set_value;
-            instance.estimator.Speed_PID.ramp_limit = set_value;
+            instance.config.speed_pid.ramp_limit = set_value;
             break;
         case POS_KP:
-            instance.config.position_kp = set_value;
-            instance.estimator.Position_PID.Kp = set_value;
+            instance.config.position_pid.Kp = set_value;
             break;
         case POS_KI:
-            instance.config.position_ki = set_value;
-            instance.estimator.Position_PID.Ki = set_value;
+            instance.config.position_pid.Ki = set_value;
             break;
         case POS_KD:
-            instance.config.position_kd = set_value;
-            instance.estimator.Position_PID.Kd = set_value;
+            instance.config.position_pid.Kd = set_value;
             break;
         case POS_SPEED_LIMIT:
-            instance.config.position_speed_limit = set_value;
-            instance.estimator.Position_PID.limit = set_value;
+            instance.config.position_pid.limit = set_value;
             break;
         case POS_RAMP_LIMIT:
-            instance.config.position_ramp_limit = set_value;
-            instance.estimator.Position_PID.ramp_limit = set_value;
+            instance.config.position_pid.ramp_limit = set_value;
             break;
         case GO_HOME:
             // instance.estimator.SetSubMode(SUBMODE_HOME);
@@ -254,16 +225,19 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
             //     result = CMD_FORBIDDEN;
             //     break;
             // }
-            instance.trajController.PlanTrajectory(shaft_to_origin(set_value, instance.config.motor.gear_ratio),              // rad(shaft)
-                                                   instance.est_output.estimated_raw_angle,                                   // rad(shaft)
-                                                   instance.est_output.estimated_speed,                                       // RPM(output) -> rad(shaft)
-                                                   shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio),    // RPM(out) -> rad(shaft)
-                                                   instance.config.traj_max_accel,                                            // RPM/s -> rad(shaft)
-                                                   instance.config.traj_max_decel                                             // RPM/s -> rad(shaft)
-                                                  );
+            instance.trajController.PlanTrajectory(shaft_to_origin(set_value, instance.config.motor.gear_ratio),    // rad(shaft)
+                                                   instance.est_input.target_pos,                                   // rad(shaft)
+                                                   RPM_speed_to_rad(instance.est_output->estimated_speed, 1),       // RPM(output) -> rad(shaft)
+                                                   RPM_speed_to_rad(shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio)),    // RPM(out) -> rad(shaft)
+                                                   instance.config.traj_max_accel,                                  // RPM/s -> rad(shaft)
+                                                   instance.config.traj_max_decel);                                 // RPM/s -> rad(shaft)
             break;
         case TRAJ_TARGET_DEG:
             return SetEndpointValue(TRAJ_TARGET_RAD, DEG2RAD(set_value));
+        case TRAJ_TARGET_INC_RAD:
+            return SetEndpointValue(TRAJ_TARGET_RAD, instance.trajController.GetFinalPos() + set_value);
+        case TRAJ_TARGET_INC_DEG:
+            return SetEndpointValue(TRAJ_TARGET_INC_RAD, DEG2RAD(set_value));
         case TRAJ_CRUISE_SPEED:
             instance.config.traj_cruise_speed = set_value;
             break;
@@ -273,6 +247,27 @@ FOC_CMD_RET BaseProtocol<BDC<T1, T2, T3>>::SetEndpointValue(PROTOCOL_ENDPOINT en
         case TRAJ_MAX_DECEL:
             instance.config.traj_max_decel = set_value;
             break;
+        case SET_HOME:
+            
+            break;
+        case MECHANIC_SPEED_LIMIT:
+            instance.config.motor.max_mechanic_speed = set_value;
+            break;
+#ifdef FOC_USING_INDICATOR
+        case INDICATOR_STATE:
+            // if(instance.error_code) break; // Modifying indicator state when ERROR_CODE present is not allowed
+            if(instance.indicator != nullptr)
+            {
+                instance.indicator.get()->SetState(set_value != 0.0f);
+            }
+            break;
+        case INDICATOR_TOGGLE:
+            if(instance.indicator != nullptr)
+            {
+                instance.indicator.get()->Toggle();
+            }
+            break;
+#endif
         default: 
             result = CMD_FORBIDDEN; 
             break;

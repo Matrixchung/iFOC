@@ -3,7 +3,7 @@
 
 #include "foc_math.h"
 
-template<typename T>
+template<class T>
 class DriverBDCBase
 {
 public:

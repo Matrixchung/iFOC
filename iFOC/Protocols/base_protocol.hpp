@@ -109,8 +109,6 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
         case POWER:
             return instance.bus_sense.Vbus * instance.bus_sense.Ibus;
             break;
-        // case SERIAL_NUMBER:
-        //     return (float)serial_number;
         case DRIVE_ERROR_CODE:
             return (float)instance.error_code;
         case OUTPUT_STATE:
