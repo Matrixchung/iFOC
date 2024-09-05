@@ -7,16 +7,9 @@
 class PID
 {
 public:
-    PID(float p, float i, float d, float _limit):Kp(p), Ki(i), Kd(d), limit(_limit) {ramp_limit = 0.0f;};
-    PID(float p, float i, float d, float _limit, float _ramp):Kp(p), Ki(i), Kd(d), limit(_limit), ramp_limit(_ramp) {};
-    PID(pid_config_t config)
-    {
-        Kp = config.Kp;
-        Ki = config.Ki;
-        Kd = config.Kd;
-        limit = config.limit;
-        ramp_limit = config.ramp_limit;
-    };
+    PID(float p, float i, float d, float _limit, float _ramp) : Kp(p), Ki(i), Kd(d), limit(_limit), ramp_limit(_ramp) {};
+    PID(float p, float i, float d, float _limit) : PID(p, i, d, _limit, 0.0f) {};
+    PID(pid_config_t config) : PID(config.Kp, config.Ki, config.Kd, config.limit, config.ramp_limit) {};
     float GetOutput(float error, float Ts);
     void Reset();
     bool enable_integral = true;

@@ -52,7 +52,7 @@ void DriverBDC::SetOutputRaw(uint16_t ch_1, uint8_t dir)
 {
     set_cmp(htim, ch_1);
     if(dir) LL_GPIO_SetOutputPin(ph_port, ph_pin);
-    else LL_GPIO_ResetOutputPin(ph_port, ph_pin);
+    else LL_GPIO_ResetOutputPin(ph_port, ph_pin); // Fast Decay provided by hardware design
 }
 
 #endif

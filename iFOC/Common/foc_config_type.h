@@ -4,6 +4,7 @@
 #include "stdint.h"
 #include "stddef.h"
 #include "foc_type.h"
+#include "foc_math.h"
 
 #define BREAK_MODE_NORMAL 0
 #define BREAK_MODE_SPO 1

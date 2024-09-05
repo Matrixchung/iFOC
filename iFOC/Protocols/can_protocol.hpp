@@ -17,8 +17,8 @@ uint8_t GetCANNodeID(uint32_t id) { return (uint8_t)((id & 0x7E0) >> 5); };
 uint8_t GetCANCmdID(uint32_t id) { return (uint8_t)(id & 0x1F); };
 uint16_t GetCANFrameID(uint8_t node_id, uint16_t id) { return (uint16_t)((uint16_t)node_id << 5) | id; };
 
-uint8_t is_identifying = 0;
-uint8_t delay_send_addr_flag = 0;
+static uint8_t is_identifying = 0;
+static uint8_t delay_send_addr_flag = 0;
 
 template<class Intf, class U>
 class CANProtocol

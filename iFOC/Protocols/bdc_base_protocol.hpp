@@ -63,33 +63,33 @@ float BaseProtocol<FOC<DriverBDCBase<A>, B, C>>::GetEndpointValue(PROTOCOL_ENDPO
         case POS_ABS_SET_DEG:
             return RAD2DEG(GetEndpointValue(POS_ABS_SET_RAD));
         case CURRENT_KP:
-            return instance.estimator.Idc_PID.Kp;
+            return instance.config.current_pid.Kp;
         case CURRENT_KI:
-            return instance.estimator.Idc_PID.Ki;
+            return instance.config.current_pid.Ki;
         case VPHASE_LIMIT:
-            return instance.config.Vphase_limit;
+            return instance.config.current_pid.limit;
         case CURRENT_RAMP_LIMIT:
-            return instance.config.current_ramp_limit;
+            return instance.config.current_pid.ramp_limit;
         case SPEED_KP:
-            return instance.config.speed_kp;
+            return instance.config.speed_pid.Kp;
         case SPEED_KI:
-            return instance.config.speed_ki;
+            return instance.config.speed_pid.Ki;
         case SPEED_KD:
-            return instance.config.speed_kd;
+            return instance.config.speed_pid.Kd;
         case SPEED_CURRENT_LIMIT:
-            return instance.config.speed_current_limit;
+            return instance.config.speed_pid.limit;
         case SPEED_RAMP_LIMIT:
-            return instance.config.speed_ramp_limit;
+            return instance.config.speed_pid.ramp_limit;
         case POS_KP:
-            return instance.config.position_kp;
+            return instance.config.position_pid.Kp;
         case POS_KI:
-            return instance.config.position_ki;
+            return instance.config.position_pid.Ki;
         case POS_KD:
-            return instance.config.position_kd;
+            return instance.config.position_pid.Kd;
         case POS_SPEED_LIMIT:
-            return instance.config.position_speed_limit;
+            return instance.config.position_pid.limit;
         case POS_RAMP_LIMIT:
-            return instance.config.position_ramp_limit;
+            return instance.config.position_pid.ramp_limit;
         case ELECTRIC_ANGLE_RAD:
         case ESTIMATED_ANGLE_RAD:
             return normalize_rad(GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD));
@@ -97,11 +97,11 @@ float BaseProtocol<FOC<DriverBDCBase<A>, B, C>>::GetEndpointValue(PROTOCOL_ENDPO
         case ESTIMATED_ANGLE_DEG:
             return RAD2DEG(GetEndpointValue(ESTIMATED_ANGLE_RAD));
         case ESTIMATED_RAW_ANGLE_RAD:
-            return origin_to_shaft(instance.est_output.estimated_raw_angle, instance.config.motor.gear_ratio);
+            return origin_to_shaft(instance.est_output->estimated_raw_angle, instance.config.motor.gear_ratio);
         case ESTIMATED_RAW_ANGLE_DEG:
             return RAD2DEG(GetEndpointValue(ESTIMATED_RAW_ANGLE_RAD));
         case ESTIMATED_SPEED:
-            return origin_to_shaft(instance.est_output.estimated_speed, instance.config.motor.gear_ratio);
+            return origin_to_shaft(instance.est_output->estimated_speed, instance.config.motor.gear_ratio);
         // case ESTIMATED_ACCELERATION:
         //     return instance.est_output.estimated_acceleration;
         case TRAJ_TARGET_RAD:
@@ -228,7 +228,7 @@ FOC_CMD_RET BaseProtocol<FOC<DriverBDCBase<A>, B, C>>::SetEndpointValue(PROTOCOL
             instance.trajController.PlanTrajectory(shaft_to_origin(set_value, instance.config.motor.gear_ratio),    // rad(shaft)
                                                    instance.est_input.target_pos,                                   // rad(shaft)
                                                    RPM_speed_to_rad(instance.est_output->estimated_speed, 1),       // RPM(output) -> rad(shaft)
-                                                   RPM_speed_to_rad(shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio)),    // RPM(out) -> rad(shaft)
+                                                   RPM_speed_to_rad(shaft_to_origin(instance.config.traj_cruise_speed, instance.config.motor.gear_ratio), 1),    // RPM(out) -> rad(shaft)
                                                    instance.config.traj_max_accel,                                  // RPM/s -> rad(shaft)
                                                    instance.config.traj_max_decel);                                 // RPM/s -> rad(shaft)
             break;

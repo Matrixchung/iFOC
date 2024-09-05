@@ -16,9 +16,9 @@ public:
     float est_velocity = 0.0f;
     float est_angle = 0.0f;
     float Calculate(float input, float Ts);
+    LowpassFilter lpf = LowpassFilter(0.001f);
 private:
     DP_PID pi_controller;
-    LowpassFilter lpf = LowpassFilter(0.001f);
 };
 
 float SpeedPLL::Calculate(float input, float Ts)

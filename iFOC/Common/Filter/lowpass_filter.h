@@ -6,7 +6,7 @@
 class LowpassFilter : public FilterBase
 {
 public:
-    explicit LowpassFilter(float time_constant):Tf(time_constant) {};
+    explicit LowpassFilter(float time_constant) : Tf(time_constant) {};
     float GetOutput(float input, float Ts);
     void Reset();
     float Tf;

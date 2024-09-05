@@ -12,7 +12,7 @@ template<class T1, class T_CurrentSenseBase, class T_BusSenseBase>
 class FOC<DriverBDCBase<T1>, T_CurrentSenseBase, T_BusSenseBase>
 {
 public:
-    FOC(DriverBDCBase<T1>& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus);
+    FOC(T1& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus);
     bool Init(bool initTIM = true);
     void Update(float Ts);
     void UpdateMidInterval(float Ts);
@@ -22,21 +22,21 @@ public:
     bool GetTrajPosState();
     foc_config_t config;
     TrajController trajController;
+    EstimatorBDC* GetMainEstimator() { return &estimator; }
 private:
     template<class U> friend class BaseProtocol;
     template<class ... T> friend void SyncStartTimer(T&... inst);
-    DriverBDCBase<T1>& driver;
+    T1& driver;
     T_CurrentSenseBase& current_sense;
     T_BusSenseBase& bus_sense;
     foc_state_input_t est_input;
     foc_state_output_t* est_output;
+    EstimatorBDC estimator = EstimatorBDC(est_input, config);
     float overspeed_timer = 0.0f;
     float overcurrent_timer = 0.0f;
     uint16_t error_code = FOC_ERROR_NONE;
     FOC_MODE mode = MODE_TORQUE;
     bool output_state = false;
-public:
-    EstimatorBDC estimator = EstimatorBDC(est_input);
 #ifdef FOC_USING_INDICATOR
 public:
     std::unique_ptr<Indicator<GPIOBase>> indicator = nullptr;
@@ -65,6 +65,7 @@ private:
 template<class A, class B, class C>
 bool FOC<DriverBDCBase<A>, B, C>::Init(bool initTIM)
 {
+    config.speed_pll_config.pid_config.limit = RPM_speed_to_rad(shaft_to_origin(config.motor.max_mechanic_speed * 1.2f, config.motor.gear_ratio), config.motor.pole_pair);
     if(driver.DriverInit(initTIM) == false || estimator.Init() == false)
     {
         error_code = FOC_ERROR_INITIALIZE;
@@ -83,7 +84,7 @@ template<class A, class B, class C>
 void FOC<DriverBDCBase<A>, B, C>::Update(float Ts)
 {
     current_sense.CurrentSenseUpdate();
-    est_input.Ialphabeta_fb.alpha = current_sense.Iabc.a;
+    est_input.Ialphabeta_fb.alpha = current_sense.Iabc.a * (float)driver._dir;
     if(output_state)
     {
         switch(mode)
@@ -95,6 +96,7 @@ void FOC<DriverBDCBase<A>, B, C>::Update(float Ts)
             case MODE_TRAJECTORY:
                 trajController.Preprocess(&est_input, est_output, Ts);
                 est_input.target = EST_TARGET_POS;
+                est_input.Iqd_target = {0.0f, 0.0f};
                 break;
             case MODE_POSITION:
                 est_input.target = EST_TARGET_POS;
@@ -122,6 +124,28 @@ template<class A, class B, class C>
 void FOC<DriverBDCBase<A>, B, C>::UpdateMidInterval(float Ts)
 {
     estimator.UpdateMidInterval(Ts);
+    // Overspeed protection, disabled in debug mode
+    if(config.debug_mode == FOC_DEBUG_NONE)
+    {
+        float temp = shaft_to_origin(config.motor.max_mechanic_speed, config.motor.gear_ratio);
+        est_input.target_speed = _constrain(est_input.target_speed, -temp, temp);
+        if(config.max_speed > 0.0f)
+        {
+            if(ABS(est_output->estimated_speed) > shaft_to_origin(config.max_speed, config.motor.gear_ratio))
+            {
+                overspeed_timer += Ts;
+                if(overspeed_timer > config.overspeed_detect_time) error_code |= FOC_ERROR_OVERSPEED;
+            }
+            else overspeed_timer = 0.0f;
+        }
+    }
+    // Sync target with current pos
+    if(!output_state)
+    {
+        trajController.task_done = true;
+        est_input.target_pos = est_output->estimated_raw_angle;
+        trajController.final_pos = est_output->estimated_raw_angle;
+    }
 }
 
 template<class A, class B, class C>
@@ -158,8 +182,8 @@ void FOC<DriverBDCBase<A>, B, C>::EmergencyStop()
 }
 
 template<class T1, class T_CurrentSenseBase, class T_BusSenseBase>
-FOC<DriverBDCBase<T1>, T_CurrentSenseBase, T_BusSenseBase>::FOC(DriverBDCBase<T1>& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus)
-: driver(_driver), current_sense(_curr), bus_sense(_bus)
+FOC<DriverBDCBase<T1>, T_CurrentSenseBase, T_BusSenseBase>::FOC(T1& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus)
+: config(), driver(_driver), current_sense(_curr), bus_sense(_bus)
 {
     config = {
         .motor = {

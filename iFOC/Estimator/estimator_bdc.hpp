@@ -17,9 +17,7 @@ public:
 private:
     SpeedPLL speed_pll;
     EncoderBase *encoder = nullptr;
-    // SlidingFilter Idc_sf = SlidingFilter(10);
-    // LowpassFilter Idc_lpf = LowpassFilter(0.001f);
-    float state_timer = 0.0f;
+    // float state_timer = 0.0f;
 #ifdef FOC_SENSORED_USING_AUX_ENCODER
 public:
     void AttachAuxEncoder(EncoderBase *_aux_encoder) { aux_encoder = _aux_encoder; };
@@ -30,6 +28,7 @@ private:
 
 bool EstimatorBDC::Init()
 {
+    speed_pll.lpf.Tf = config.speed_pll_config.Tlp;
     if(encoder == nullptr) return false;
     bool encoder1_init_state = encoder->Init();
 #ifdef FOC_SENSORED_USING_AUX_ENCODER
@@ -42,15 +41,22 @@ bool EstimatorBDC::Init()
 
 void EstimatorBDC::Update(float Ts)
 {
-    // input.Ialphabeta_fb.alpha = Idc_lpf.GetOutput(input.Ialphabeta_fb.alpha, Ts);
     output.Iqd_fb = {input.Ialphabeta_fb.alpha, 0.0f};
     encoder->Update(Ts);
     output.estimated_angle = encoder->single_round_angle;
     output.estimated_raw_angle = encoder->raw_angle;
-    if(config.use_speed_pll) output.estimated_speed = rad_speed_to_RPM(speed_pll.Calculate(output.estimated_angle, Ts), 1);
+    // if(config.use_speed_pll) output.estimated_speed = rad_speed_to_RPM(speed_pll.Calculate(output.estimated_angle, Ts), 1);
+    output.estimated_speed = rad_speed_to_RPM(encoder->velocity, 1);
     if(input.target > EST_TARGET_NONE)
     {
-        
+        output.Iqd_set = input.Iqd_target;
+        if(input.target >= EST_TARGET_SPEED)
+        {
+            if(input.target >= EST_TARGET_POS) output.set_speed = Position_PID.GetOutput(input.target_pos - output.estimated_raw_angle, Ts);
+            else output.set_speed = input.target_speed;
+            output.Iqd_set.q += Speed_PID.GetOutput(output.set_speed - output.estimated_speed, Ts);
+        }
+        output.Uqd.q = Iq_PID.GetOutput(output.Iqd_set.q - output.Iqd_fb.q, Ts);
     }
 }
 
@@ -59,28 +65,28 @@ void EstimatorBDC::UpdateMidInterval(float Ts)
     encoder->UpdateMidInterval(Ts);
     if(input.target > EST_TARGET_NONE)
     {
-        if(input.target >= EST_TARGET_SPEED)
-        {
-            if(input.target >= EST_TARGET_POS) 
-            {
-                // if(mode == MODE_TRAJECTORY)
-                // {
-                //     trajController.Update(Ts);
-                //     input.set_abs_pos = trajController.GetPos();
-                // }
-                // else
-                // {
-                //     trajController.Reset();
-                // }
-                output.set_speed = Position_PID.GetOutput(input.target_pos - output.estimated_raw_angle, Ts);
-            }
-            else output.set_speed = input.target_speed;
-            output.Uqd.q = Speed_PID.GetOutput(output.set_speed - output.estimated_speed, Ts);
-        }
+        // if(input.target >= EST_TARGET_SPEED)
+        // {
+        //     if(input.target >= EST_TARGET_POS) 
+        //     {
+        //         // if(mode == MODE_TRAJECTORY)
+        //         // {
+        //         //     trajController.Update(Ts);
+        //         //     input.set_abs_pos = trajController.GetPos();
+        //         // }
+        //         // else
+        //         // {
+        //         //     trajController.Reset();
+        //         // }
+        //         output.set_speed = Position_PID.GetOutput(input.target_pos - output.estimated_raw_angle, Ts);
+        //     }
+        //     else output.set_speed = input.target_speed;
+        //     output.Uqd.q = Speed_PID.GetOutput(output.set_speed - output.estimated_speed, Ts);
+        // }
     }
     else
     {
-        state_timer = 0.0f;
+        // state_timer = 0.0f;
         EstimatorBase::Reset();
     }
 }
