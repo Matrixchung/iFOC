@@ -19,10 +19,13 @@ private:
 
 void TwoShuntCurrentSense::Update()
 {
-    uint32_t _vref = __LL_ADC_CALC_VREFANALOG_VOLTAGE(Vrefint, LL_ADC_RESOLUTION_12B);
-    Iabc.a = ((float)__LL_ADC_CALC_DATA_TO_VOLTAGE(_vref, LL_ADC_INJ_ReadConversionData32(hadc, LL_ADC_INJ_RANK_1), LL_ADC_RESOLUTION_12B)) - ((float)_vref * 0.5f);
-    Iabc.b = ((float)__LL_ADC_CALC_DATA_TO_VOLTAGE(_vref, LL_ADC_INJ_ReadConversionData32(hadc, LL_ADC_INJ_RANK_2), LL_ADC_RESOLUTION_12B)) - ((float)_vref * 0.5f);
+    // uint32_t _vref = __LL_ADC_CALC_VREFANALOG_VOLTAGE(Vrefint, LL_ADC_RESOLUTION_12B);
+    // Iabc.a = ((float)__LL_ADC_CALC_DATA_TO_VOLTAGE(_vref, LL_ADC_INJ_ReadConversionData32(hadc, LL_ADC_INJ_RANK_1), LL_ADC_RESOLUTION_12B)) - ((float)_vref * 0.5f);
+    // Iabc.b = ((float)__LL_ADC_CALC_DATA_TO_VOLTAGE(_vref, LL_ADC_INJ_ReadConversionData32(hadc, LL_ADC_INJ_RANK_2), LL_ADC_RESOLUTION_12B)) - ((float)_vref * 0.5f);
     // Iabc.c = ((float)__LL_ADC_CALC_DATA_TO_VOLTAGE(_vref, LL_ADC_INJ_ReadConversionData32(hadc, LL_ADC_INJ_RANK_3), LL_ADC_RESOLUTION_12B)) - ((float)_vref * 0.5f);
+    float _vref = (float)__LL_ADC_CALC_VREFANALOG_VOLTAGE(Vrefint, LL_ADC_RESOLUTION_12B);
+    Iabc.a = (((float)LL_ADC_INJ_ReadConversionData32(hadc, LL_ADC_INJ_RANK_1)) * _vref / 4095.0f) - (_vref * 0.5f);
+    Iabc.b = (((float)LL_ADC_INJ_ReadConversionData32(hadc, LL_ADC_INJ_RANK_2)) * _vref / 4095.0f) - (_vref * 0.5f);
     Iabc.a *= current_factor;
     Iabc.b *= current_factor;
     Iabc.a = filter_1.GetOutput(Iabc.a);
