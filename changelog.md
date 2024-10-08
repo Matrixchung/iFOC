@@ -67,3 +67,6 @@
 ## 2024-07-07
 * Implemented Synchronous Timer Initialize in STM32.
 * Various bug fixes.
+
+## 2024-07-07 ~ 2024-10-08
+* See GitHub commits.
