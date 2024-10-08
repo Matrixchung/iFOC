@@ -17,6 +17,7 @@ static foc_config_t config_dcu08017p12 =
     },
     .mcu_temp_limit = 80.0f,
     .motor_temp_limit = 80.0f, 
+    .max_current = 1.0f,
     .align_current = 0.0f,
     .current_bandwidth = 0.0f,
     .current_damping_coefficient = 0.0f,
@@ -34,6 +35,7 @@ static foc_config_t config_dcu08017p12 =
     .startup_state = true,
     .break_mode = BREAK_MODE_ASC,
     .startup_mode = MODE_TRAJECTORY,
+    .debug_mode = FOC_DEBUG_NONE,
     .apply_curr_feedforward = false,
     .use_speed_pll = false,
     .speed_pll_config = 

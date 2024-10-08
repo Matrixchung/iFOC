@@ -17,6 +17,7 @@ static foc_config_t config_m2804 =
     },
     .mcu_temp_limit = 80.0f,
     .motor_temp_limit = 80.0f, 
+    .max_current = 2.0f,
     .align_current = 0.3f,
     .current_bandwidth = 0.0f,
     .current_damping_coefficient = 0.0f,
@@ -34,6 +35,7 @@ static foc_config_t config_m2804 =
     .startup_state = false,
     .break_mode = BREAK_MODE_ASC,
     .startup_mode = MODE_TORQUE,
+    .debug_mode = FOC_DEBUG_NONE,
     .apply_curr_feedforward = false,
     .use_speed_pll = false,
     .speed_pll_config = 

@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "string.h"
 
-#define KEEPALIVE_TICKS 250
+#define KEEPALIVE_TICKS 500
 
 typedef struct motor_state_t
 {
@@ -43,14 +43,15 @@ typedef struct motor_set_t
 
 class UARTProtocol
 {
-private:
+// private:
+public:
     const uint8_t _head[2] = {0x11, 0x45};
 public:
     UARTProtocol();
     motor_state_t state;
     motor_set_t set;
     uint8_t state_buffer[sizeof(_head) + sizeof(motor_state_t) + sizeof(uint16_t)];
-    uint8_t set_buffer[sizeof(_head) + sizeof(motor_set_t) + sizeof(uint16_t)];
+    uint8_t set_buffer[sizeof(_head) + sizeof(state.SN) + sizeof(motor_set_t) + sizeof(uint16_t)]; // added SN identifier
     uint32_t last_rec_tick = 0;
     bool keep_alive = false;
     bool IsAlive();
@@ -79,10 +80,12 @@ void UARTProtocol::PrepareTxStateBuf()
 void UARTProtocol::PrepareTxSetBuf()
 {
     memcpy(set_buffer, _head, sizeof(_head));
-    memcpy(set_buffer + sizeof(_head), &set, sizeof(motor_set_t));
-    uint16_t crc_16 = getCRC16(set_buffer, sizeof(_head) + sizeof(motor_set_t));
-    set_buffer[sizeof(_head) + sizeof(motor_set_t)] = (uint8_t)(crc_16 >> 8);
-    set_buffer[sizeof(_head) + sizeof(motor_set_t) + 1] = (uint8_t)(crc_16);
+    // memcpy(set_buffer + sizeof(_head), &set, sizeof(motor_set_t));
+    memcpy(set_buffer + sizeof(_head), &state.SN, sizeof(state.SN));
+    memcpy(set_buffer + sizeof(_head) + sizeof(state.SN), &set, sizeof(motor_set_t));
+    uint16_t crc_16 = getCRC16(set_buffer, sizeof(_head) + sizeof(state.SN) + sizeof(motor_set_t));
+    set_buffer[sizeof(_head) + sizeof(state.SN) + sizeof(motor_set_t)] = (uint8_t)(crc_16 >> 8);
+    set_buffer[sizeof(_head) + sizeof(state.SN) + sizeof(motor_set_t) + 1] = (uint8_t)(crc_16);
 }
 
 bool UARTProtocol::ReceiveRxStateBuf(uint8_t *buffer, uint8_t len)
@@ -106,9 +109,12 @@ bool UARTProtocol::ReceiveRxSetBuf(uint8_t *buffer, uint8_t len)
     {
         if(buffer[i] != _head[i]) return false;
     }
-    uint16_t crc = (uint16_t)buffer[sizeof(_head) + sizeof(motor_set_t) + 1] | (uint16_t)(buffer[sizeof(_head) + sizeof(motor_set_t)] << 8);
-    if(crc != getCRC16(buffer, sizeof(_head) + sizeof(motor_set_t))) return false;
-    memcpy(&set, buffer + sizeof(_head), sizeof(motor_set_t));
+    uint16_t crc = (uint16_t)buffer[sizeof(_head) + sizeof(state.SN) + sizeof(motor_set_t) + 1] | (uint16_t)(buffer[sizeof(_head) + sizeof(state.SN) + sizeof(motor_set_t)] << 8);
+    if(crc != getCRC16(buffer, sizeof(_head) + sizeof(state.SN) + sizeof(motor_set_t))) return false;
+    uint32_t SN = 0;
+    memcpy(&SN, buffer + sizeof(_head), sizeof(SN));
+    if(SN != state.SN) return false;
+    memcpy(&set, buffer + sizeof(_head) + sizeof(state.SN), sizeof(motor_set_t));
     last_rec_tick = HAL_GetTick();
     return true;
 }

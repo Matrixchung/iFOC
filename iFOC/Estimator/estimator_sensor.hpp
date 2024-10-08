@@ -80,6 +80,7 @@ void EstimatorSensor::Update(float Ts)
         output.Uqd.q = Iq_PID.GetOutput(output.Iqd_set.q - output.Iqd_fb.q, Ts);
         output.Uqd.d = Id_PID.GetOutput(output.Iqd_set.d - output.Iqd_fb.d, Ts);
     }
+    else abs_raw_angle_offset = encoder->raw_angle;
 }
 
 void EstimatorSensor::UpdateMidInterval(float Ts)
@@ -115,7 +116,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
             {
                 output.Iqd_set = Iqd_align;
                 if(euclid_distance(output.Iqd_fb.q, output.Iqd_fb.d, output.Iqd_set.q, output.Iqd_set.d) >= 
-                   euclid_distance(0.0f, 0.0f, output.Iqd_set.q, output.Iqd_set.d) * 0.5f) // current response not works as expected, or current feedback route unavailable
+                   euclid_distance(0.0f, 0.0f, output.Iqd_set.q, output.Iqd_set.d) * 0.75f) // current response not works as expected, or current feedback route unavailable
                 {
                     error_flag = 1;
                 }

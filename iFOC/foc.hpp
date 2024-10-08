@@ -176,7 +176,7 @@ void FOC<A, B, C>::Update(float Ts)
     error_code |= main_estimator->GetErrorFlag();
     if(output_state)
     {
-        if(ABS(est_output->Iqd_fb.q) >= config.speed_pid.limit * 0.95 || ABS(est_output->Iqd_fb.d) >= config.speed_pid.limit * 0.95)
+        if(ABS(est_output->Iqd_fb.q) >= config.max_current * 0.95 || ABS(est_output->Iqd_fb.d) >= config.max_current * 0.95)
         {
             overcurrent_timer += Ts;
             if(overcurrent_timer > 1.0f)
@@ -420,6 +420,7 @@ FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver
         },
         .mcu_temp_limit = 80.0f,  // limit MCU max temp to 80 degree
         .motor_temp_limit = 80.0f, 
+        .max_current = 0.0f,
         .align_current = 0.6f,
         .current_bandwidth = 10000.0f,
         .current_damping_coefficient = 0.707f,

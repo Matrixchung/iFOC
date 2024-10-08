@@ -39,6 +39,7 @@ typedef struct foc_config_t
     // virtual_endstop_t virtual_endstop;
     float mcu_temp_limit;
     float motor_temp_limit;
+    float max_current;
     float align_current;
     float current_bandwidth;           // if current_kp and current_ki is not set,
     float current_damping_coefficient; // those will be used to calculate current loop Kp/Ki

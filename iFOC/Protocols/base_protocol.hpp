@@ -108,7 +108,6 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
             return instance.bus_sense.Ibus;
         case POWER:
             return instance.bus_sense.Vbus * instance.bus_sense.Ibus;
-            break;
         case DRIVE_ERROR_CODE:
             return (float)instance.error_code;
         case OUTPUT_STATE:
@@ -221,6 +220,14 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
             return instance.trajController.GetAccel();
         case MECHANIC_SPEED_LIMIT:
             return instance.config.motor.max_mechanic_speed;
+#ifdef FOC_USING_TEMP_PROBE
+        case MCU_TEMP:
+            if(instance.mcu_temp != nullptr) return *instance.mcu_temp;
+        case MOTOR_TEMP:
+            if(instance.motor_temp != nullptr) return *instance.motor_temp;
+        case MOSFET_TEMP:
+            if(instance.mosfet_temp != nullptr) return *instance.mosfet_temp;
+#endif
         default: break;
     }
     return 0.0f;
