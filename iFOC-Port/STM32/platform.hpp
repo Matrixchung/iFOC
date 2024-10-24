@@ -118,122 +118,173 @@ void JumpToBootloader()
 }
 
 #ifdef USE_INTERNAL_FLASH
-#define READ_U32(addr) (*(__IO uint32_t *)(addr))
-#if MCU == F7
-// STM32F72xxx & STM32F732xx / F733xx, with a total of 512 Kbytes
-#define ADDR_FLASH_SECTOR_0     ((uint32_t)0x08000000) /* Base address of Sector 0, 16 Kbytes, start with user code area */
-#define ADDR_FLASH_SECTOR_1     ((uint32_t)0x08004000) /* Base address of Sector 1, 16 Kbytes */
-#define ADDR_FLASH_SECTOR_2     ((uint32_t)0x08008000) /* Base address of Sector 2, 16 Kbytes */
-#define ADDR_FLASH_SECTOR_3     ((uint32_t)0x0800C000) /* Base address of Sector 3, 16 Kbytes */
-#define ADDR_FLASH_SECTOR_4     ((uint32_t)0x08010000) /* Base address of Sector 4, 64 Kbytes */
-#define ADDR_FLASH_SECTOR_5     ((uint32_t)0x08020000) /* Base address of Sector 5, 128 Kbytes */
-#define ADDR_FLASH_SECTOR_6     ((uint32_t)0x08040000) /* Base address of Sector 6, 128 Kbytes */
-#define ADDR_FLASH_SECTOR_7     ((uint32_t)0x08060000) /* Base address of Sector 7, 128 Kbytes */
-
-#define USER_STORAGE_START_ADDR (ADDR_FLASH_SECTOR_5)
-#define USER_STORAGE_END_ADDR   (ADDR_FLASH_SECTOR_6)
-
-static uint32_t GetSector(uint32_t Address)
+#include "fal_cfg.h"
+#include "flashdb.h"
+#include "string.h"
+typedef struct nvm_config_t
 {
-  uint32_t sector = 0;
-
-  if((Address < ADDR_FLASH_SECTOR_1) && (Address >= ADDR_FLASH_SECTOR_0))
-  {
-    sector = FLASH_SECTOR_0;
-  }
-  else if((Address < ADDR_FLASH_SECTOR_2) && (Address >= ADDR_FLASH_SECTOR_1))
-  {
-    sector = FLASH_SECTOR_1;
-  }
-  else if((Address < ADDR_FLASH_SECTOR_3) && (Address >= ADDR_FLASH_SECTOR_2))
-  {
-    sector = FLASH_SECTOR_2;
-  }
-  else if((Address < ADDR_FLASH_SECTOR_4) && (Address >= ADDR_FLASH_SECTOR_3))
-  {
-    sector = FLASH_SECTOR_3;
-  }
-  else if((Address < ADDR_FLASH_SECTOR_5) && (Address >= ADDR_FLASH_SECTOR_4))
-  {
-    sector = FLASH_SECTOR_4;
-  }
-  else if((Address < ADDR_FLASH_SECTOR_6) && (Address >= ADDR_FLASH_SECTOR_5))
-  {
-    sector = FLASH_SECTOR_5;
-  }
-  else if((Address < ADDR_FLASH_SECTOR_7) && (Address >= ADDR_FLASH_SECTOR_6))
-  {
-    sector = FLASH_SECTOR_6;
-  }
-  else /* (Address < FLASH_END_ADDR) && (Address >= ADDR_FLASH_SECTOR_7) */
-  {
-    sector = FLASH_SECTOR_7;
-  }
-  return sector;
+    uint32_t boot_time;
+    uint32_t serial_number;
+}nvm_config_t;
+nvm_config_t user_config;
+static struct fdb_kvdb kvdb = {0};
+static void _lock_db(fdb_db_t db)
+{
+    __disable_irq();
 }
-
-uint32_t WriteFlash(uint32_t addr, uint32_t *data, const uint16_t len)
+static void _unlock_db(fdb_db_t db)
 {
-  if(addr < USER_STORAGE_START_ADDR) return HAL_ERROR;
-  uint32_t end_addr = addr + len;
-  if(end_addr > USER_STORAGE_END_ADDR) return HAL_ERROR;
-  FLASH_EraseInitTypeDef EraseInitStruct;
-  uint32_t SECTORError = 0;
-  HAL_FLASH_Unlock();
-  EraseInitStruct.TypeErase = FLASH_TYPEERASE_SECTORS;
-  EraseInitStruct.VoltageRange = FLASH_VOLTAGE_RANGE_3;
-  EraseInitStruct.Sector = GetSector(addr);
-  EraseInitStruct.NbSectors = GetSector(end_addr) - EraseInitStruct.Sector + 1;
-  if(HAL_FLASHEx_Erase(&EraseInitStruct, &SECTORError) != HAL_OK) 
-  {
-    HAL_FLASH_Lock();
-    // __enable_irq();
-    return HAL_FLASH_GetError();
-  }
-  while(addr < end_addr)
-  {
-      if(HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, addr, *data) == HAL_OK)
-      {
-          addr += 4;
-          data += 1;
-      }
-      else
-      {
-          HAL_FLASH_Lock();
-          return HAL_ERROR;
-      }
-  }
-  HAL_FLASH_Lock();
-  return HAL_OK;
+    __enable_irq();
 }
-uint32_t CheckProgrammedFlash(uint32_t addr, uint32_t *data, const uint16_t len)
+#define FDB_LOG_TAG "[main]"
+void blob_sample(fdb_kvdb_t kvdb)
 {
-    uint32_t ret = 0; // number of bytes not programmed correctly (*data != *addr)
-    if(addr < USER_STORAGE_START_ADDR) return 0;
-    uint32_t end_addr = addr + len;
-    if(end_addr > USER_STORAGE_END_ADDR) return 0;
-    while(addr < end_addr)
+    struct fdb_blob blob;
+    nvm_config_t readback_config;
+    memset(&readback_config, 0, sizeof(readback_config));
+    fdb_kv_get_blob(kvdb, "user_config", fdb_blob_make(&blob, &readback_config, sizeof(readback_config)));
+    if(blob.saved.len > 0)
     {
-        uint32_t read_back_data = READ_U32(addr);
-        if(read_back_data != *data) ret++;
-        addr += 4;
-        data += 1;
+        FDB_INFO("Readout boot_time: %d, serial_number: %d", readback_config.boot_time, readback_config.serial_number);
+        if(readback_config.serial_number != (uint32_t)GetSerialNumber())
+        {
+            readback_config.serial_number = (uint32_t)GetSerialNumber();
+            FDB_INFO("Set serial_number to: %d\n", readback_config.serial_number);
+        }
+        readback_config.boot_time++;
+        fdb_kv_set_blob(kvdb, "user_config", fdb_blob_make(&blob, &readback_config, sizeof(readback_config)));
     }
-    return ret;
-}
-HAL_StatusTypeDef ReadFlash(uint32_t addr, uint32_t *dst, const uint16_t len)
-{
-    if(addr < USER_STORAGE_START_ADDR) return HAL_ERROR;
-    uint32_t end_addr = addr + len;
-    if(end_addr > USER_STORAGE_END_ADDR) return HAL_ERROR;
-    while(addr < end_addr)
+    else
     {
-        *dst = READ_U32(addr);
-        addr += 4;
-        dst += 1;
+        FDB_INFO("user_config not found, creating\n");
+        readback_config.boot_time = 1;
+        readback_config.serial_number = 0;
+        fdb_kv_set_blob(kvdb, "user_config", fdb_blob_make(&blob, &readback_config, sizeof(readback_config)));
     }
-    return HAL_OK;
 }
+void StorageInit()
+{
+    fdb_kvdb_control(&kvdb, FDB_KVDB_CTRL_SET_LOCK, (void *)_lock_db);
+    fdb_kvdb_control(&kvdb, FDB_KVDB_CTRL_SET_UNLOCK, (void *)_unlock_db);
+    fdb_kvdb_init(&kvdb, "env", "nvm_storage", NULL, NULL);
+    blob_sample(&kvdb);
+}
+// #if MCU == F7
+
+// // STM32F72xxx & STM32F732xx / F733xx, with a total of 512 Kbytes
+// #define ADDR_FLASH_SECTOR_0     ((uint32_t)0x08000000) /* Base address of Sector 0, 16 Kbytes, start with user code area */
+// #define ADDR_FLASH_SECTOR_1     ((uint32_t)0x08004000) /* Base address of Sector 1, 16 Kbytes */
+// #define ADDR_FLASH_SECTOR_2     ((uint32_t)0x08008000) /* Base address of Sector 2, 16 Kbytes */
+// #define ADDR_FLASH_SECTOR_3     ((uint32_t)0x0800C000) /* Base address of Sector 3, 16 Kbytes */
+// #define ADDR_FLASH_SECTOR_4     ((uint32_t)0x08010000) /* Base address of Sector 4, 64 Kbytes */
+// #define ADDR_FLASH_SECTOR_5     ((uint32_t)0x08020000) /* Base address of Sector 5, 128 Kbytes */
+// #define ADDR_FLASH_SECTOR_6     ((uint32_t)0x08040000) /* Base address of Sector 6, 128 Kbytes */
+// #define ADDR_FLASH_SECTOR_7     ((uint32_t)0x08060000) /* Base address of Sector 7, 128 Kbytes */
+
+// #define USER_STORAGE_START_ADDR (ADDR_FLASH_SECTOR_5)
+// #define USER_STORAGE_END_ADDR   (ADDR_FLASH_SECTOR_6)
+
+// static uint32_t GetSector(uint32_t Address)
+// {
+//   uint32_t sector = 0;
+
+//   if((Address < ADDR_FLASH_SECTOR_1) && (Address >= ADDR_FLASH_SECTOR_0))
+//   {
+//     sector = FLASH_SECTOR_0;
+//   }
+//   else if((Address < ADDR_FLASH_SECTOR_2) && (Address >= ADDR_FLASH_SECTOR_1))
+//   {
+//     sector = FLASH_SECTOR_1;
+//   }
+//   else if((Address < ADDR_FLASH_SECTOR_3) && (Address >= ADDR_FLASH_SECTOR_2))
+//   {
+//     sector = FLASH_SECTOR_2;
+//   }
+//   else if((Address < ADDR_FLASH_SECTOR_4) && (Address >= ADDR_FLASH_SECTOR_3))
+//   {
+//     sector = FLASH_SECTOR_3;
+//   }
+//   else if((Address < ADDR_FLASH_SECTOR_5) && (Address >= ADDR_FLASH_SECTOR_4))
+//   {
+//     sector = FLASH_SECTOR_4;
+//   }
+//   else if((Address < ADDR_FLASH_SECTOR_6) && (Address >= ADDR_FLASH_SECTOR_5))
+//   {
+//     sector = FLASH_SECTOR_5;
+//   }
+//   else if((Address < ADDR_FLASH_SECTOR_7) && (Address >= ADDR_FLASH_SECTOR_6))
+//   {
+//     sector = FLASH_SECTOR_6;
+//   }
+//   else /* (Address < FLASH_END_ADDR) && (Address >= ADDR_FLASH_SECTOR_7) */
+//   {
+//     sector = FLASH_SECTOR_7;
+//   }
+//   return sector;
+// }
+
+// uint32_t WriteFlash(uint32_t addr, uint32_t *data, const uint16_t len)
+// {
+//   if(addr < USER_STORAGE_START_ADDR) return HAL_ERROR;
+//   uint32_t end_addr = addr + len;
+//   if(end_addr > USER_STORAGE_END_ADDR) return HAL_ERROR;
+//   FLASH_EraseInitTypeDef EraseInitStruct;
+//   uint32_t SECTORError = 0;
+//   HAL_FLASH_Unlock();
+//   EraseInitStruct.TypeErase = FLASH_TYPEERASE_SECTORS;
+//   EraseInitStruct.VoltageRange = FLASH_VOLTAGE_RANGE_3;
+//   EraseInitStruct.Sector = GetSector(addr);
+//   EraseInitStruct.NbSectors = GetSector(end_addr) - EraseInitStruct.Sector + 1;
+//   if(HAL_FLASHEx_Erase(&EraseInitStruct, &SECTORError) != HAL_OK) 
+//   {
+//     HAL_FLASH_Lock();
+//     // __enable_irq();
+//     return HAL_FLASH_GetError();
+//   }
+//   while(addr < end_addr)
+//   {
+//       if(HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, addr, *data) == HAL_OK)
+//       {
+//           addr += 4;
+//           data += 1;
+//       }
+//       else
+//       {
+//           HAL_FLASH_Lock();
+//           return HAL_ERROR;
+//       }
+//   }
+//   HAL_FLASH_Lock();
+//   return HAL_OK;
+// }
+// uint32_t CheckProgrammedFlash(uint32_t addr, uint32_t *data, const uint16_t len)
+// {
+//     uint32_t ret = 0; // number of bytes not programmed correctly (*data != *addr)
+//     if(addr < USER_STORAGE_START_ADDR) return 0;
+//     uint32_t end_addr = addr + len;
+//     if(end_addr > USER_STORAGE_END_ADDR) return 0;
+//     while(addr < end_addr)
+//     {
+//         uint32_t read_back_data = READ_U32(addr);
+//         if(read_back_data != *data) ret++;
+//         addr += 4;
+//         data += 1;
+//     }
+//     return ret;
+// }
+// HAL_StatusTypeDef ReadFlash(uint32_t addr, uint32_t *dst, const uint16_t len)
+// {
+//     if(addr < USER_STORAGE_START_ADDR) return HAL_ERROR;
+//     uint32_t end_addr = addr + len;
+//     if(end_addr > USER_STORAGE_END_ADDR) return HAL_ERROR;
+//     while(addr < end_addr)
+//     {
+//         *dst = READ_U32(addr);
+//         addr += 4;
+//         dst += 1;
+//     }
+//     return HAL_OK;
+// }
 // Example code
 // #pragma pack(4) // IMPORTANT!
 // typedef struct storage_t
@@ -263,7 +314,7 @@ HAL_StatusTypeDef ReadFlash(uint32_t addr, uint32_t *dst, const uint16_t len)
 //     readback_storage.crc16 = getCRC16((uint8_t*)&readback_storage, sizeof(readback_storage) - sizeof(uint32_t));
 //     WriteFlash(STORAGE_ADDR, (uint32_t*)&readback_storage, sizeof(readback_storage));
 // }
-#endif
+// #endif
 #endif
 
 #endif
