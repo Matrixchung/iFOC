@@ -71,21 +71,21 @@ static uint32_t stm32_get_sector(uint32_t Address)
  *
  * @return sector size
  */
-static uint32_t stm32_get_sector_size(uint32_t sector) {
-    assert(IS_FLASH_SECTOR(sector));
+// static uint32_t stm32_get_sector_size(uint32_t sector) {
+//     assert(IS_FLASH_SECTOR(sector));
 
-    switch (sector) {
-    case FLASH_SECTOR_0: return 16 * 1024;
-    case FLASH_SECTOR_1: return 16 * 1024;
-    case FLASH_SECTOR_2: return 16 * 1024;
-    case FLASH_SECTOR_3: return 16 * 1024;
-    case FLASH_SECTOR_4: return 64 * 1024;
-    case FLASH_SECTOR_5: return 128 * 1024;
-    case FLASH_SECTOR_6: return 128 * 1024;
-    case FLASH_SECTOR_7: return 128 * 1024;
-    default : return 128 * 1024;
-    }
-}
+//     switch (sector) {
+//     case FLASH_SECTOR_0: return 16 * 1024;
+//     case FLASH_SECTOR_1: return 16 * 1024;
+//     case FLASH_SECTOR_2: return 16 * 1024;
+//     case FLASH_SECTOR_3: return 16 * 1024;
+//     case FLASH_SECTOR_4: return 64 * 1024;
+//     case FLASH_SECTOR_5: return 128 * 1024;
+//     case FLASH_SECTOR_6: return 128 * 1024;
+//     case FLASH_SECTOR_7: return 128 * 1024;
+//     default : return 128 * 1024;
+//     }
+// }
 
 static int read(long offset, uint8_t *buf, size_t size)
 {

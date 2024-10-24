@@ -5,23 +5,13 @@
 #include "foc.hpp"
 #include "foc_header.h"
 #include "endpoints_enum.h"
-#include "eeprom_interface.hpp"
 
 // All protocols share same UID(aka node_id) externed from BaseProtocol, which fits the CANSimple Protocol ID
 // ID range: 0x00 - 0x3E (0x3F is the unaddressed ID, also global broadcast ID)
 // BaseProtocol only process "Endpoints"
 
-// For EEPROM:
-// At init, we will read all packet based on given sud_dev_index, and check crc.
-// If CRC correct, then we will apply those settings to FOC config struct.
-// If CRC WRONG, we will writeback all default settings to EEPROM here.
-
-typedef struct config_blob_t
-{
-    uint8_t crc_8;           // CRC8 checksum of all variables below
-    uint8_t node_id;
-    uint32_t serial_number_lsb;
-}config_blob_t;
+typedef void (*save_config_cb)(const char *key, const nvm_config_t *blob);
+typedef bool (*read_config_cb)(const char *key, nvm_config_t *blob);
 
 PROTOCOL_ENDPOINT GetEndpointFromIndex(int i) { return static_cast<PROTOCOL_ENDPOINT>(i); }
 
@@ -31,68 +21,79 @@ class BaseProtocol
 private:
     T_FOC& instance;
 public:
-    BaseProtocol(T_FOC& _ref, uint8_t _idx): instance(_ref), sub_dev_index(_idx) {};
-    EEPROM<I2CBase> *pROM = nullptr;
-    template<class T> void AttachEEPROM(EEPROM<T> *ptr);
+    BaseProtocol(T_FOC& _ref, uint8_t _idx);
     float GetEndpointValue(PROTOCOL_ENDPOINT endpoint);
     FOC_CMD_RET SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float set_value);
+    void RegisterNVMSaveCallback(save_config_cb cb) { _save_config = cb; };
+    void NVMReadConfig(read_config_cb cb);
+    bool SaveConfig();
     uint8_t node_id = 0x3F;
     uint8_t sub_dev_index = 0; // used to mark the index among same physical device, for example motor1, motor2, ...
     uint64_t serial_number = 0;
 private:
-    config_blob_t config_blob;
-    bool ReadConfig();
-    bool SaveConfig();
-    bool EraseConfig();
+    nvm_config_t nvm_config;
+    save_config_cb _save_config = nullptr;
+    read_config_cb _read_config = nullptr;
+    bool ParseConfig();
 };
 
-template<class U>
-template<class T>
-void BaseProtocol<U>::AttachEEPROM(EEPROM<T> *ptr)
+template<class T_FOC>
+BaseProtocol<T_FOC>::BaseProtocol(T_FOC& _ref, uint8_t _idx) : instance(_ref), sub_dev_index(_idx)
 {
-    pROM = reinterpret_cast<EEPROM<I2CBase>*>(ptr); // physical address: sub_dev_index * sizeof(config_blob_t)
-    if(pROM != nullptr) ReadConfig();
+    SaveConfig();
 }
 
 template<class U>
-bool BaseProtocol<U>::ReadConfig()
+void BaseProtocol<U>::NVMReadConfig(read_config_cb cb)
 {
-    if(pROM == nullptr) return false;
-    config_blob = pROM->ReadVar<config_blob_t>(sub_dev_index * sizeof(config_blob_t));
-    uint8_t buffer[sizeof(config_blob_t) - sizeof(uint8_t)];
-    uint8_t *ptr = (uint8_t*)&config_blob;
-    memcpy(buffer, ptr + 1, sizeof(buffer));
-    if(config_blob.crc_8 == getCRC8(buffer, sizeof(buffer)) &&   // checksum valid
-       config_blob.serial_number_lsb == (uint32_t)serial_number  // serial number match
-    ) 
+    _read_config = cb;
+    if(_read_config && _save_config)
     {
-        node_id = config_blob.node_id;
-        return true;
+        ParseConfig();
     }
+}
+
+template<class U>
+bool BaseProtocol<U>::ParseConfig()
+{
+    if(!_read_config) return false;
+    char key[30];
+    snprintf(key, sizeof(key), "user_config_%d", sub_dev_index);
+    nvm_config_t blob;
+    memset(&blob, 0, sizeof(blob));
+    if(_read_config(key, &blob))
+    {
+        uint8_t buffer[sizeof(nvm_config_t) - sizeof(uint8_t)];
+        memcpy(buffer, (uint8_t*)&blob + 1, sizeof(buffer));
+        if(blob.crc_8 == getCRC8(buffer, sizeof(buffer)) &&   // checksum valid
+        blob.serial_number_lsb == (uint32_t)serial_number  // serial number match
+        ) 
+        {
+            node_id = blob.node_id;
+            memcpy(&nvm_config, &blob, sizeof(nvm_config_t));
+            return true;
+        }
+    }
+    SaveConfig();
     return false;
 }
 
 template<class U>
 bool BaseProtocol<U>::SaveConfig()
 {
-    if(pROM == nullptr) return false;
-    config_blob.node_id = node_id;
-    config_blob.serial_number_lsb = (uint32_t)serial_number;
-    uint8_t buffer[sizeof(config_blob_t) - sizeof(uint8_t)];
-    uint8_t *ptr = (uint8_t*)&config_blob;
-    memcpy(buffer, ptr + 1, sizeof(buffer));
-    config_blob.crc_8 = getCRC8(buffer, sizeof(buffer));
-    pROM->WriteVar<config_blob_t>(sub_dev_index * sizeof(config_blob_t), config_blob);
-    return true;
-}
-
-template<class U>
-bool BaseProtocol<U>::EraseConfig()
-{
-    if(pROM == nullptr) return false;
-    pROM->FlushPage(0x00);
-    node_id = 0x3F;
-    return true;
+    nvm_config.node_id = node_id;
+    nvm_config.serial_number_lsb = (uint32_t)serial_number;
+    uint8_t buffer[sizeof(nvm_config_t) - sizeof(uint8_t)];
+    memcpy(buffer, (uint8_t*)&nvm_config + 1, sizeof(buffer));
+    nvm_config.crc_8 = getCRC8(buffer, sizeof(buffer));
+    if(_save_config)
+    {
+        char key[30];
+        snprintf(key, sizeof(key), "user_config_%d", sub_dev_index);
+        _save_config(key, &nvm_config);
+        return true;
+    }
+    return false;
 }
 
 template<class U>
@@ -251,9 +252,13 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             }
             break;
         case CONFIGURATION:
-            if(set_value == 0.0f) result = ReadConfig() ? CMD_SUCCESS : CMD_UNKNOWN_FAILURE;
-            else if(set_value == 1.0f) result = SaveConfig() ? CMD_SUCCESS : CMD_UNKNOWN_FAILURE;
-            else if(set_value == 2.0f) result = EraseConfig() ? CMD_SUCCESS : CMD_UNKNOWN_FAILURE;
+            // if(set_value == 0.0f) result = ReadConfig() ? CMD_SUCCESS : CMD_UNKNOWN_FAILURE;
+            if(set_value == 1.0f) result = SaveConfig() ? CMD_SUCCESS : CMD_UNKNOWN_FAILURE;
+            else if(set_value == 2.0f) 
+            {
+                node_id = 0x3F;
+                result = SaveConfig() ? CMD_SUCCESS : CMD_UNKNOWN_FAILURE;
+            }
             else result = CMD_NOT_SUPPORTED;
             break;
         // case SERIAL_NUMBER:

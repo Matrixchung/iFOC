@@ -9,6 +9,10 @@
 // AT24C256C: 262144bits = 32768Bytes = 8192floats
 
 // use union to extract/save multiple-byte variables
+// For EEPROM:
+// At init, we will read all packet based on given sud_dev_index, and check crc.
+// If CRC correct, then we will apply those settings to FOC config struct.
+// If CRC WRONG, we will writeback all default settings to EEPROM here.
 
 template<class T = I2CBase>
 class EEPROM
@@ -24,6 +28,8 @@ public:
     template<class U>
     void WriteVar(uint16_t addr, U var);
     void FlushPage(uint16_t addr);
+    void SaveConfigBlob(const char *key, const nvm_config_t *blob);
+    bool ReadConfigBlob(const char *key, nvm_config_t *blob);
 private:
     T& i2c;
     void PageWrite(uint16_t start_addr, uint8_t *src, uint16_t len);
@@ -83,6 +89,18 @@ void EEPROM<T>::SequentialRead(uint16_t start_addr, uint8_t *src, uint16_t len)
     buffer[1] = (uint8_t)start_addr;
     i2c.WriteBytes(device_addr, buffer, 2);
     i2c.ReadBytes(device_addr, src, len);
+}
+
+template<class T>
+void EEPROM<T>::SaveConfigBlob(const char *key, const nvm_config_t *blob)
+{
+
+}
+
+template<class T>
+bool EEPROM<T>::ReadConfigBlob(const char *key, nvm_config_t *blob)
+{
+    return true;
 }
 
 #endif

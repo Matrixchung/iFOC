@@ -63,4 +63,11 @@ typedef struct foc_config_t
     speed_pll_t speed_pll_config;
 }foc_config_t;
 
+typedef struct nvm_config_t
+{
+    uint8_t crc_8;           // CRC8 checksum of all variables below
+    uint8_t node_id;
+    uint32_t serial_number_lsb;
+}nvm_config_t;
+
 #endif
