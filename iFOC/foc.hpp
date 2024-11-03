@@ -39,13 +39,13 @@ public:
     FOC(T_DriverBase& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus);
     bool Init(bool initTIM = true);
     template<class T> void AttachMainEstimator();
-    template<class T> T* GetMainEstimator();
+    template<class T> [[nodiscard]] T* GetMainEstimator();
     void Update(float Ts);
     void UpdateMidInterval(float Ts);
     void UpdateIdleTask(float Ts);
     void SetOutputState(bool state);
     void EmergencyStop();
-    bool GetTrajPosState();
+    [[nodiscard]] bool GetTrajPosState();
     foc_config_t config;
     TrajController trajController;
 private:
@@ -81,7 +81,7 @@ private:
 #ifdef FOC_USING_AUX_ESTIMATOR
 public:
     template<class T> void AttachAuxEstimator();
-    template<class T> T* GetAuxEstimator();
+    template<class T> [[nodiscard]] T* GetAuxEstimator();
     void SwitchEstimator(uint8_t index);
     bool IsMainEstimatorActive() { return is_main_est; };
 private:
@@ -94,15 +94,33 @@ public:
 #ifdef FOC_USING_EXTRA_MODULE
 public:
     template<class T> void AppendModule();
-    template<class T> T* GetModule();
+    template<class T> [[nodiscard]] T* GetModule();
     void ResetModule() { extra_module.reset(); };
 private:
     std::unique_ptr<ModuleBase> extra_module = nullptr;
 #endif
 };
 
+/**
+ * @brief Init the FOC Hardware
+ *        Initialization Sequence:
+ *        1) Read config, and calculate current Kp/Ki if necessary.
+ *        2) Parse speed_pll PI regulator limit from 120% of max_mechanic_speed (out speed -> elec speed)
+ *        3) Initialize Full Bridge driver, take initTIM parameter for synchronization use. (if init failed, return)
+ *        4) Main Estimator is mandatory. Unconfigured / init failure will cause a false return.
+ *        5) If we use Auxiliary Estimator, then initialize it too.
+ *        6) Link estimated output struct pointer to main estimator.
+ *        7) Parse max compare value for SVPWM module and set up the initial state, prepare for running.
+ * @tparam A DriverBase
+ * @tparam B CurrentSenseBase
+ * @tparam C BusSenseBase
+ * @param initTIM If initTIM set to false, then we will synchronously start all timers later, otherwise start timer in driver.DriverInit(true).
+ * @return true Initialization successful
+ * @return false Initialization failed, with error_code = FOC_ERROR_INITIALIZE.
+ */
+
 template<class A, class B, class C>
-bool FOC<A, B, C>::Init(bool initTIM) // if initTIM set to false, then we will synchronously start all timers later.
+bool FOC<A, B, C>::Init(bool initTIM)
 {
     if(config.motor.gear_ratio <= 0.0f) config.motor.gear_ratio = 1.0f; // fix gear ratio
     if((config.current_pid.Kp == 0.0f && config.current_pid.Ki == 0.0f) && 
@@ -152,15 +170,24 @@ void FOC<A, B, C>::Update(float Ts)
             {
                 case MODE_SPEED:
                     est_input.target = EST_TARGET_SPEED;
+#ifdef FOC_USING_EXTRA_MODULE
+                    if(extra_module.get() == nullptr) 
+#endif 
                     est_input.Iqd_target = {0.0f, 0.0f}; // Iqd_target now acts as bias
                     break;
                 case MODE_TRAJECTORY:
                     trajController.Preprocess(&est_input, est_output, Ts);
                     est_input.target = EST_TARGET_POS;
+#ifdef FOC_USING_EXTRA_MODULE
+                    if(extra_module.get() == nullptr) 
+#endif 
                     est_input.Iqd_target = {0.0f, 0.0f};
                     break;
                 case MODE_POSITION:
                     est_input.target = EST_TARGET_POS;
+#ifdef FOC_USING_EXTRA_MODULE
+                    if(extra_module.get() == nullptr) 
+#endif 
                     est_input.Iqd_target = {0.0f, 0.0f};
                     break;
                 default: 
@@ -219,6 +246,14 @@ void FOC<A, B, C>::UpdateMidInterval(float Ts)
             mode = MODE_TORQUE;
             break;
         case FOC_DEBUG_NONE:
+            // Sync target with current pos
+            if(!output_state)
+            {
+                trajController.task_done = true;
+                est_input.target_pos = est_output->estimated_raw_angle;
+                trajController.final_pos = est_output->estimated_raw_angle;
+            }
+            break;
         default: break;
     }
     main_estimator->UpdateMidInterval(Ts);
@@ -250,13 +285,6 @@ void FOC<A, B, C>::UpdateMidInterval(float Ts)
             }
             else overspeed_timer = 0.0f;
         }
-    }
-    // Sync target with current pos
-    if(!output_state)
-    {
-        trajController.task_done = true;
-        est_input.target_pos = est_output->estimated_raw_angle;
-        trajController.final_pos = est_output->estimated_raw_angle;
     }
 }
 

@@ -1,3 +1,14 @@
+/**
+ * @file direct_param_pid.hpp
+ * @author Matrixchung (xin_zhong@std.uestc.edu.cn)
+ * @brief a simple PID class which doesn't store arguments copy, but takes references from other places.
+ *        used in connecting config variables with inner variables. If you modified config, it will take effects immediately.
+ * @version 0.1
+ * @date 2024-11-03
+ * 
+ * Copyright © 2024, iFOC Project
+ * 
+ */
 #ifndef _FOC_DIRECT_PARAM_PID_HPP
 #define _FOC_DIRECT_PARAM_PID_HPP
 
