@@ -60,8 +60,11 @@ void EstimatorSensor::Update(float Ts)
     encoder->Update(Ts);
     output.estimated_angle = encoder->single_round_angle;
     output.estimated_raw_angle = encoder->raw_angle - abs_raw_angle_offset;
-    if(config.use_speed_pll) output.estimated_speed = rad_speed_to_RPM(speed_pll.Calculate(output.estimated_angle, Ts), 1);
-    if(align_state) output.electric_angle = normalize_rad(output.estimated_angle * config.motor.pole_pair - zero_electric_angle);
+    if(align_state)
+    {
+        if(config.use_speed_pll) output.estimated_speed = rad_speed_to_RPM(speed_pll.Calculate(output.estimated_angle, Ts), 1);
+        output.electric_angle = normalize_rad(output.estimated_angle * config.motor.pole_pair - zero_electric_angle);
+    }
     else output.estimated_speed = 0.0f; // pll calculated, but not used
     output.Iqd_fb = FOC_Park(input.Ialphabeta_fb, output.electric_angle);
     if(input.target > EST_TARGET_NONE)
@@ -80,7 +83,7 @@ void EstimatorSensor::Update(float Ts)
         output.Uqd.q = Iq_PID.GetOutput(output.Iqd_set.q - output.Iqd_fb.q, Ts);
         output.Uqd.d = Id_PID.GetOutput(output.Iqd_set.d - output.Iqd_fb.d, Ts);
     }
-    else abs_raw_angle_offset = encoder->raw_angle;
+    else if(config.debug_mode == FOC_DEBUG_NONE) abs_raw_angle_offset = encoder->raw_angle;
 }
 
 void EstimatorSensor::UpdateMidInterval(float Ts)
