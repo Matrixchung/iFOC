@@ -19,7 +19,7 @@ public:
     void UpdateIdleTask(float Ts);
     void SetOutputState(bool state);
     void EmergencyStop();
-    bool GetTrajPosState();
+    [[nodiscard]] bool GetTrajPosState();
     foc_config_t config;
     TrajController trajController;
     EstimatorBDC* GetMainEstimator() { return &estimator; }

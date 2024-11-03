@@ -9,8 +9,8 @@ class EstimatorIF : public EstimatorBase
 {
 public:
     EstimatorIF(foc_state_input_t& _in, foc_config_t& _config) : EstimatorBase(_in, _config) {};
-    bool Init() override;
-    void Update(float Ts) override;
+    bool Init() final;
+    void Update(float Ts) final;
     float start_time = 1.0f;
 private:
     float state_timer = 0.0f;
