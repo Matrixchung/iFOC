@@ -28,8 +28,8 @@ class SoundInjector : public ModuleBase
 public:
     template<std::size_t _Nm>
     bool PlaySound(const std::array<Note, _Nm> &array, uint16_t BPM);
-    bool Postprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts) final;
-    float inject_voltage = 0.0f;
+    bool Preprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts) final;
+    float inject_current = 0.0f;
 private:
     bool play_complete = true;
     float beat_time = 0.0f; // = 60s / BPM
@@ -53,25 +53,28 @@ bool SoundInjector::PlaySound(const std::array<Note, _Nm> &array, uint16_t BPM)
     return true;
 }
 
-bool SoundInjector::Postprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts)
+bool SoundInjector::Preprocess(foc_state_input_t* in, foc_state_output_t* out, float Ts)
 {
     if(!play_complete && iter_begin != nullptr && iter_end != nullptr && iter_begin <= iter_end)
     {
+        in->target = EST_TARGET_TORQUE;
         if(iter_begin == iter_end)
         {
+            in->target = EST_TARGET_SPEED;
             play_complete = true;
             state_timer = 0.0f;
             note_timer = 0.0f;
+            in->Iqd_target.d = 0.0f;
             return true;
         }
         state_timer += Ts;
         note_timer += Ts;
-        if(note_timer < flip_time) out->Uqd.d += inject_voltage;
-        // if(note_timer < flip_time) in->Iqd_target.d += inject_current;
+        // if(note_timer < flip_time) out->Uqd.d += inject_voltage;
+        if(note_timer < flip_time) in->Iqd_target.d = inject_current;
         else
         {
-            out->Uqd.d -= inject_voltage;
-            // in->Iqd_target.d -= inject_current;
+            // out->Uqd.d -= inject_voltage;
+            in->Iqd_target.d = -inject_current;
             if(note_timer >= _sound_Ts[*iter_begin]) note_timer = 0;
         }
         if(state_timer >= beat_time)
@@ -82,7 +85,7 @@ bool SoundInjector::Postprocess(foc_state_input_t* in, foc_state_output_t* out, 
             flip_time = _sound_Ts[*iter_begin] * 0.5f;
         }
     }
-    return true;
+    return false;
 }
 
 #endif
