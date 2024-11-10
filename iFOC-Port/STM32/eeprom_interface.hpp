@@ -24,7 +24,7 @@ public:
     };
     EEPROM(T& _i2c) : EEPROM(_i2c, 0x50) {};
     template<class U>
-    U ReadVar(uint16_t addr);
+    [[nodiscard]] U ReadVar(uint16_t addr);
     template<class U>
     void WriteVar(uint16_t addr, U var);
     void FlushPage(uint16_t addr);
@@ -94,13 +94,25 @@ void EEPROM<T>::SequentialRead(uint16_t start_addr, uint8_t *src, uint16_t len)
 template<class T>
 void EEPROM<T>::SaveConfigBlob(const char *key, const nvm_config_t *blob)
 {
-
+    auto parsed_idx = key[strlen(key) - 1];
+    if(parsed_idx >= '0' && parsed_idx <= '9')
+    {
+        auto sub_dev_index = (uint8_t)(parsed_idx - '0');
+        WriteVar<nvm_config_t>(sub_dev_index * sizeof(nvm_config_t), *blob);
+    }
 }
 
 template<class T>
 bool EEPROM<T>::ReadConfigBlob(const char *key, nvm_config_t *blob)
 {
-    return true;
+    auto parsed_idx = key[strlen(key) - 1];
+    if(parsed_idx >= '0' && parsed_idx <= '9')
+    {
+        auto sub_dev_index = (uint8_t)(parsed_idx - '0');
+        *blob = ReadVar<nvm_config_t>(sub_dev_index * sizeof(nvm_config_t));
+        return true;
+    }
+    return false;
 }
 
 #endif
