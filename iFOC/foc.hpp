@@ -47,16 +47,16 @@ public:
     void EmergencyStop();
     [[nodiscard]] bool GetTrajPosState();
     foc_config_t config;
-    TrajController trajController;
 private:
     template<class U> friend class BaseProtocol;
     template<class ... T> friend void SyncStartTimer(T&... inst);
     T_DriverBase& driver;
     T_CurrentSenseBase& current_sense;
     T_BusSenseBase& bus_sense;
+    TrajController trajController;
     foc_state_input_t est_input;
     foc_state_output_t *est_output;
-    std::unique_ptr<EstimatorBase> main_estimator = nullptr;
+    EstimatorBase *main_estimator = nullptr;
     svpwm_t svpwm;
     float overspeed_timer = 0.0f;
     float overcurrent_timer = 0.0f;
@@ -65,7 +65,7 @@ private:
     bool output_state = false;
 #ifdef FOC_USING_INDICATOR
 public:
-    std::unique_ptr<Indicator<GPIOBase>> indicator = nullptr;
+    Indicator<GPIOBase> *indicator = nullptr;
     template <class T = GPIOBase> void SetIndicator(T& gpio);
 #endif
 #ifdef FOC_USING_TEMP_PROBE
@@ -85,7 +85,7 @@ public:
     void SwitchEstimator(uint8_t index);
     bool IsMainEstimatorActive() { return is_main_est; };
 private:
-    std::unique_ptr<EstimatorBase> aux_estimator = nullptr;
+    EstimatorBase *aux_estimator = nullptr;
     bool is_main_est = true;
 #else
 public:
@@ -144,7 +144,7 @@ bool FOC<A, B, C>::Init(bool initTIM)
         error_code = FOC_ERROR_INITIALIZE;
         return false;
     }
-    est_output = &main_estimator.get()->output;
+    est_output = &(main_estimator->output);
     svpwm.max_compare = driver.GetMaxCompare();
     current_sense.CurrentSenseUpdate();
     bus_sense.BusSenseUpdate();
@@ -200,9 +200,9 @@ void FOC<A, B, C>::Update(float Ts)
     else est_input.target = EST_TARGET_NONE;
 #endif
     main_estimator->Update(Ts);
-    error_code |= main_estimator->GetErrorFlag();
     if(output_state)
     {
+        error_code |= main_estimator->GetErrorFlag();
         if(ABS(est_output->Iqd_fb.q) >= config.max_current * 0.95 || ABS(est_output->Iqd_fb.d) >= config.max_current * 0.95)
         {
             overcurrent_timer += Ts;
@@ -360,7 +360,7 @@ template<class T>
 void FOC<A, B, C>::SetIndicator(T& gpio)
 {
     static_assert(std::is_base_of<GPIOBase, T>::value, "GPIO must be derived from GPIOBase");
-    indicator = std::make_unique<Indicator<GPIOBase>>(gpio);
+    indicator = new Indicator<GPIOBase>(gpio);
 }
 #endif
 
@@ -369,7 +369,7 @@ template<class T>
 void FOC<A, B, C>::AttachMainEstimator()
 {
     static_assert(std::is_base_of<EstimatorBase, T>::value, "Estimator must be derived from EstimatorBase");
-    main_estimator = std::make_unique<T>(est_input, config);
+    main_estimator = new T(est_input, config);
 }
 
 template<class A, class B, class C>
@@ -377,7 +377,7 @@ template<class T>
 T* FOC<A, B, C>::GetMainEstimator()
 {
     static_assert(std::is_base_of<EstimatorBase, T>::value, "Estimator must be derived from EstimatorBase");
-    return static_cast<T*>(main_estimator.get());
+    return static_cast<T*>(main_estimator);
 }
 
 #ifdef FOC_USING_AUX_ESTIMATOR
