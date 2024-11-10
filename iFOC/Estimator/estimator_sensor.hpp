@@ -19,6 +19,7 @@ public:
     void AttachEncoder(EncoderBase *_encoder) { encoder = _encoder; };
     void Update(float Ts) final;
     void UpdateMidInterval(float Ts) final;
+    void SetHome() final;
     FOC_ERROR_FLAG GetErrorFlag() final;
 private:
     SpeedPLL speed_pll;
@@ -195,10 +196,10 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
     }
 }
 
-// void EstimatorSensor::AttachLimiter(LimiterBase *_limiter)
-// {
-//     limiter = _limiter;
-// }
+void EstimatorSensor::SetHome()
+{
+    abs_raw_angle_offset = encoder->raw_angle;
+}
 
 FOC_ERROR_FLAG EstimatorSensor::GetErrorFlag()
 {

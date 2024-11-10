@@ -29,8 +29,8 @@ public:
     virtual void UpdateMidInterval(float Ts) {};
     virtual void UpdateIdleTask(float Ts) {};
     virtual FOC_ERROR_FLAG GetErrorFlag() {return FOC_ERROR_NONE;};
+    virtual void SetHome() {};
     foc_state_output_t output;
-    float abs_raw_angle_offset = 0.0f;
 protected:
     foc_state_input_t& input;
     foc_config_t& config;
@@ -38,6 +38,7 @@ protected:
     DP_PID Id_PID;
     DP_PID Speed_PID;
     DP_PID Position_PID;
+    float abs_raw_angle_offset = 0.0f;
     void Reset();
 };
 

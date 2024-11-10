@@ -282,7 +282,15 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             break;
         case DRIVE_MODE:
             if((uint8_t)set_value >= LAST_MODE_PLACEHOLDER) result = CMD_NOT_SUPPORTED;
-            else instance.mode = (FOC_MODE)set_value;
+            else
+            {
+                // if(instance.mode >= MODE_TORQUE && instance.mode != MODE_TRAJECTORY && (FOC_MODE)set_value == MODE_TRAJECTORY)
+                // {
+                //     SetEndpointValue(SET_HOME, 1.0f);
+                //     instance.est_input.target_pos = 0.0f;
+                // }
+                instance.mode = (FOC_MODE)set_value;
+            }
             break;
         case IQ_TARGET:
             instance.est_input.Iqd_target.q = set_value;
@@ -345,9 +353,9 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
         case POS_RAMP_LIMIT:
             instance.config.position_pid.ramp_limit = set_value;
             break;
-        case GO_HOME:
-            // instance.estimator->SetSubMode(SUBMODE_HOME);
-            break;
+        // case GO_HOME:
+        //     // instance.estimator->SetSubMode(SUBMODE_HOME);
+        //     break;
         case BREAK_MODE:
             instance.config.break_mode = (uint8_t)set_value;
             break;
@@ -380,7 +388,7 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             instance.config.traj_max_decel = set_value;
             break;
         case SET_HOME:
-            
+            instance.main_estimator->SetHome();
             break;
         case MECHANIC_SPEED_LIMIT:
             instance.config.motor.max_mechanic_speed = set_value;
@@ -390,13 +398,13 @@ FOC_CMD_RET BaseProtocol<U>::SetEndpointValue(PROTOCOL_ENDPOINT endpoint, float 
             // if(instance.error_code) break; // Modifying indicator state when ERROR_CODE present is not allowed
             if(instance.indicator != nullptr)
             {
-                instance.indicator.get()->SetState(set_value != 0.0f);
+                instance.indicator->SetState(set_value != 0.0f);
             }
             break;
         case INDICATOR_TOGGLE:
             if(instance.indicator != nullptr)
             {
-                instance.indicator.get()->Toggle();
+                instance.indicator->Toggle();
             }
             break;
 #endif
