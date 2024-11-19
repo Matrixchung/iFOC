@@ -221,6 +221,9 @@ float BaseProtocol<U>::GetEndpointValue(PROTOCOL_ENDPOINT endpoint)
             return instance.trajController.GetAccel();
         case MECHANIC_SPEED_LIMIT:
             return instance.config.motor.max_mechanic_speed;
+        case HAS_SET_HOME:
+            return instance.main_estimator->HasSetHome();
+            break;
 #ifdef FOC_USING_TEMP_PROBE
         case MCU_TEMP:
             if(instance.mcu_temp != nullptr) return *instance.mcu_temp;
@@ -423,7 +426,7 @@ public:
     ProtocolSerializer(BaseProtocol<U>&... inst) : instances{ {(BaseProtocol<FOC<DriverDefault, CurrentSenseDefault, BusSenseDefault>>*)(&inst)...} } 
     {
         static_assert(sizeof...(inst) == N, "Number of BaseProtocol instances must match size N.");
-    };
+    }
     BaseProtocol<T>* get(size_t index)
     {
         auto ptr = instances.at(index);

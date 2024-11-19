@@ -29,7 +29,8 @@ public:
     virtual void UpdateMidInterval(float Ts) {};
     virtual void UpdateIdleTask(float Ts) {};
     virtual FOC_ERROR_FLAG GetErrorFlag() {return FOC_ERROR_NONE;};
-    virtual void SetHome() {};
+    virtual void SetHome() { has_set_home = true; };
+    bool HasSetHome() { return has_set_home; }
     foc_state_output_t output;
 protected:
     foc_state_input_t& input;
@@ -39,6 +40,7 @@ protected:
     DP_PID Speed_PID;
     DP_PID Position_PID;
     float abs_raw_angle_offset = 0.0f;
+    bool has_set_home = false;
     void Reset();
 };
 

@@ -199,6 +199,7 @@ void EstimatorSensor::UpdateMidInterval(float Ts)
 void EstimatorSensor::SetHome()
 {
     abs_raw_angle_offset = encoder->raw_angle;
+    has_set_home = true;
 }
 
 FOC_ERROR_FLAG EstimatorSensor::GetErrorFlag()

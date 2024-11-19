@@ -80,6 +80,7 @@ typedef enum PROTOCOL_ENDPOINT
     MOSFET_TEMP,
     
     SET_HOME, // Writeonly
+    HAS_SET_HOME, // Readonly
     INDICATOR_STATE,  // Writeonly
     INDICATOR_TOGGLE, // Writeonly
     MECHANIC_SPEED_LIMIT,
