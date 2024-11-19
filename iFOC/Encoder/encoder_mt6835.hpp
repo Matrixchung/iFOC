@@ -36,14 +36,11 @@
 // Write: 4 bit COMMAND + 12 bit REGISTER + 8 bit DATA
 // Read:  --------------------------------+ 8 bit RETR
 
-template<class T = SPIBase>
+template<SPIImpl T>
 class EncoderMT6835 : public EncoderBase
 {
 public:
-    EncoderMT6835(T& _spi) : spi(_spi)
-    {
-        static_assert(std::is_base_of<SPIBase, T>::value, "SPI Implementation must be derived from SPIBase");
-    };
+    explicit EncoderMT6835(T& _spi) : spi(_spi) {};
     bool Init() override;
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;
@@ -73,7 +70,7 @@ private:
     // virtual uint16_t PortSPIRead8(uint8_t reg, uint8_t *ret) = 0;
 };
 
-template<class T>
+template<SPIImpl T>
 bool EncoderMT6835<T>::Init()
 {
     // direction = _dir;
@@ -91,7 +88,7 @@ bool EncoderMT6835<T>::Init()
     return true;
 }
 
-template<class T>
+template<SPIImpl T>
 uint8_t EncoderMT6835<T>::SPIWrite24Read8(uint8_t cmd, uint16_t reg, uint8_t data)
 {
     // PortSetCS(0);
@@ -111,7 +108,7 @@ uint8_t EncoderMT6835<T>::SPIWrite24Read8(uint8_t cmd, uint16_t reg, uint8_t dat
     return (uint8_t)ret;
 }
 
-template<class T>
+template<SPIImpl T>
 uint8_t EncoderMT6835<T>::ReadAngle()
 {
     // PortSetCS(0);
@@ -171,7 +168,7 @@ uint8_t EncoderMT6835<T>::ReadAngle()
     return 0;
 }
 
-template<class T>
+template<SPIImpl T>
 uint8_t EncoderMT6835<T>::ReadAngleContinuous()
 {
     uint16_t ret = 0;
@@ -200,24 +197,24 @@ uint8_t EncoderMT6835<T>::ReadAngleContinuous()
     return 1;
 }
 
-template<class T>
+template<SPIImpl T>
 uint8_t EncoderMT6835<T>::ReadAngleContinuousStart()
 {
     spi.SetCS();
     // uint16_t ret = 0;
     // return (uint8_t)PortSPIRead16(0xA003, &ret);
-    uint8_t temp = {0xA0, 0x03};
+    uint8_t temp[] = {0xA0, 0x03};
     return spi.WriteBytes(temp, 2);
 }
 
-template<class T>
+template<SPIImpl T>
 uint8_t EncoderMT6835<T>::ReadAngleContinuousEnd()
 {
     spi.ResetCS();
     return 0;
 }
 
-template<class T>
+template<SPIImpl T>
 void EncoderMT6835<T>::Update(float Ts)
 {
     // if(!ReadAngleContinuous()) // read angle continuously
@@ -247,13 +244,13 @@ void EncoderMT6835<T>::Update(float Ts)
     }
 }
 
-template<class T>
+template<SPIImpl T>
 void EncoderMT6835<T>::UpdateMidInterval(float Ts)
 {
     // velocity = speed_pll.Calculate(single_round_angle, Ts);
 }
 
-template<class T>
+template<SPIImpl T>
 bool EncoderMT6835<T>::IsCalibrated()
 {
     return true;

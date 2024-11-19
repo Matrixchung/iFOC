@@ -4,15 +4,12 @@
 #include "encoder_base.hpp"
 #include "i2c_base.h"
 
-template<class T = I2CBase>
+template<I2CImpl T>
 class EncoderAS5600 : public EncoderBase
 {
 public:
-    EncoderAS5600(T& _i2c, uint8_t _addr) : i2c(_i2c), device_addr(_addr)
-    {
-        static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
-    };
-    EncoderAS5600(T& _i2c) : EncoderAS5600(_i2c, device_addr) {};
+    EncoderAS5600(T& _i2c, uint8_t _addr) : i2c(_i2c), device_addr(_addr) {};
+    explicit EncoderAS5600(T& _i2c) : EncoderAS5600(_i2c, device_addr) {};
     bool Init() override;
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;
@@ -29,20 +26,20 @@ private:
     // uint8_t repeat_counter = 0; // runs at 2KHz
 };
 
-template<class T>
+template<I2CImpl T>
 bool EncoderAS5600<T>::Init()
 {
     i2c.Init();
     return true;
 }
 
-template<class T>
+template<I2CImpl T>
 void EncoderAS5600<T>::Update(float Ts)
 {
     ; // update interval may be too short for I2C communication
 }
 
-template<class T>
+template<I2CImpl T>
 void EncoderAS5600<T>::UpdateMidInterval(float Ts)
 {
     uint8_t temp = 0x0C;
@@ -66,7 +63,7 @@ void EncoderAS5600<T>::UpdateMidInterval(float Ts)
     // repeat_counter = 0;
 }
 
-template<class T>
+template<I2CImpl T>
 bool EncoderAS5600<T>::IsCalibrated()
 {
     return true;

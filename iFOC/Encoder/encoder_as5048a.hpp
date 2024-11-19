@@ -4,14 +4,11 @@
 #include "encoder_base.hpp"
 #include "spi_base.h"
 
-template<class T = SPIBase>
+template<SPIImpl T>
 class EncoderAS5048A : public EncoderBase
 {
 public:
-    EncoderAS5048A(T& _spi) : spi(_spi)
-    {
-        static_assert(std::is_base_of<SPIBase, T>::value, "SPI Implementation must be derived from SPIBase");
-    };
+    explicit EncoderAS5048A(T& _spi) : spi(_spi) {};
     bool Init() override;
     void Update(float Ts) override;
     void UpdateMidInterval(float Ts) override;
@@ -26,7 +23,7 @@ private:
     uint8_t ReadAngle();
 };
 
-template<class T>
+template<SPIImpl T>
 bool EncoderAS5048A<T>::Init()
 {
     spi.ResetCS();
@@ -34,7 +31,7 @@ bool EncoderAS5048A<T>::Init()
     return true;
 }
 
-template<class T>
+template<SPIImpl T>
 uint8_t EncoderAS5048A<T>::ReadAngle()
 {   
     spi.SetCS();
@@ -65,7 +62,7 @@ uint8_t EncoderAS5048A<T>::ReadAngle()
     return 1;
 }
 
-template<class T>
+template<SPIImpl T>
 void EncoderAS5048A<T>::Update(float Ts)
 {
     if(!ReadAngle())
@@ -88,13 +85,13 @@ void EncoderAS5048A<T>::Update(float Ts)
     }
 }
 
-template<class T>
+template<SPIImpl T>
 void EncoderAS5048A<T>::UpdateMidInterval(float Ts)
 {
     // velocity = 0.0f;
 }
 
-template<class T>
+template<SPIImpl T>
 bool EncoderAS5048A<T>::IsCalibrated()
 {
     return true;
