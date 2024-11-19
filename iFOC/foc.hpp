@@ -32,11 +32,11 @@
 // Using CRTP for zero-overhead polymorphism at *compile-time*
 // See: https://stackoverflow.com/questions/18174441/crtp-and-multilevel-inheritance/18174442#18174442
 
-template<class T_DriverBase, class T_CurrentSenseBase, class T_BusSenseBase>
+template<class Driver, class CurrSense, class Bus>
 class FOC
 {
 public:
-    FOC(T_DriverBase& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus);
+    FOC(Driver& _driver, CurrSense& _curr, Bus& _bus);
     bool Init(bool initTIM = true);
     template<class T> void AttachMainEstimator();
     template<class T> [[nodiscard]] T* GetMainEstimator();
@@ -50,9 +50,9 @@ public:
 private:
     template<class U> friend class BaseProtocol;
     template<class ... T> friend void SyncStartTimer(T&... inst);
-    T_DriverBase& driver;
-    T_CurrentSenseBase& current_sense;
-    T_BusSenseBase& bus_sense;
+    Driver& driver;
+    CurrSense& current_sense;
+    Bus& bus_sense;
     TrajController trajController;
     foc_state_input_t est_input;
     foc_state_output_t *est_output;
@@ -431,9 +431,8 @@ T* FOC<A, B, C>::GetModule()
 }
 #endif
 
-// init structs
-template<class T_DriverBase, class T_CurrentSenseBase, class T_BusSenseBase>
-FOC<T_DriverBase, T_CurrentSenseBase, T_BusSenseBase>::FOC(T_DriverBase& _driver, T_CurrentSenseBase& _curr, T_BusSenseBase& _bus) 
+template<class Driver, class CurrSense, class Bus>
+FOC<Driver, CurrSense, Bus>::FOC(Driver &_driver, CurrSense &_curr, Bus &_bus)
 : driver(_driver), current_sense(_curr), bus_sense(_bus)
 {
     config = {
