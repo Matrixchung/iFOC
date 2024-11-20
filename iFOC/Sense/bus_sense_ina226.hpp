@@ -6,26 +6,19 @@
 
 // https://blog.csdn.net/weixin_50257954/article/details/133635534
 
-template <class T = I2CBase>
+template <I2CImpl T>
 class BusSenseINA226 : public BusSenseBase<BusSenseINA226<T>>
 {
 public:
     BusSenseINA226(T& _i2c, uint8_t _addr, float _max_measure_current, float _rshunt_ohm)
     : i2c(_i2c), device_addr(_addr), max_current(_max_measure_current), rshunt_ohm(_rshunt_ohm)
     {
-        static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
         current_lsb = max_current / 32768.0f;
         power_lsb = current_lsb * 25.0f;
         current_cal_reg = (uint16_t)(0.00512f / (current_lsb * rshunt_ohm));
     };
     BusSenseINA226(T& _i2c, float _max_measure_current, float _rshunt_ohm)
-    : i2c(_i2c), max_current(_max_measure_current), rshunt_ohm(_rshunt_ohm)
-    {
-        static_assert(std::is_base_of<I2CBase, T>::value, "I2C Implementation must be derived from I2CBase");
-        current_lsb = max_current / 32768.0f;
-        power_lsb = current_lsb * 25.0f;
-        current_cal_reg = (uint16_t)(0.00512f / (current_lsb * rshunt_ohm));
-    };
+    : BusSenseINA226(_i2c, 0x40, _max_measure_current, _rshunt_ohm) {};
     void Init();
     void Update();
 private:
@@ -39,7 +32,7 @@ private:
     float power_lsb = 0.025f;
 };
 
-template <class T>
+template <I2CImpl T>
 void BusSenseINA226<T>::Init()
 {
     i2c.Init();
@@ -54,7 +47,7 @@ void BusSenseINA226<T>::Init()
     i2c.WriteBytes(device_addr, i2c_buffer, 3);
 }
 
-template <class T>
+template <I2CImpl T>
 void BusSenseINA226<T>::Update()
 {
     i2c_buffer[0] = 0x02;
