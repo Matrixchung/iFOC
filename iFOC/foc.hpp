@@ -38,8 +38,8 @@ class FOC
 public:
     FOC(Driver& _driver, CurrSense& _curr, Bus& _bus);
     bool Init(bool initTIM = true);
-    template<class T> void AttachMainEstimator();
-    template<class T> [[nodiscard]] T* GetMainEstimator();
+    template<EstimatorImpl T> void AttachMainEstimator();
+    template<EstimatorImpl T> [[nodiscard]] T* GetMainEstimator();
     void Update(float Ts);
     void UpdateMidInterval(float Ts);
     void UpdateIdleTask(float Ts);
@@ -66,7 +66,7 @@ private:
 #ifdef FOC_USING_INDICATOR
 public:
     Indicator<GPIOBase> *indicator = nullptr;
-    template <class T = GPIOBase> void SetIndicator(T& gpio);
+    template <GPIOImpl T> void SetIndicator(T& gpio);
 #endif
 #ifdef FOC_USING_TEMP_PROBE
 public:
@@ -80,8 +80,8 @@ private:
 #endif
 #ifdef FOC_USING_AUX_ESTIMATOR
 public:
-    template<class T> void AttachAuxEstimator();
-    template<class T> [[nodiscard]] T* GetAuxEstimator();
+    template<EstimatorImpl T> void AttachAuxEstimator();
+    template<EstimatorImpl T> [[nodiscard]] T* GetAuxEstimator();
     void SwitchEstimator(uint8_t index);
     bool IsMainEstimatorActive() { return is_main_est; };
 private:
@@ -93,8 +93,8 @@ public:
 #endif
 #ifdef FOC_USING_EXTRA_MODULE
 public:
-    template<class T> void AppendModule();
-    template<class T> [[nodiscard]] T* GetModule();
+    template<ModuleImpl T> void AppendModule();
+    template<ModuleImpl T> [[nodiscard]] T* GetModule();
     void ResetModule() { extra_module.reset(); };
 private:
     std::unique_ptr<ModuleBase> extra_module = nullptr;
@@ -151,7 +151,6 @@ bool FOC<A, B, C>::Init(bool initTIM)
     output_state = config.startup_state;
     mode = config.startup_mode;
     error_code = FOC_ERROR_NONE;
-    // soundInjector.inject_voltage = config.current_pid.limit / 3.0f;
     return true;
 }
 
@@ -356,48 +355,43 @@ void FOC<A, B, C>::EmergencyStop()
 
 #ifdef FOC_USING_INDICATOR
 template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
-template<class T>
+template<GPIOImpl T>
 void FOC<A, B, C>::SetIndicator(T& gpio)
 {
-    static_assert(std::is_base_of<GPIOBase, T>::value, "GPIO must be derived from GPIOBase");
     indicator = new Indicator<GPIOBase>(gpio);
 }
 #endif
 
 template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
-template<class T>
+template<EstimatorImpl T>
 void FOC<A, B, C>::AttachMainEstimator()
 {
-    static_assert(std::is_base_of<EstimatorBase, T>::value, "Estimator must be derived from EstimatorBase");
     main_estimator = new T(est_input, config);
 }
 
 template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
-template<class T>
+template<EstimatorImpl T>
 T* FOC<A, B, C>::GetMainEstimator()
 {
-    static_assert(std::is_base_of<EstimatorBase, T>::value, "Estimator must be derived from EstimatorBase");
     return static_cast<T*>(main_estimator);
 }
 
 #ifdef FOC_USING_AUX_ESTIMATOR
-template<class A, class B, class C>
-template<class T>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
+template<EstimatorImpl T>
 void FOC<A, B, C>::AttachAuxEstimator()
 {
-    static_assert(std::is_base_of<EstimatorBase, T>::value, "Estimator must be derived from EstimatorBase");
     aux_estimator = std::make_unique<T>(est_input, config);
 }
 
-template<class A, class B, class C>
-template<class T>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
+template<EstimatorImpl T>
 T* FOC<A, B, C>::GetAuxEstimator()
 {
-    static_assert(std::is_base_of<EstimatorBase, T>::value, "Estimator must be derived from EstimatorBase");
     return static_cast<T*>(aux_estimator.get());
 }
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 void FOC<A, B, C>::SwitchEstimator(uint8_t index)
 {
     if(index == 0)
@@ -414,19 +408,17 @@ void FOC<A, B, C>::SwitchEstimator(uint8_t index)
 #endif
 
 #ifdef FOC_USING_EXTRA_MODULE
-template<class A, class B, class C>
-template<class T>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
+template<ModuleImpl T>
 void FOC<A, B, C>::AppendModule()
 {
-    static_assert(std::is_base_of<ModuleBase, T>::value, "Extra module must be derived from ModuleBase");
     extra_module = std::make_unique<T>();
 }
 
-template<class A, class B, class C>
-template<class T>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
+template<ModuleImpl T>
 T* FOC<A, B, C>::GetModule()
 {
-    static_assert(std::is_base_of<ModuleBase, T>::value, "Extra module must be derived from ModuleBase");
     return static_cast<T*>(extra_module.get());
 }
 #endif

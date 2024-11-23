@@ -56,4 +56,7 @@ void EstimatorBase::Reset()
     Position_PID.Reset();
 }
 
+template<typename T>
+concept EstimatorImpl = std::is_base_of<EstimatorBase, T>::value;
+
 #endif

@@ -14,4 +14,7 @@ public:
     virtual ~ModuleBase(){};
 };
 
+template<typename T>
+concept ModuleImpl = std::is_base_of<ModuleBase, T>::value;
+
 #endif

@@ -11,4 +11,7 @@ public:
     virtual bool ReadState() = 0;
 };
 
+template<typename T>
+concept GPIOImpl = std::is_base_of<GPIOBase, T>::value;
+
 #endif
