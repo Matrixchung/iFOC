@@ -25,4 +25,7 @@ public:
     void Update() {};
 };
 
+template<typename T>
+concept CurrSenseImpl = std::is_base_of<CurrentSenseBase<T>, T>::value;
+
 #endif

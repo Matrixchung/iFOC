@@ -7,7 +7,7 @@ template<class T>
 class DriverBDCBase
 {
 public:
-    DriverBDCBase(uint16_t _max_compare) : max_compare(_max_compare) {};
+    explicit DriverBDCBase(uint16_t _max_compare) : max_compare(_max_compare) {};
     bool DriverInit(bool initCNT) { return static_cast<T*>(this)->Init(initCNT); }
     void DriverEnableOutput() { static_cast<T*>(this)->EnableOutput(); };
     void DriverDisableOutput() { static_cast<T*>(this)->DisableOutput(); };

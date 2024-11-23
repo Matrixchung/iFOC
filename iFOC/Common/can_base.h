@@ -54,4 +54,7 @@ public:
     uint8_t rx_buffer[16] = {0x00};
 };
 
+template<typename T>
+concept CANImpl = std::is_base_of<CANBase, T>::value;
+
 #endif

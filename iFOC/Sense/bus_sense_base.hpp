@@ -13,4 +13,7 @@ public:
     void BusSenseUpdate() { static_cast<T*>(this)->Update(); };
 };
 
+template<typename T>
+concept BusSenseImpl = std::is_base_of<BusSenseBase<T>, T>::value;
+
 #endif

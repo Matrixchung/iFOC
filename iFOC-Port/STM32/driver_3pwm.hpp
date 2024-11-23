@@ -1,22 +1,22 @@
 #ifndef _DRIVER_3PWM_H
 #define _DRIVER_3PWM_H
 
-#include "driver_pwm_base.hpp"
+#include "driver_base.hpp"
 #include "global_include.h"
 
-class Driver3PWM : public DriverPWMBase<Driver3PWM>
+class Driver3PWM : public DriverBase<Driver3PWM>
 {
 public:
     explicit Driver3PWM(TIM_TypeDef *_htim) : htim(_htim) {};
-    bool PortTIMInit(bool initCNT);
-    void PortSetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3);
-    void EnableOutput() { LL_TIM_EnableAllOutputs(htim); };
-    void DisableOutput() { LL_TIM_DisableAllOutputs(htim); }; // route noises cause motor unexpectedly spin
+    bool Init(bool initCNT);
+    void SetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3);
+    void EnableOutput() const { LL_TIM_EnableAllOutputs(htim); };
+    void DisableOutput() const { LL_TIM_DisableAllOutputs(htim); }; // route noises cause motor unexpectedly spin
     void SetLSIdleState(uint8_t state) {};
     TIM_TypeDef *htim;
 };
 
-bool Driver3PWM::PortTIMInit(bool initCNT)
+bool Driver3PWM::Init(bool initCNT)
 {
     max_compare = LL_TIM_GetAutoReload(htim);
     LL_TIM_CC_EnableChannel(htim, LL_TIM_CHANNEL_CH1);
@@ -35,7 +35,7 @@ bool Driver3PWM::PortTIMInit(bool initCNT)
     return true;
 }
 
-void Driver3PWM::PortSetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3)
+void Driver3PWM::SetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3)
 {
     LL_TIM_OC_SetCompareCH1(htim, ch_1);
     LL_TIM_OC_SetCompareCH2(htim, ch_2);

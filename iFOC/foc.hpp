@@ -32,7 +32,7 @@
 // Using CRTP for zero-overhead polymorphism at *compile-time*
 // See: https://stackoverflow.com/questions/18174441/crtp-and-multilevel-inheritance/18174442#18174442
 
-template<class Driver, class CurrSense, class Bus>
+template<DriverImpl Driver, CurrSenseImpl CurrSense, BusSenseImpl Bus>
 class FOC
 {
 public:
@@ -119,7 +119,7 @@ private:
  * @return false Initialization failed, with error_code = FOC_ERROR_INITIALIZE.
  */
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 bool FOC<A, B, C>::Init(bool initTIM)
 {
     if(config.motor.gear_ratio <= 0.0f) config.motor.gear_ratio = 1.0f; // fix gear ratio
@@ -155,7 +155,7 @@ bool FOC<A, B, C>::Init(bool initTIM)
     return true;
 }
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 void FOC<A, B, C>::Update(float Ts)
 {
     current_sense.CurrentSenseUpdate();
@@ -237,7 +237,7 @@ void FOC<A, B, C>::Update(float Ts)
     }
 }
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 void FOC<A, B, C>::UpdateMidInterval(float Ts)
 {
     switch(config.debug_mode)
@@ -288,14 +288,14 @@ void FOC<A, B, C>::UpdateMidInterval(float Ts)
     }
 }
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 void FOC<A, B, C>::UpdateIdleTask(float Ts)
 {
     bus_sense.BusSenseUpdate();
     main_estimator->UpdateIdleTask(Ts);
 }
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 bool FOC<A, B, C>::GetTrajPosState()
 {
     if(output_state)
@@ -315,7 +315,7 @@ bool FOC<A, B, C>::GetTrajPosState()
     return false;
 }
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 void FOC<A, B, C>::SetOutputState(bool state)
 {
     output_state = state;
@@ -330,7 +330,7 @@ void FOC<A, B, C>::SetOutputState(bool state)
     }
 }
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 void FOC<A, B, C>::EmergencyStop()
 {
     output_state = false;
@@ -355,7 +355,7 @@ void FOC<A, B, C>::EmergencyStop()
 }
 
 #ifdef FOC_USING_INDICATOR
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 template<class T>
 void FOC<A, B, C>::SetIndicator(T& gpio)
 {
@@ -364,7 +364,7 @@ void FOC<A, B, C>::SetIndicator(T& gpio)
 }
 #endif
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 template<class T>
 void FOC<A, B, C>::AttachMainEstimator()
 {
@@ -372,7 +372,7 @@ void FOC<A, B, C>::AttachMainEstimator()
     main_estimator = new T(est_input, config);
 }
 
-template<class A, class B, class C>
+template<DriverImpl A, CurrSenseImpl B, BusSenseImpl C>
 template<class T>
 T* FOC<A, B, C>::GetMainEstimator()
 {
@@ -431,7 +431,7 @@ T* FOC<A, B, C>::GetModule()
 }
 #endif
 
-template<class Driver, class CurrSense, class Bus>
+template<DriverImpl Driver, CurrSenseImpl CurrSense, BusSenseImpl Bus>
 FOC<Driver, CurrSense, Bus>::FOC(Driver &_driver, CurrSense &_curr, Bus &_bus)
 : driver(_driver), current_sense(_curr), bus_sense(_bus)
 {

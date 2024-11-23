@@ -7,13 +7,7 @@ template<class T>
 class DriverBase
 {
 public:
-//    DriverBase(const uint32_t tim_clk_mhz, const uint32_t pwm_freq_hz)
-//    {
-//        max_compare = (uint16_t)(((uint32_t)tim_clk_mhz * (uint32_t)1000000u / ((uint32_t)(pwm_freq_hz))) & (uint16_t)0xFFFE);
-//        half_compare = max_compare / 2u;
-//    };
     inline bool DriverInit(bool initCNT) { return static_cast<T*>(this)->Init(initCNT); };
-    // bool DriverIsEnabled() { return static_cast<T*>(this)->IsEnabledOutput(); };
     inline void DriverEnableOutput() { static_cast<T*>(this)->EnableOutput(); };
     inline void DriverDisableOutput() { static_cast<T*>(this)->DisableOutput(); };
     inline void DriverSetLSIdleState(uint8_t state) { static_cast<T*>(this)->SetLSIdleState(state); };
@@ -39,5 +33,8 @@ public:
     void SetLSIdleState(uint8_t state) {};
     void SetOutputRaw(uint16_t ch_1, uint16_t ch_2, uint16_t ch_3) {};
 };
+
+template<typename T>
+concept DriverImpl = std::is_base_of<DriverBase<T>, T>::value;
 
 #endif
