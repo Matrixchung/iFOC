@@ -14,11 +14,11 @@ public:
     SWI2C(GPIO_TypeDef *_scl_port, uint32_t _scl_pin, GPIO_TypeDef *_sda_port, uint32_t _sda_pin, uint32_t _freq)
     : scl_port(_scl_port), scl_pin(_scl_pin), sda_port(_sda_port), sda_pin(_sda_pin), freq(_freq) {};
     SWI2C(GPIO_TypeDef *_scl_port, uint32_t _scl_pin, GPIO_TypeDef *_sda_port, uint32_t _sda_pin)
-    : scl_port(_scl_port), scl_pin(_scl_pin), sda_port(_sda_port), sda_pin(_sda_pin) {};
-    void Init() override;
-    uint8_t WriteBytes(uint8_t addr, uint8_t *data, uint16_t len) override; // return 1 if success, else 0
-    uint8_t ReadBytes(uint8_t addr, uint8_t *data, uint16_t len) override;
-    void DelayMs(uint32_t ms) override { delay_ms(ms); };
+    : SWI2C(_scl_port, _scl_pin, _sda_port, _sda_pin, 400000) {};
+    void Init() final;
+    uint8_t WriteBytes(uint8_t addr, const uint8_t *data, uint16_t len) final; // return 1 if success, else 0
+    uint8_t ReadBytes(uint8_t addr, uint8_t *data, uint16_t len) final;
+    void DelayMs(uint32_t ms) final { delay_ms(ms); };
     uint8_t CheckDevice(uint8_t addr); // 1 if the specific address returns ACK, else 0
 private:
     inline void SDAInputMode();
@@ -26,7 +26,7 @@ private:
     inline void SDAOutput(uint8_t val);
     inline void SCLOutput(uint8_t val);
     inline uint8_t SDAInput();
-    inline void DelayClock() { delay_cycle(clock_cycles); };
+    inline void DelayClock() const { delay_cycle(clock_cycles); };
     void Start();
     void Stop();
     uint8_t WaitAck(); // return 1 if success, 0 if failed
@@ -59,7 +59,7 @@ uint8_t SWI2C::CheckDevice(uint8_t addr)
     return 1;
 }
 
-uint8_t SWI2C::WriteBytes(uint8_t addr, uint8_t *data, uint16_t len)
+uint8_t SWI2C::WriteBytes(uint8_t addr, const uint8_t *data, uint16_t len)
 {
     addr <<= 1;
     addr &= ~0x01; // R/W bit
