@@ -11,10 +11,10 @@ public:
     EncoderInterp(EncoderBase& base): wrapped(&base) {};
     EncoderInterp(EncoderBase& base, uint8_t _downsample) : wrapped(&base), downsample(_downsample) {};
     EncoderBase *wrapped;
-    bool Init() override;
-    void Update(float Ts) override;
-    void UpdateMidInterval(float Ts) override;
-    bool IsCalibrated() override { return wrapped->IsCalibrated(); };
+    bool Init() final;
+    void Update(float Ts) final;
+    void UpdateMidInterval(float Ts) final;
+    bool IsCalibrated() final { return wrapped->IsCalibrated(); };
 private:
     uint8_t downsample = 5;
     uint8_t downsample_cnt = 0;

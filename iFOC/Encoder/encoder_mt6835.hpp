@@ -41,11 +41,11 @@ class EncoderMT6835 : public EncoderBase
 {
 public:
     explicit EncoderMT6835(T& _spi) : spi(_spi) {};
-    bool Init() override;
-    void Update(float Ts) override;
-    void UpdateMidInterval(float Ts) override;
-    bool IsCalibrated() override;
-    bool IsError() override {return overspeed_flag | low_magnetic_flag | undervoltage_flag;};
+    bool Init() final;
+    void Update(float Ts) final;
+    void UpdateMidInterval(float Ts) final;
+    bool IsCalibrated() final;
+    bool IsError() final {return overspeed_flag | low_magnetic_flag | undervoltage_flag;};
     uint8_t overspeed_flag = 0;
     uint8_t low_magnetic_flag = 0;
     uint8_t undervoltage_flag = 0;

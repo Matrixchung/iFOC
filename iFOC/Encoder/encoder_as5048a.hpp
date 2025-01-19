@@ -9,10 +9,10 @@ class EncoderAS5048A : public EncoderBase
 {
 public:
     explicit EncoderAS5048A(T& _spi) : spi(_spi) {};
-    bool Init() override;
-    void Update(float Ts) override;
-    void UpdateMidInterval(float Ts) override;
-    bool IsCalibrated() override;
+    bool Init() final;
+    void Update(float Ts) final;
+    void UpdateMidInterval(float Ts) final;
+    bool IsCalibrated() final;
     uint16_t raw_14bit_angle = 0;
     uint8_t parity_error_flag = 0;
     uint8_t comm_error_flag = 0;

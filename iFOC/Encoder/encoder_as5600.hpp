@@ -10,10 +10,10 @@ class EncoderAS5600 : public EncoderBase
 public:
     EncoderAS5600(T& _i2c, uint8_t _addr) : i2c(_i2c), device_addr(_addr) {};
     explicit EncoderAS5600(T& _i2c) : EncoderAS5600(_i2c, device_addr) {};
-    bool Init() override;
-    void Update(float Ts) override;
-    void UpdateMidInterval(float Ts) override;
-    bool IsCalibrated() override;
+    bool Init() final;
+    void Update(float Ts) final;
+    void UpdateMidInterval(float Ts) final;
+    bool IsCalibrated() final;
 private:
     T& i2c;
     uint8_t device_addr = 0x36;

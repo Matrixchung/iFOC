@@ -1,4 +1,6 @@
 #include "foc_math.h"
+#pragma GCC push_options
+#pragma GCC optimize (3)
 /*
     @brief Clark transform for three phase input
     @param abc_t input a, b, c
@@ -125,19 +127,19 @@ float fast_atan2f(float y, float x)
 	if(y < 0) return (-angle);
     return angle;
 }
-float max3(float *data)
+float max3(const float *data)
 {
     if(data[0] >= data[1] && data[0] >= data[2]) return data[0];
     else if(data[2] >= data[0] && data[2] >= data[1]) return data[2];
     return data[1];
 }
-float min3(float *data)
+float min3(const float *data)
 {
     if(data[0] <= data[1] && data[0] <= data[2]) return data[0];
     else if(data[2] <= data[0] && data[2] <= data[1]) return data[2];
     return data[1];
 }
-float max(float *data, uint16_t len)
+float max(const float *data, uint16_t len)
 {
     float result = *data;
     data++;
@@ -149,7 +151,7 @@ float max(float *data, uint16_t len)
     }
     return result;
 }
-float min(float *data, uint16_t len)
+float min(const float *data, uint16_t len)
 {
     float result = *data;
     data++;
@@ -324,3 +326,4 @@ float euclid_distance(float x1, float y1, float x2, float y2)
 {
     return sqrtf(SQ(x2 - x1) + SQ(y2 - y1));
 }
+#pragma GCC pop_options

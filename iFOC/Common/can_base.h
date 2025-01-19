@@ -43,7 +43,7 @@ public:
      * @param payload payload buffer pointer in byte. 
      * @param len payload buffer length, should not exceed hardware limit.
      */
-    virtual void SendPayload(uint32_t id, uint8_t *payload, uint8_t len) = 0;
+    virtual void SendPayload(uint32_t id, const uint8_t *payload, uint8_t len) = 0;
     
     /**
      * @brief Pre-allocated Rx buffer for storing income payload.

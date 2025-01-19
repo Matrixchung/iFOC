@@ -4,15 +4,18 @@
 #include "encoder_base.hpp"
 #include "i2c_base.h"
 
+// A1, A2, ADDR = 10000(A2)(A1)b
+// 0x40, 0x41, 0x42, 0x43
+
 template<I2CImpl T>
 class EncoderAS5048B : public EncoderBase
 {
 public:
     EncoderAS5048B(T& _i2c, uint8_t _addr) : i2c(_i2c), device_addr(_addr) {};
-    bool Init() override;
-    void Update(float Ts) override;
-    void UpdateMidInterval(float Ts) override;
-    bool IsCalibrated() override;
+    bool Init() final;
+    void Update(float Ts) final;
+    void UpdateMidInterval(float Ts) final;
+    bool IsCalibrated() final;
 private:
     T& i2c;
     uint8_t device_addr = 0x00;

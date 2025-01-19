@@ -8,9 +8,9 @@ class STM32CAN : public CANBase
 {
 public:
     STM32CAN(CAN_HandleTypeDef *_hcan) : hcan(_hcan) {};
-    void ConfigFilter(uint32_t id, uint32_t mask, uint8_t fifo_index, uint8_t filter_index) override;
-    void InitHW() override;
-    void SendPayload(uint32_t id, uint8_t *payload, uint8_t len) override;
+    void ConfigFilter(uint32_t id, uint32_t mask, uint8_t fifo_index, uint8_t filter_index) final;
+    void InitHW() final;
+    void SendPayload(uint32_t id, const uint8_t *payload, uint8_t len) final;
     template<class ... instances>
     void OnIRQ(uint32_t fifo_index, instances&... args);
 private:
@@ -42,7 +42,7 @@ void STM32CAN::InitHW()
     HAL_CAN_Start(hcan);
 }
 
-void STM32CAN::SendPayload(uint32_t id, uint8_t *payload, uint8_t len)
+void STM32CAN::SendPayload(uint32_t id, const uint8_t *payload, uint8_t len)
 {
     __unused uint32_t mailbox = 0;
     CAN_TxHeaderTypeDef header;

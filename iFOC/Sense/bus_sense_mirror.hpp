@@ -8,9 +8,9 @@
 class BusSenseMirror : public BusSenseBase<BusSenseMirror>
 {
 public:
-    BusSenseMirror(float *_pVbus, float *_pIbus): pVbus(_pVbus), pIbus(_pIbus) {};
+    BusSenseMirror(const float *_pVbus, const float *_pIbus): pVbus(_pVbus), pIbus(_pIbus) {};
     template<class T>
-    BusSenseMirror(T *base)
+    explicit BusSenseMirror(const T *base)
     {
         pVbus = &base->Vbus;
         pIbus = &base->Ibus;
@@ -21,8 +21,8 @@ public:
         Ibus = *pIbus;
     }
 private:
-    float *pVbus;
-    float *pIbus;
+    const float *pVbus;
+    const float *pIbus;
 };
 
 #endif
