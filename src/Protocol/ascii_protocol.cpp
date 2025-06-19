@@ -592,6 +592,11 @@ void ASCIIProtocolFOC::CmdSystem(uint8_t *data, uint16_t len, bool use_checksum)
                 if(foc->GetInternalID() == 0) GenerateResponse(use_checksum, false, "invalid command format");
                 return;
             }
+            if(foc->state_machine.GetState() != MotorState::IDLE) // must in IDLE state to save the config
+            {
+                GenerateResponse(use_checksum, false, "state not in IDLE");
+                return;
+            }
             if(foc->GetInternalID() == 0)
             {
                 if(*(data + 3) == 'b')
@@ -616,6 +621,11 @@ void ASCIIProtocolFOC::CmdSystem(uint8_t *data, uint16_t len, bool use_checksum)
             if(len != 4 || (!isdigit(*(data + 3)) && *(data + 3) != 'b') || (isdigit(*(data + 3)) && *(data + 3) - '0' > SYSTEM_MOTOR_NUM - 1))
             {
                 if(foc->GetInternalID() == 0) GenerateResponse(use_checksum, false, "invalid command format");
+                return;
+            }
+            if(foc->state_machine.GetState() != MotorState::IDLE) // must in IDLE state to erase the config
+            {
+                GenerateResponse(use_checksum, false, "state not in IDLE");
                 return;
             }
             if(foc->GetInternalID() == 0)
