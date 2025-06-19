@@ -134,6 +134,9 @@ protected:
     /// otherwise, when the counter (added up in Mid task) exceeds preset limit, a motor shutdown will be immediately triggered.
     uint32_t watchdog_cnt = 0;
 
+    /// If set to > 0, watchdog is enabled.
+    uint32_t watchdog_timeout_cnt = 0;
+
     /// \brief used to determine internal index in case of a CPU handling multiple motor instances \n
     ///        used in following areas: NVM config R/W, updating BusSense, handling bus communication...
     uint8_t internal_id = 0;
@@ -170,7 +173,14 @@ __fast_inline void MotorBase<shunt_count>::DispatchRTTasks(float Ts)
 template<uint8_t shunt_count>
 __fast_inline void MotorBase<shunt_count>::DispatchMidTasks(float Ts)
 {
-    watchdog_cnt++;
+    if(watchdog_timeout_cnt > 0)
+    {
+        if(watchdog_cnt >= watchdog_timeout_cnt)
+        {
+            DisarmWithError(MotorError::SYSTEM_CRITICAL_WATCHDOG_TIMEOUT);
+        }
+        else watchdog_cnt++;
+    }
     tasks.MidTaskScheduler(Ts);
 }
 

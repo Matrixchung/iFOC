@@ -44,6 +44,8 @@ message FOCMotorConfig {
     float vel_kp = 32;                       // Velocity loop output (A) = vel_kp * vel_error(rad/s) + vel_ki * vel_error_integral, [A / (rad/s)]
     float vel_ki = 33;                       // [(A/s) / (rad/s)]
 
+    float watchdog_timeout_sec = 34;             // [seconds], set 0 to disable watchdog
+
     /// MOTOR PARAMETERS VALIDATION, PLACED HERE TO AVOID PADDING
     bool phase_resistance_valid = 12;
     bool phase_inductance_valid = 16;

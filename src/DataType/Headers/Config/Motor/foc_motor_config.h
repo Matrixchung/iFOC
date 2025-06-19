@@ -31,41 +31,42 @@ class FOCMotorConfig final: public ::EmbeddedProto::MessageInterface
 {
   public:
         REFLECT(
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_inductance_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_direction_valid_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, torque_constant_valid_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_inductance_valid_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensorless_closed_loop_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, d_axis_inductance_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, kv_rating_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, current_loop_bandwidth_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, deduction_ratio_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_basic_param_calibration_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, max_current_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_resistance_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sequence_enabled_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, flux_linkage_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_extend_param_calibration_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, max_voltage_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensored_closed_loop_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, max_current_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_direction_valid_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_inductance_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensorless_closed_loop_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_direction_clockwise_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_zero_offset_valid_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_resistance_valid_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_encoder_calibration_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_zero_offset_rad_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, calibration_voltage_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, vel_ki_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, max_output_speed_rpm_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, calibration_current_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_inductance_valid_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, kv_rating_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, torque_constant_valid_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, pos_kp_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, current_loop_bandwidth_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_basic_param_calibration_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, pole_pairs_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_zero_offset_rad_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_encoder_calibration_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_encoder_index_search_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, vel_kp_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, kv_rating_valid_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, q_axis_inductance_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, flux_linkage_valid_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, pole_pairs_valid_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, pos_kp_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_zero_offset_valid_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, deduction_ratio_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, torque_constant_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_encoder_index_search_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_direction_clockwise_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, pole_pairs_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, vel_kp_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, max_output_speed_rpm_)
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sequence_enabled_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, calibration_voltage_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, flux_linkage_valid_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, flux_linkage_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_resistance_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensored_closed_loop_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, watchdog_timeout_sec_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, pole_pairs_valid_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, d_axis_inductance_)
     )
 FOCMotorConfig() = default;
     FOCMotorConfig(const FOCMotorConfig& rhs )
@@ -89,6 +90,7 @@ FOCMotorConfig() = default;
       set_pos_kp(rhs.get_pos_kp());
       set_vel_kp(rhs.get_vel_kp());
       set_vel_ki(rhs.get_vel_ki());
+      set_watchdog_timeout_sec(rhs.get_watchdog_timeout_sec());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -128,6 +130,7 @@ FOCMotorConfig() = default;
       set_pos_kp(rhs.get_pos_kp());
       set_vel_kp(rhs.get_vel_kp());
       set_vel_ki(rhs.get_vel_ki());
+      set_watchdog_timeout_sec(rhs.get_watchdog_timeout_sec());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -179,6 +182,7 @@ FOCMotorConfig() = default;
       POS_KP = 31,
       VEL_KP = 32,
       VEL_KI = 33,
+      WATCHDOG_TIMEOUT_SEC = 34,
       STARTUP_SEQUENCE_ENABLED = 37,
       STARTUP_BASIC_PARAM_CALIBRATION = 38,
       STARTUP_ENCODER_INDEX_SEARCH = 39,
@@ -209,6 +213,7 @@ FOCMotorConfig() = default;
       set_pos_kp(rhs.get_pos_kp());
       set_vel_kp(rhs.get_vel_kp());
       set_vel_ki(rhs.get_vel_ki());
+      set_watchdog_timeout_sec(rhs.get_watchdog_timeout_sec());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -249,6 +254,7 @@ FOCMotorConfig() = default;
       set_pos_kp(rhs.get_pos_kp());
       set_vel_kp(rhs.get_vel_kp());
       set_vel_ki(rhs.get_vel_ki());
+      set_watchdog_timeout_sec(rhs.get_watchdog_timeout_sec());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -419,6 +425,14 @@ FOCMotorConfig() = default;
     inline float& mutable_vel_ki() { return vel_ki_.get(); }
     inline const float& get_vel_ki() const { return vel_ki_.get(); }
     inline float vel_ki() const { return vel_ki_.get(); }
+
+    static constexpr char const* WATCHDOG_TIMEOUT_SEC_NAME = "watchdog_timeout_sec";
+    inline void clear_watchdog_timeout_sec() { watchdog_timeout_sec_.clear(); }
+    inline void set_watchdog_timeout_sec(const float& value) { watchdog_timeout_sec_ = value; }
+    inline void set_watchdog_timeout_sec(const float&& value) { watchdog_timeout_sec_ = value; }
+    inline float& mutable_watchdog_timeout_sec() { return watchdog_timeout_sec_.get(); }
+    inline const float& get_watchdog_timeout_sec() const { return watchdog_timeout_sec_.get(); }
+    inline float watchdog_timeout_sec() const { return watchdog_timeout_sec_.get(); }
 
     static constexpr char const* PHASE_RESISTANCE_VALID_NAME = "phase_resistance_valid";
     inline void clear_phase_resistance_valid() { phase_resistance_valid_.clear(); }
@@ -648,6 +662,11 @@ FOCMotorConfig() = default;
         return_value = vel_ki_.serialize_with_id(static_cast<uint32_t>(FieldNumber::VEL_KI), buffer, false);
       }
 
+      if((0.0 != watchdog_timeout_sec_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = watchdog_timeout_sec_.serialize_with_id(static_cast<uint32_t>(FieldNumber::WATCHDOG_TIMEOUT_SEC), buffer, false);
+      }
+
       if((false != phase_resistance_valid_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = phase_resistance_valid_.serialize_with_id(static_cast<uint32_t>(FieldNumber::PHASE_RESISTANCE_VALID), buffer, false);
@@ -820,6 +839,10 @@ FOCMotorConfig() = default;
             return_value = vel_ki_.deserialize_check_type(buffer, wire_type);
             break;
 
+          case FieldNumber::WATCHDOG_TIMEOUT_SEC:
+            return_value = watchdog_timeout_sec_.deserialize_check_type(buffer, wire_type);
+            break;
+
           case FieldNumber::PHASE_RESISTANCE_VALID:
             return_value = phase_resistance_valid_.deserialize_check_type(buffer, wire_type);
             break;
@@ -932,6 +955,7 @@ FOCMotorConfig() = default;
       clear_pos_kp();
       clear_vel_kp();
       clear_vel_ki();
+      clear_watchdog_timeout_sec();
       clear_phase_resistance_valid();
       clear_phase_inductance_valid();
       clear_sensor_direction_clockwise();
@@ -1012,6 +1036,9 @@ FOCMotorConfig() = default;
           break;
         case FieldNumber::VEL_KI:
           name = VEL_KI_NAME;
+          break;
+        case FieldNumber::WATCHDOG_TIMEOUT_SEC:
+          name = WATCHDOG_TIMEOUT_SEC_NAME;
           break;
         case FieldNumber::PHASE_RESISTANCE_VALID:
           name = PHASE_RESISTANCE_VALID_NAME;
@@ -1140,6 +1167,7 @@ FOCMotorConfig() = default;
       left_chars = pos_kp_.to_string(left_chars, indent_level + 2, POS_KP_NAME, false);
       left_chars = vel_kp_.to_string(left_chars, indent_level + 2, VEL_KP_NAME, false);
       left_chars = vel_ki_.to_string(left_chars, indent_level + 2, VEL_KI_NAME, false);
+      left_chars = watchdog_timeout_sec_.to_string(left_chars, indent_level + 2, WATCHDOG_TIMEOUT_SEC_NAME, false);
       left_chars = phase_resistance_valid_.to_string(left_chars, indent_level + 2, PHASE_RESISTANCE_VALID_NAME, false);
       left_chars = phase_inductance_valid_.to_string(left_chars, indent_level + 2, PHASE_INDUCTANCE_VALID_NAME, false);
       left_chars = sensor_direction_clockwise_.to_string(left_chars, indent_level + 2, SENSOR_DIRECTION_CLOCKWISE_NAME, false);
@@ -1199,6 +1227,7 @@ FOCMotorConfig() = default;
       EmbeddedProto::floatfixed pos_kp_ = 0.0;
       EmbeddedProto::floatfixed vel_kp_ = 0.0;
       EmbeddedProto::floatfixed vel_ki_ = 0.0;
+      EmbeddedProto::floatfixed watchdog_timeout_sec_ = 0.0;
       EmbeddedProto::boolean phase_resistance_valid_ = false;
       EmbeddedProto::boolean phase_inductance_valid_ = false;
       EmbeddedProto::boolean sensor_direction_clockwise_ = false;

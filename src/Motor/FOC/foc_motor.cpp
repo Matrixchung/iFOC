@@ -47,6 +47,12 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
     if(GetConfig().phase_resistance() <= 0.0001f) GetConfig().set_phase_resistance_valid(false);
     if(GetConfig().deduction_ratio() <= 0.0f) GetConfig().set_deduction_ratio(1.0f);
     if(GetConfig().max_output_speed_rpm() <= 0.0f) GetConfig().set_max_output_speed_rpm(DEFAULT_PARAM_MOTOR_MAX_OUTPUT_SPEED_RPM);
+    if(GetConfig().watchdog_timeout_sec() <= 0.0f) GetConfig().set_watchdog_timeout_sec(0.0f);
+    else
+    {
+        float temp = GetConfig().watchdog_timeout_sec() / iFOC::MID_LOOP_TS;
+        if(temp >= 1.0f) watchdog_timeout_cnt = (uint32_t)temp;
+    }
     auto result = bus_sense->Init();
     bus_sense->Update();
     if(result != FuncRetCode::OK)
