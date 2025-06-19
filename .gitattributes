@@ -2,4 +2,4 @@
 * text=auto
 
 # Ignore third party codes
-src/ThirdParty/* linguist-vendored=false
+src/ThirdParty/* linguist-vendored
