@@ -1,0 +1,17 @@
+### Test Method:
+{
+    iFOC::TaskTimer timer;
+    MEASURE_TIME(timer)
+    {
+        uart_1.Print(0, "Iq:%.3f\n", motor_1.Iqd_target.q);
+    }
+    uart_1.Print(1, "Time:%dus\n", timer.elapsed_time_us);
+}
+
+### Test Result (stdio, gcc linker options: -u _printf_float)
+Binary Size: 96812
+Time: 252us (Avg.)
+
+### Test Result (ascii_tiny_printf)
+Binary Size: 87248
+Time: 102us (Avg.)

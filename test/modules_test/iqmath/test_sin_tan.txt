@@ -1,0 +1,88 @@
+real_t x = argv[1];
+        float x_f = argv[1];
+        switch((uint8_t)argv[0])
+        {
+            case 0: // sin
+            {
+                auto start = DWT->CYCCNT;
+                auto end = DWT->CYCCNT;
+                real_t sum = 0;
+                for(uint8_t i = 0; i < 100; i++)
+                {
+                    sum += sinf(x);
+                }
+                sum /= 100;
+                end = DWT->CYCCNT;
+                UART1.print(0, "IQ, sinf(%.5f) = %.5f (%d cycles)\n", (float)x, (float)sum, end-start);
+
+                start = DWT->CYCCNT;
+                float sum_f = 0;
+                for(uint8_t i = 0; i < 100; i++)
+                {
+                    sum_f += sinf(x_f);
+                }
+                sum_f /= 100;
+                end = DWT->CYCCNT;
+                UART1.print(0, "float, sinf(%.5f) = %.5f (%d cycles)\n", x_f, sum_f, end-start);
+
+                start = DWT->CYCCNT;
+                sum_f = 0;
+                for(uint8_t i = 0; i < 100; i++)
+                {
+                    sum_f += arm_sin_f32(x_f);
+                }
+                sum_f /= 100;
+                end = DWT->CYCCNT;
+                UART1.print(1, "DSP, sinf(%.5f) = %.5f (%d cycles)\n", x_f, sum_f, end-start);
+                break;
+            }
+            case 1: // tan
+            {
+                auto start = DWT->CYCCNT;
+                auto end = DWT->CYCCNT;
+                real_t sum = 0;
+                for(uint8_t i = 0; i < 100; i++)
+                {
+                    sum += tanf(x);
+                }
+                sum /= 100;
+                end = DWT->CYCCNT;
+                UART1.print(0, "IQMATH, tanf(%.5f) = %.5f (%d cycles)\n", (float)x, (float)sum, end-start);
+
+                start = DWT->CYCCNT;
+                float sum_f = 0;
+                for(uint8_t i = 0; i < 100; i++)
+                {
+                    sum_f += tanf(x_f);
+                }
+                sum_f /= 100;
+                end = DWT->CYCCNT;
+                UART1.print(0, "float, tanf(%.5f) = %.5f (%d cycles)\n", x_f, sum_f, end-start);
+
+                start = DWT->CYCCNT;
+                sum_f = 0;
+                for(uint8_t i = 0; i < 100; i++)
+                {
+                    sum_f += arm_sin_f32(x_f) / arm_cos_f32(x_f);
+                }
+                sum_f /= 100;
+                end = DWT->CYCCNT;
+                UART1.print(1, "DSP, tanf(%.5f) = %.5f (%d cycles)\n", x_f, sum_f, end-start);
+                break;
+            }
+        }
+
+
+{
+    float start = 0;
+    float error_sum = 0.0f;
+    while(start < PI2)
+    {
+        start += 0.001f;
+        float sin, cos;
+        iFOC::HAL::sinf_cosf_impl(start, sin, cos);
+        error_sum += ABS(std::sinf(start) - sin) + ABS(std::cosf(start) - cos);
+    }
+    uart_1.Print(0, "error: %.8f\n", error_sum);
+    uart_1.StartTransmit(false);
+}

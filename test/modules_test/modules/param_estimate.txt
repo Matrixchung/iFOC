@@ -1,0 +1,120 @@
+class ParamTask final : public iFOC::Task
+{
+private:
+    struct Rs_est_t
+    {
+        static constexpr uint32_t TARGET_LOOP_COUNT = 40000;
+        static constexpr float Ki = 4.0f;
+        float voltage_diff = 0.0f;
+        float target_current = 0.0f;
+        float Rs_result = 0.0f;
+        uint32_t loop_count = 0;
+    };
+    struct Ls_est_t
+    {
+        static constexpr uint32_t TARGET_LOOP_COUNT = 20000;
+        float test_voltage = 0.0f;
+        float currents[2] = {0.0f};
+        float Ls_result = 0.0f;
+        uint32_t loop_count = 0;
+    };
+    static constexpr size_t BUFFER_SIZE = MAX(sizeof(Rs_est_t), sizeof(Ls_est_t));
+    uint8_t *buffer = nullptr;
+    bool test_en = false;
+    // iFOC::FOCMotor* foc = nullptr;
+public:
+    ParamTask() : iFOC::Task("ParamTask")
+    {
+        config.IsRegisterRT = true;
+        config.IsRegisterNormal = true;
+    }
+    ~ParamTask()
+    {
+        vPortFree(buffer);
+    }
+    void InitRT() final
+    {
+        foc = reinterpret_cast<iFOC::FOCMotor*>(motor.value());
+        buffer = (uint8_t*)pvPortMalloc(BUFFER_SIZE);
+        memset(buffer, 0, BUFFER_SIZE);
+
+        // auto ptr = (Rs_est_t*)buffer;
+        // ptr->target_current = 1.0f;
+        // foc->GetDriver()->DisableBridges(iFOC::Driver::FOCDriverBase::Bridge::HB_U,
+        //                                  iFOC::Driver::FOCDriverBase::Bridge::LB_U);
+
+        auto ptr = (Ls_est_t*)buffer;
+        ptr->test_voltage = 1.0f;
+        foc->GetDriver()->DisableBridges(iFOC::Driver::FOCDriverBase::Bridge::HB_U,
+                                         iFOC::Driver::FOCDriverBase::Bridge::LB_U);
+
+        test_en = true;
+    }
+    void UpdateRT(float Ts) final
+    {
+        // Rs estimation
+        // Step #1: Disable Phase U bridges, add voltage diff to Phase V, use current @ Phase V as target.
+        // if(test_en)
+        // {
+        //     auto* ptr = (Rs_est_t*)buffer;
+        //     if(ptr->loop_count >= ptr->TARGET_LOOP_COUNT)
+        //     {
+        //         foc->GetDriver()->SetOutput3CHPu(0.0f, 0.0f, 0.0f);
+        //         test_en = false;
+        //         return;
+        //     }
+        //     ptr->voltage_diff += ptr->Ki * Ts * (ptr->target_current - foc->GetCurrSense()->shunt_values[1]);
+        //     foc->GetDriver()->SetOutput3CHPu(0.0f, 0.5f + ptr->voltage_diff, 0.5f);
+        //     ptr->loop_count ++;
+        // }
+
+        // Ls estimation
+        if(test_en)
+        {
+            auto* ptr = (Ls_est_t*)buffer;
+            if(ptr->loop_count >= ptr->TARGET_LOOP_COUNT)
+            {
+                foc->GetDriver()->SetOutput3CHPu(0.0f, 0.0f, 0.0f);
+                float dI_by_dt = ABS(ptr->currents[1] - ptr->currents[0]) / (float)(Ts * (float)ptr->TARGET_LOOP_COUNT);
+                ptr->Ls_result = (ptr->test_voltage / dI_by_dt) * 0.5f;
+                test_en = false;
+                return;
+            }
+            auto i = ptr->loop_count % 20;
+            ptr->currents[i <= 9] += foc->GetCurrSense()->shunt_values[1];
+            float test_voltage_pu = (i <= 9) ? -ptr->test_voltage / foc->GetBusSense()->voltage :
+                                                ptr->test_voltage / foc->GetBusSense()->voltage;
+            foc->GetDriver()->SetOutput3CHPu(0.0f, 0.5f + test_voltage_pu, 0.5f);
+            ptr->loop_count ++;
+        }
+    }
+    void UpdateNormal() final
+    {
+        // auto* ptr = (Rs_est_t*)buffer;
+        // if(!test_en && ptr->loop_count)
+        // {
+        //     ptr->Rs_result = (ptr->voltage_diff * foc->GetBusSense()->voltage / ptr->target_current) * 0.5f;
+        //     size_t len = snprintf_(str, sizeof(str), "Rs:%.8f\n", ptr->Rs_result);
+        //     iFOC::DataType::Fabric::char_msg_t msg = {
+        //             .payload = str,
+        //             .len = len
+        //     };
+        //     xQueueSend(test.comm_queue, &msg, 0);
+        //     foc->RemoveTaskByName(config.name);
+        // }
+        // else sleep(100);
+
+        auto* ptr = (Ls_est_t*)buffer;
+        if(!test_en && ptr->loop_count)
+        {
+            size_t len = snprintf_(str, sizeof(str), "Ls:%.8f\n", ptr->Ls_result);
+            iFOC::DataType::Fabric::char_msg_t msg = {
+                    .payload = str,
+                    .len = len
+            };
+            xQueueSend(test.comm_queue, &msg, 0);
+            foc->RemoveTaskByName(config.name);
+        }
+        else sleep(100);
+    }
+};

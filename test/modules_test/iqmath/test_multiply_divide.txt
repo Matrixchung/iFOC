@@ -1,0 +1,56 @@
+real_t x = argv[1];
+real_t y = argv[2];
+float x_f = argv[1];
+float y_f = argv[2];
+switch((uint8_t)argv[0])
+{
+    case 0: // *
+    {
+        auto start = DWT->CYCCNT;
+        auto end = DWT->CYCCNT;
+        real_t sum = 0;
+        for(uint8_t i = 0; i < 100; i++)
+        {
+            sum += x * y;
+        }
+        sum /= 100;
+        end = DWT->CYCCNT;
+        UART1.print(0, "IQMATH, %.5f * %.5f = %.5f (%d cycles)\n", (float)x, (float)y, (float)sum, end-start);
+
+        start = DWT->CYCCNT;
+        float sum_f = 0;
+        for(uint8_t i = 0; i < 100; i++)
+        {
+            sum_f += x_f * y_f;
+        }
+        sum_f /= 100;
+        end = DWT->CYCCNT;
+        UART1.print(1, "float, %.5f * %.5f = %.5f (%d cycles)\n", x_f, y_f, sum_f, end-start);
+        break;
+    }
+    case 1: // /
+    {
+        auto start = DWT->CYCCNT;
+        auto end = DWT->CYCCNT;
+        real_t sum = 0;
+        for(uint8_t i = 0; i < 100; i++)
+        {
+            sum += x / y;
+        }
+        sum /= 100;
+        end = DWT->CYCCNT;
+        UART1.print(0, "IQMATH, %.5f / %.5f = %.5f (%d cycles)\n", (float)x, (float)y, (float)sum, end-start);
+
+        start = DWT->CYCCNT;
+        float sum_f = 0;
+        for(uint8_t i = 0; i < 100; i++)
+        {
+            sum_f += x_f / y_f;
+        }
+        sum_f /= 100;
+        end = DWT->CYCCNT;
+        UART1.print(1, "float, %.5f / %.5f = %.5f (%d cycles)\n", x_f, y_f, sum_f, end-start);
+        break;
+    }
+    default: break;
+}

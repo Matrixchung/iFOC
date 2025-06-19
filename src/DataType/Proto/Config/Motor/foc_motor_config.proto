@@ -1,0 +1,68 @@
+syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
+package iFOC.DataType.Config.Motor;
+
+message FOCMotorConfig {
+//    enum ControlLaw {
+//      C_V_P = 0;   // Current - Velocity - Position, three loops sensored control
+//      C_V = 1;     // Current - Velocity, two loops control, can be sensorless
+//    }
+//    ControlLaw control_law = 1;
+    float current_loop_bandwidth = 2;        // [Hz]
+
+
+    /// MOTOR CALIBRATION SETPOINTS (7 - 8)
+    float calibration_voltage = 7;           // [V]
+    float calibration_current = 8;           // [A]
+
+    /// MOTOR BASIC PARAMETERS (9 - 22)
+    float max_voltage = 9;       // [V]
+    float max_current = 10;      // [A]
+
+    float phase_resistance = 11;       // [Ohm]
+
+    float phase_inductance = 13;       // [H]
+    float q_axis_inductance = 14;      // [H]
+    float d_axis_inductance = 15;      // [H]
+
+    uint32 pole_pairs = 19;
+
+    float sensor_zero_offset_rad = 21; // [rad]
+
+    float kv_rating = 23;        // [RPM/V]
+
+    float torque_constant = 25;  // [Nm/A]
+
+    float flux_linkage = 27;           // [Wb]
+
+    float deduction_ratio = 29;  // [RBase / ROutput], strictly > 0.0, (0.0, 1.0) means overspeed transmission, (1.0, +inf) means deduction
+
+    float max_output_speed_rpm = 30;  // [RPM], represents base speed
+
+    float pos_kp = 31;                       // Position loop output (rad/s) = pos_kp * pos_error (rad), [(rad/s) / rad]
+    float vel_kp = 32;                       // Velocity loop output (A) = vel_kp * vel_error(rad/s) + vel_ki * vel_error_integral, [A / (rad/s)]
+    float vel_ki = 33;                       // [(A/s) / (rad/s)]
+
+    /// MOTOR PARAMETERS VALIDATION, PLACED HERE TO AVOID PADDING
+    bool phase_resistance_valid = 12;
+    bool phase_inductance_valid = 16;
+    bool sensor_direction_clockwise = 17; // false - sensor_direction = CCW, true - sensor_direction = CW.
+    bool sensor_direction_valid = 18;
+    bool pole_pairs_valid = 20;
+    // For sensorless the parameter is of no use.
+    // For incremental sensor, only usable after index was found.
+    bool sensor_zero_offset_valid = 22;
+    bool kv_rating_valid = 24;
+    bool torque_constant_valid = 26;
+    bool flux_linkage_valid = 28;
+
+    /// STARTUP SEQUENCE CONFIGURATION
+    bool startup_sequence_enabled = 37;
+    bool startup_basic_param_calibration = 38;
+    bool startup_encoder_index_search = 39;
+    bool startup_encoder_calibration = 40;
+    bool startup_extend_param_calibration = 41;
+    bool startup_sensored_closed_loop = 42;
+    bool startup_sensorless_closed_loop = 43;
+}

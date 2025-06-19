@@ -1,0 +1,143 @@
+#include "encoder_mt6835.hpp"
+
+namespace iFOC::Encoder
+{
+EncoderMT6835::EncoderMT6835(EncoderMT6835::SPIBase *_spi) : EncoderBase("MT6835", Type::ABSOLUTE_ENCODER, 1), spi(_spi) {};
+
+EncoderMT6835::~EncoderMT6835()
+{
+
+}
+
+// MT6835 SPI: CPOL = 1, CPHA = 1(2 Edge), MAX CLK = 16 MHz
+// Write: 4 bit COMMAND + 12 bit REGISTER + 8 bit DATA
+// Read:  --------------------------------+ 8 bit RETR
+
+FuncRetCode EncoderMT6835::Init()
+{
+    spi->SetCPOLCPHA(1, 1);
+    spi->SetDataWidth(SPIBase::DataWidth::BYTE);
+    spi->SetClock(24000000); // using 24 MHz MAX, decrease if communication error persists
+    if(auto r = spi->Init(); r != FuncRetCode::OK) return r;
+    uint8_t temp = 0;
+    // Step #1: Read System Bandwidth Register (0x011), as chip detection
+    if(auto r = ReadReg(0x011, &temp); r != FuncRetCode::OK) return r;
+    if(temp != 0x5) return FuncRetCode::HARDWARE_ERROR; // Communication Error
+    // Step #2: Turn off ABZ output at Register 0x008
+    temp = (1 << 1);
+    if(auto r = WriteReg(0x008, temp); r != FuncRetCode::OK) return r;
+    // Step #3: Turn off UVM output at Register 0x00B
+    temp = (1 << 4);
+    if(auto r = WriteReg(0x00B, temp); r != FuncRetCode::OK) return r;
+    // Step #4: Try to read angle
+    if(auto r = ReadAbsAngleRad(); r != FuncRetCode::OK) return r;
+    last_angle_cnt = now_angle_cnt;
+    multi_round_angle_rad = single_round_angle_rad;
+    result_valid = true;
+    return FuncRetCode::OK;
+}
+
+void EncoderMT6835::UpdateRT(float Ts)
+{
+    // Step #1: We get single_round_angle_rad & now_angle_cnt
+    ReadAbsAngleRad();
+}
+
+void EncoderMT6835::UpdateMid(float Ts)
+{
+    // Step #2: Calculate delta
+    int delta = (int)now_angle_cnt - (int)last_angle_cnt;
+    last_angle_cnt = now_angle_cnt;
+    // Step #3: Calculate full_rotations and multi_round_angle_rad
+    if(delta > CPRdiv2)
+    {
+        full_rotations--;
+        delta -= CPR;
+    }
+    else if(delta < -CPRdiv2)
+    {
+        full_rotations++;
+        delta += CPR;
+    }
+    multi_round_angle_rad = full_rotations * PI2 + single_round_angle_rad;
+    if(startup_timer <= 10)
+    {
+        startup_timer++;
+    }
+    else
+    {
+        // Step #4: Calculate velocity
+        // real_t vel = (multi_round_angle_rad - last_multi_round_angle_rad) / Ts;
+        real_t vel = ((real_t)delta * PI2divCPR_f) / Ts;
+        angular_speed_rad_s = speed_lpf.GetOutput(vel, Ts);
+    }
+}
+
+FuncRetCode EncoderMT6835::ReadAbsAngleRad()
+{
+    // uint8_t ret[6] = {0x00}; // length: 6 for burst read (see datasheet and ReadAngleRegBurst())
+    // for(uint8_t i = 0; i < 4; i++)
+    // {
+    //     if(auto r = ReadReg(0x003 + i, &ret[i + 2]); r != FuncRetCode::OK) return r;
+    // }
+    ReadAngleRegBurst(rx_buf);
+    uint8_t _get_crc = get_crc8(rx_buf + 2, 3);
+    if(_get_crc == rx_buf[5])
+    {
+        device_error &= ~(to_underlying(DeviceError::CRC_ERROR)); // CRC passed
+        now_angle_cnt = (uint32_t)(rx_buf[2] << 13) | (uint32_t)(rx_buf[3] << 5) | (uint32_t)(rx_buf[4] >> 3); // 21 bit angle
+        if(sign_and_deduction_ratio < 0.0f) now_angle_cnt = CPR - now_angle_cnt;
+        // single_round_angle_rad = (float)angle / CPR_f;
+        // single_round_angle_rad *= PI2;
+        single_round_angle_rad = (float)now_angle_cnt * PI2divCPR_f;
+        device_error = (device_error & 0xF8) | (rx_buf[4] & 0x07);
+        return FuncRetCode::OK;
+    }
+    device_error |= to_underlying(DeviceError::CRC_ERROR);
+    return FuncRetCode::CRC_MISMATCH;
+}
+
+FuncRetCode EncoderMT6835::WriteReg(uint16_t reg, uint8_t data)
+{
+    // uint8_t tx_buf[3];
+    tx_buf[0] = (0x06 << 4) | (uint8_t)(reg >> 12);
+    tx_buf[1] = (uint8_t)reg;
+    tx_buf[2] = data;
+    return spi->WriteBytes(tx_buf, 3);
+}
+
+FuncRetCode EncoderMT6835::ReadReg(uint16_t reg, uint8_t* data)
+{
+    // uint8_t tx_buf[3];
+    // uint8_t rx_buf[3] = {0x00};
+    tx_buf[0] = (0x03 << 4) | (uint8_t)(reg >> 12);
+    tx_buf[1] = (uint8_t)reg;
+    tx_buf[2] = 0x00;
+    *data = 0x00;
+    auto result = spi->WriteReadBytes(tx_buf, rx_buf, 3);
+    if(result != FuncRetCode::OK) return result;
+    *data = rx_buf[2];
+    return FuncRetCode::OK;
+}
+
+__fast_inline FuncRetCode EncoderMT6835::ReadAngleRegBurst(uint8_t *ret)
+{
+    // uint8_t tx_buf[6] = {0x00};
+    tx_buf[0] = (0x0A << 4); // Burst read angle register
+    tx_buf[1] = 0x03;
+    return spi->WriteReadBytes(tx_buf, ret, 6);
+}
+
+FuncRetCode EncoderMT6835::BurnEEPROM()
+{
+    // uint8_t tx_buf[3];
+    // uint8_t rx_buf[3] = {0x00};
+    tx_buf[0] = (0x0C << 4);
+    tx_buf[1] = 0;
+    tx_buf[2] = 0;
+    auto result = spi->WriteReadBytes(tx_buf, rx_buf, 3);
+    if(result != FuncRetCode::OK) return result;
+    if(rx_buf[2] == 0x55) return FuncRetCode::OK;
+    return FuncRetCode::HARDWARE_ERROR;
+}
+}

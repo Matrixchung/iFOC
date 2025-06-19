@@ -1,0 +1,54 @@
+class ExampleTask final : public iFOC::Task
+{
+public:
+    ExampleTask(const char *name, uint8_t id) : Task(name), i(id)
+    {
+        config.IsRegisterRT = false;
+        config.IsRegisterNormal = true;
+    }
+    uint8_t i = 1;
+    void InitRT() final
+    {
+        UART1.print(1, "T%d InitRT\n", i);
+    }
+    void UpdateRT(float Ts) final
+    {
+        UART1.print(1, "T%d UpdateRT\n", i);
+    }
+    void InitNormal() final
+    {
+        UART1.print(1, "T%d InitNormal\n", i);
+    }
+    void UpdateNormal() final
+    {
+        UART1.print(1, "T%d UpdateNormal\n", i);
+        sleep(250);
+    }
+    ~ExampleTask() final
+    {
+        UART1.print(1, "T%d Destruct\n", i);
+    }
+};
+
+case 1:
+{
+    UART1.print(1, "Free: %d bytes\n", xPortGetFreeHeapSize());
+    motor_1.AppendTask(new ExampleTask("EX1", 1));
+    UART1.print(1, "Added 1, Free: %d bytes\n", xPortGetFreeHeapSize());
+    osDelay(500);
+    motor_1.AppendTask(new ExampleTask("EX2", 2));
+    UART1.print(1, "Added 2, Free: %d bytes\n", xPortGetFreeHeapSize());
+    osDelay(500);
+    motor_1.AppendTask(new ExampleTask("EX3", 3));
+    UART1.print(1, "Added 3, Free: %d bytes\n", xPortGetFreeHeapSize());
+    osDelay(500);
+    motor_1.RemoveTaskByName("EX1");
+    UART1.print(1, "Removed 1, Free: %d bytes\n", xPortGetFreeHeapSize());
+    osDelay(500);
+    motor_1.RemoveTaskByName("EX2");
+    UART1.print(1, "Removed 2, Free: %d bytes\n", xPortGetFreeHeapSize());
+    osDelay(500);
+    motor_1.RemoveTaskByName("EX3");
+    UART1.print(1, "Removed 3, Free: %d bytes\n", xPortGetFreeHeapSize());
+    break;
+}

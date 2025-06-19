@@ -1,0 +1,95 @@
+void test_callback(char *name, float *argv, uint16_t arg_len)
+{
+    switch((uint16_t)argv[0])
+    {
+        case 0:
+        {
+            config.payload().to_string(str_view);
+            auto ptr = str;
+            auto len = strlen(str);
+            while(len > TX_BUFFER_SIZE)
+            {
+                UART1.PutTxFifo(ptr, TX_BUFFER_SIZE);
+                UART1.Transmit();
+                len -= TX_BUFFER_SIZE;
+                ptr += TX_BUFFER_SIZE;
+            }
+            UART1.PutTxFifo(ptr, len);
+            UART1.Transmit();
+            break;
+        }
+        case 1:
+        {
+            if(arg_len < 3) break;
+            switch((uint16_t)argv[1])
+            {
+                case 0:
+                {
+                    config.payload().set_uart_1_baudrate((uint32_t)argv[2]);
+                    break;
+                }
+                case 1:
+                {
+                    config.payload().set_bus_overvoltage_limit(argv[2]);
+                    break;
+                }
+                case 2:
+                {
+                    config.payload().set_bus_undervoltage_limit(argv[2]);
+                    break;
+                }
+                case 3:
+                {
+                    config.payload().set_bus_max_positive_current(argv[2]);
+                    break;
+                }
+                case 4:
+                {
+                    config.payload().set_bus_max_negative_current(argv[2]);
+                    break;
+                }
+                case 5:
+                {
+                    config.payload().set_max_regen_current(argv[2]);
+                    break;
+                }
+            }
+            break;
+        }
+        case 2: // serialize & get length
+        {
+            size_t len = 0;
+            auto result = config.Serialize(len);
+            if(result == EmbeddedProto::Error::NO_ERRORS)
+            {
+                UART1.print(1, "Serialized len: %d\n", len);
+            }
+            else UART1.print(1, "ESerial: %d\n", (int)result);
+            break;
+        }
+        case 3: // serialize & save
+        {
+            size_t len = 0;
+            auto result = config.Serialize(len);
+            if(result == EmbeddedProto::Error::NO_ERRORS)
+            {
+                iFOC::STM32NVMStorage::Inst().WriteNVM(2, config.GetBuffer(), ALIGN_TO(len, 8));
+                UART1.print(1, "Serial OK\n");
+            }
+            else UART1.print(1, "ESerial: %d\n", (int)result);
+            break;
+        }
+        case 4: // deserialize from NVM
+        {
+            iFOC::STM32NVMStorage::Inst().ReadNVM(2, config.GetBuffer(), ALIGN_TO(config.GetBufferSize(), 8));
+            auto result = config.Deserialize(config.GetBufferSize());
+            if(result == EmbeddedProto::Error::NO_ERRORS)
+            {
+                UART1.print(1, "DSerial OK\n");
+            }
+            else UART1.print(1, "ESerial: %d\n", (int)result);
+            break;
+        }
+        default: break;
+    }
+}

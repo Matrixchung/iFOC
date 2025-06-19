@@ -1,0 +1,36 @@
+iFOC::Listener listener;
+/// Call listener.CallEvent() somewhere else (in RTOS Task) or listener.CallEventISR() in ISR
+/// ...
+class TestTask1 : public RTOSTask
+{
+public:
+    EventBits_t listener_id = 0;
+    void setup() final
+    {
+        listener_id = listener.RegisterListener();
+    }
+    void loop() final
+    {
+        listener.WaitForEvent(listener_id);
+        uart_1.Print(1, "Task1,id:%d\n", listener_id);
+    }
+};
+TestTask1 tt1;
+
+class TestTask2 : public RTOSTask
+{
+public:
+    EventBits_t listener_id = 0;
+    void setup() final
+    {
+        listener_id = listener.RegisterListener();
+    }
+    void loop() final
+    {
+        listener.WaitForEvent(listener_id);
+        uart_1.Print(1, "Task2,id:%d\n", listener_id);
+        // stop(); // If we stop the task here without remove listener, the event loop won't be called again.
+        // listener.RemoveListener(listener_id); // currently not implemented
+    }
+};
+TestTask2 tt2;

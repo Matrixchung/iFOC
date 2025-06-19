@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package iFOC.DataType.Base;
+
+enum MotorControlMode {
+  CTRL_MODE_POSITION = 0;
+  CTRL_MODE_VELOCITY = 1;
+  CTRL_MODE_CURRENT = 2;
+  CTRL_MODE_HYBRID = 3;
+}

@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package iFOC.DataType.Base;
+
+enum ProtoHeader {
+    NOT_USED = 0;
+    BOARD_CONFIG = 1;
+    FOC_MOTOR_CONFIG = 2;
+}

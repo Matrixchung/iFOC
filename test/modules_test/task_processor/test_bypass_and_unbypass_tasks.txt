@@ -1,0 +1,34 @@
+class task final : public iFOC::Task
+{
+public:
+    task() : iFOC::Task("Test")
+    {
+        RegisterTask(TaskType::MID_TASK, TaskType::NORMAL_TASK);
+    }
+    void UpdateMid(float Ts) final
+    {
+        static float timer = 0.0f;
+        timer += Ts;
+        if(timer >= 1.5f)
+        {
+            UART1.print(1, "TestMid\n");
+            timer = 0.0f;
+        }
+    }
+    void UpdateNormal() final
+    {
+        UART1.print(1, "TestNormal\n");
+        sleep(2000);
+    }
+};
+
+{
+// ...
+        sleep(5000);
+        motor_1.BypassTaskByName("Test");
+        UART1.print(1, "Test bypassed\n");
+        sleep(5000);
+        UART1.print(1, "Test unbypassed\n");
+        motor_1.UnbypassTaskByName("Test");
+// ...
+}

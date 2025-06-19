@@ -1,0 +1,20 @@
+case 1:
+{
+    UART1.print(1, "Free: %d bytes\n", xPortGetFreeHeapSize());
+    {
+        std::vector<int, iFOC::Allocator<int>> vector = {1, 2, 3, 4, 5, 6, 7, 8};
+        UART1.print(1, "vector[8], Free: %d bytes\n", xPortGetFreeHeapSize());
+        vector.emplace_back(9);
+        UART1.print(1, "vector[9], Free: %d bytes\n", xPortGetFreeHeapSize());
+        vector.emplace_back(100);
+        UART1.print(0, "vector[10], Free: %d bytes\n", xPortGetFreeHeapSize());
+        UART1.print(0, "vector size: %d\n", vector.size());
+        for(auto& i : vector)
+        {
+            UART1.print(0, "%d ", i);
+        }
+        UART1.print(1, "\n");
+    }
+    UART1.print(1, "exit vector, Free: %d bytes\n", xPortGetFreeHeapSize());
+    break;
+}

@@ -1,0 +1,30 @@
+struct __attribute__((aligned(FLASH_ADDR_ALIGN))) temp_2_t
+{
+    uint32_t poweroff_time = 0;
+    uint8_t crc8 = 0;
+};
+
+iFOC::STM32NVMStorage nvm;
+
+temp_2_t temp2_wait_to_write_in_pvd{
+    .poweroff_time = 0,
+    .crc8 = 0,
+};
+
+void HAL_PWR_PVDCallback(void)
+{
+    nvm.WriteNVM_PVD(1, (uint8_t*)&temp2_wait_to_write_in_pvd, sizeof(temp2_wait_to_write_in_pvd));
+}
+
+void test()
+{
+    nvm.ReadNVM(1, (uint8_t*)&temp2_wait_to_write_in_pvd, sizeof(temp_2_t));
+    if(iFOC::get_crc8((uint8_t*)&temp2_wait_to_write_in_pvd.poweroff_time, sizeof(temp_2_t::poweroff_time)) == temp2_wait_to_write_in_pvd.crc8)
+    {
+        UART1.print(1, "off_time=%d\n", temp2_wait_to_write_in_pvd.poweroff_time);
+    }
+    else temp2_wait_to_write_in_pvd.poweroff_time = 0;
+    temp2_wait_to_write_in_pvd.poweroff_time++;
+    temp2_wait_to_write_in_pvd.crc8 = iFOC::get_crc8((uint8_t*)&temp2_wait_to_write_in_pvd.poweroff_time, sizeof(temp_2_t::poweroff_time));
+    nvm.EraseSectorNVM(1); // Erase sector for faster write in PVD interrupt
+}

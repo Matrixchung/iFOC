@@ -1,0 +1,41 @@
+syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
+package iFOC.DataType.Config;
+
+message BoardConfig {
+    enum UARTProtocol {
+        ASCII  = 0;
+        VOFA   = 1;
+        RAW_PROTO = 2;
+        MATLAB = 3;
+    }
+    enum UARTBaudrate {
+        BAUD_115200 = 0;
+        BAUD_9600 = 1;
+        BAUD_230400 = 2;
+        BAUD_460800 = 3;
+        BAUD_921600 = 4;
+        BAUD_1843200 = 5;
+    }
+    UARTProtocol uart_1_protocol = 1;
+    UARTBaudrate uart_1_baudrate = 2;
+
+    uint32 pwm_wave_freq = 5;
+    uint32 speed_loop_freq = 6;
+
+    float bus_overvoltage_limit = 11;
+    float bus_undervoltage_limit = 12;
+    float bus_max_positive_current = 13;
+    float bus_max_negative_current = 14;
+    float bus_sense_shunt_ohm = 15;
+    bool bus_sense_dir_reversed = 16;
+    float max_regen_current = 19;
+
+    float current_sense_gain = 21;
+    float current_sense_shunt_ohm = 22;
+    bool current_sense_dir_reversed = 23;
+    uint32 current_sense_f_lp = 24;
+
+    bool play_startup_tone = 31;
+}

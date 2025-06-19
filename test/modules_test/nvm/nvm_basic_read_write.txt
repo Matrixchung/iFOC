@@ -1,0 +1,20 @@
+struct __attribute__((aligned(FLASH_ADDR_ALIGN))) temp_t
+{
+    uint32_t boot_time = 0;
+    uint8_t crc8 = 0;
+};
+
+iFOC::STM32NVMStorage nvm;
+
+temp_t temp{
+    .boot_time = 0,
+    .crc8 = 0,
+};
+auto x = nvm.ReadNVM(0, (uint8_t*)&temp, sizeof(temp));
+if(x) UART1.print(1, "Error ReadNVM:%d\n", x);
+if(iFOC::get_crc8((uint8_t*)&temp.boot_time, sizeof(temp.boot_time)) == temp.crc8) temp.boot_time++;
+else temp.boot_time = 1;
+temp.crc8 = iFOC::get_crc8((uint8_t*)&temp.boot_time, sizeof(temp.boot_time));
+x = nvm.WriteNVM(0, (uint8_t*)&temp, sizeof(temp));
+if(x) UART1.print(1, "Error WriteNVM:%d\n", x);
+UART1.print(1, "boot_time=%d\n", temp.boot_time);

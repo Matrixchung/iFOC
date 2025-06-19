@@ -1,0 +1,11 @@
+**/.DS_Store
+
+# Third-party python bytecode
+**/*.pyc
+**/*.pyd
+**/*.egg-info/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
