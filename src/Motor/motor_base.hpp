@@ -279,6 +279,7 @@ template<uint8_t shunt_count>
 void MotorBase<shunt_count>::ClearError()
 {
     error = MotorError::NONE;
+    UpdateWatchdog();
 }
 
 template<uint8_t shunt_count>
