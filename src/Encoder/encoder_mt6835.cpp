@@ -15,22 +15,31 @@ EncoderMT6835::~EncoderMT6835()
 
 FuncRetCode EncoderMT6835::Init()
 {
+    result_valid = false;
     spi->SetCPOLCPHA(1, 1);
     spi->SetDataWidth(SPIBase::DataWidth::BYTE);
     spi->SetClock(24000000); // using 24 MHz MAX, decrease if communication error persists
-    if(auto r = spi->Init(); r != FuncRetCode::OK) return r;
+    if(const auto r = spi->Init(); r != FuncRetCode::OK) return r;
     uint8_t temp = 0;
     // Step #1: Read System Bandwidth Register (0x011), as chip detection
-    if(auto r = ReadReg(0x011, &temp); r != FuncRetCode::OK) return r;
+    if(const auto r = ReadReg(0x011, &temp); r != FuncRetCode::OK) return r;
     if(temp != 0x5) return FuncRetCode::HARDWARE_ERROR; // Communication Error
     // Step #2: Turn off ABZ output at Register 0x008
     temp = (1 << 1);
-    if(auto r = WriteReg(0x008, temp); r != FuncRetCode::OK) return r;
+    if(const auto r = WriteReg(0x008, temp); r != FuncRetCode::OK) return r;
     // Step #3: Turn off UVM output at Register 0x00B
     temp = (1 << 4);
-    if(auto r = WriteReg(0x00B, temp); r != FuncRetCode::OK) return r;
-    // Step #4: Try to read angle
-    if(auto r = ReadAbsAngleRad(); r != FuncRetCode::OK) return r;
+    if(const auto r = WriteReg(0x00B, temp); r != FuncRetCode::OK) return r;
+    // Step #4: Switch PWM_FQ to lower freq (497Hz), and set PWM_SEL to "speed data" at Register 0x00C
+    //          to minimize pin crosstalk noise.
+    temp = 0x00;
+    if(const auto r = ReadReg(0x00C, &temp); r != FuncRetCode::OK) return r;
+    temp |= (1 << 4); // Set PWM_FQ to 0x1 (497Hz)
+    temp &= 0xF8;     // Clear [2:0] to 0x0
+    temp |= (1 << 1); // Set PWM_SEL[2:0] to 0x2
+    if(const auto r = WriteReg(0x00C, temp); r != FuncRetCode::OK) return r;
+    // Step #5: Try to read angle
+    if(const auto r = ReadAbsAngleRad(); r != FuncRetCode::OK) return r;
     last_angle_cnt = now_angle_cnt;
     multi_round_angle_rad = single_round_angle_rad;
     result_valid = true;
