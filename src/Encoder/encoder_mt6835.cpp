@@ -2,7 +2,8 @@
 
 namespace iFOC::Encoder
 {
-EncoderMT6835::EncoderMT6835(EncoderMT6835::SPIBase *_spi) : EncoderBase("MT6835", Type::ABSOLUTE_ENCODER, 1), spi(_spi) {};
+EncoderMT6835::EncoderMT6835(SPIBase *_spi, GPIOBase *_gpio) : EncoderBase("MT6835", Type::ABSOLUTE_ENCODER, 1), spi(_spi), cal_gpio(_gpio) {};
+EncoderMT6835::EncoderMT6835(SPIBase *_spi) : EncoderMT6835(_spi, nullptr) {};
 
 EncoderMT6835::~EncoderMT6835()
 {
@@ -123,8 +124,7 @@ FuncRetCode EncoderMT6835::ReadReg(uint16_t reg, uint8_t* data)
     tx_buf[1] = (uint8_t)reg;
     tx_buf[2] = 0x00;
     *data = 0x00;
-    auto result = spi->WriteReadBytes(tx_buf, rx_buf, 3);
-    if(result != FuncRetCode::OK) return result;
+    if(const auto result = spi->WriteReadBytes(tx_buf, rx_buf, 3); result != FuncRetCode::OK) return result;
     *data = rx_buf[2];
     return FuncRetCode::OK;
 }
@@ -144,9 +144,48 @@ FuncRetCode EncoderMT6835::BurnEEPROM()
     tx_buf[0] = (0x0C << 4);
     tx_buf[1] = 0;
     tx_buf[2] = 0;
-    auto result = spi->WriteReadBytes(tx_buf, rx_buf, 3);
-    if(result != FuncRetCode::OK) return result;
+    if(const auto result = spi->WriteReadBytes(tx_buf, rx_buf, 3); result != FuncRetCode::OK) return result;
     if(rx_buf[2] == 0x55) return FuncRetCode::OK;
     return FuncRetCode::HARDWARE_ERROR;
 }
+
+FuncRetCode EncoderMT6835::GetSelfCalibrationState(SelfCalibState& ret)
+{
+    uint8_t data = 0;
+    ret = SelfCalibState::NO_CALIB;
+    // 0x113[7:6]
+    if(const auto result = ReadReg(0x113, &data); result != FuncRetCode::OK) return result;
+    data >>= 6;
+    switch(data)
+    {
+        case to_underlying(SelfCalibState::CALIB_ONGOING): ret = SelfCalibState::CALIB_ONGOING; break;
+        case to_underlying(SelfCalibState::CALIB_FAILED): ret = SelfCalibState::CALIB_FAILED; break;
+        case to_underlying(SelfCalibState::CALIB_SUCCESS): ret = SelfCalibState::CALIB_SUCCESS; break;
+        default: break;
+    }
+    return FuncRetCode::OK;
+}
+
+FuncRetCode EncoderMT6835::SetSelfCalibrationRPM(real_t rpm)
+{
+    if(rpm >= 6400.0f || rpm < 25.0f) return FuncRetCode::NOT_SUPPORTED;
+    uint8_t original_reg = 0x00;
+    if(const auto result = ReadReg(0x00E, &original_reg); result != FuncRetCode::OK) return result;
+    uint8_t original_cal_freq = (original_reg & 0x70) >> 4;
+    if(original_cal_freq != 0x03) return FuncRetCode::NOT_SUPPORTED;
+    original_reg &= 0x8F; // ignore [6:4]
+    uint8_t reg = 0x03;
+    if(rpm >= 3200.0f) reg = 0x00;
+    else if(rpm >= 1600.0f) reg = 0x01;
+    else if(rpm >= 800.0f) reg = 0x02;
+    else if(rpm >= 400.0f) reg = 0x03;
+    else if(rpm >= 200.0f) reg = 0x04;
+    else if(rpm >= 100.0f) reg = 0x05;
+    else if(rpm >= 50.0f) reg = 0x06;
+    else if(rpm >= 25.0f) reg = 0x07;
+    original_reg |= (reg << 4);
+    if(const auto result = WriteReg(0x00E, original_reg); result != FuncRetCode::OK) return result;
+    return FuncRetCode::OK;
+}
+
 }
