@@ -5,8 +5,6 @@
 #include "foc_types.hpp"
 #include "foc_math.hpp"
 #include "task_timer.hpp"
-// #include <optional>
-#include <type_traits>
 #include <bitset>
 
 namespace iFOC

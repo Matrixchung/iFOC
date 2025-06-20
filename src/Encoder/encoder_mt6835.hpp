@@ -10,8 +10,8 @@ namespace iFOC::Encoder
 class EncoderMT6835 final : public EncoderBase
 {
 private:
-    using SPIBase = iFOC::HAL::SPIBase;
-    using GPIOBase = iFOC::HAL::GPIOBase;
+    using SPIBase = HAL::SPIBase;
+    using GPIOBase = HAL::GPIOBase;
 public:
     enum class DeviceError : uint8_t
     {

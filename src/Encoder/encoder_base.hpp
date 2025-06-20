@@ -1,7 +1,6 @@
 #pragma once
 
 #include "foc_types.hpp"
-#include "foc_math.hpp"
 #include "../Common/Filter/lowpass_filter.hpp"
 #include "../Common/foc_task.hpp"
 
@@ -61,7 +60,7 @@ public:
     long long full_rotations = 0;
 protected:
     Type encoder_type;
-    iFOC::Filter::LowpassFilter speed_lpf = iFOC::Filter::LowpassFilter(300);
+    Filter::LowpassFilter speed_lpf{300};
     float sign_and_deduction_ratio = 1.0f;
     bool result_valid = false;
     char name[Task::MAX_TASK_NAME_LEN] = "\0";

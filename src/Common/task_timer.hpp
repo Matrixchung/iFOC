@@ -1,7 +1,6 @@
 #pragma once
 
 #include "foc_types.hpp"
-#include "hal_impl.hpp"
 
 // Credits: ODrive, https://github.com/odriverobotics/ODrive/blob/master/Firmware/MotorControl/task_timer.hpp
 // Tested under STM32G4 @ 170MHz, single MEASURE_TIME takes about 1us

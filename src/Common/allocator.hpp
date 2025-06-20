@@ -1,10 +1,8 @@
 #pragma once
 
-#include <cstdint>
 #include <string>
 #include <vector>
 #include <list>
-#include "FreeRTOS.h"
 #include "portable.h"
 
 /// \brief Custom memory allocator for STL containers using FreeRTOS Heap

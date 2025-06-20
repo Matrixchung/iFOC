@@ -1,6 +1,7 @@
 #pragma once
 
 #include "task_timer.hpp"
+#include "hal_impl.hpp"
 
 #pragma GCC push_options
 #pragma GCC optimize (2)

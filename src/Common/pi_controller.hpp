@@ -1,7 +1,6 @@
 #pragma once
 
 #include "foc_types.hpp"
-#include "foc_math.hpp"
 
 namespace iFOC
 {

@@ -13,7 +13,6 @@
 #include "../Protocol/protocol_base.hpp"
 #include "motion.hpp"
 #include "config_nvm_wrapper.hpp"
-#include "queue.h"
 
 namespace iFOC
 {
