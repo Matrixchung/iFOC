@@ -18,7 +18,7 @@ void EncoderCalibTask::InitNormal()
     const auto& enc = foc->GetPrimaryEncoder();
     if(!enc.has_value())
     {
-        foc->DisarmWithError(MotorError::NO_REGISTERED_VALID_SENSOR);
+        foc->DisarmWithError(MotorError::PRIMARY_SENSOR_NOT_FOUND);
         foc->RemoveTaskByName(GetName());
         return;
     }
@@ -181,7 +181,7 @@ void EncoderCalibTask::UpdateNormal()
             auto encoder = foc->GetPrimaryEncoder().value();
             if(!encoder)
             {
-                foc->DisarmWithError(MotorError::NO_REGISTERED_VALID_SENSOR);
+                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_NOT_FOUND);
                 foc->RemoveTaskByName(GetName());
                 break;
             }

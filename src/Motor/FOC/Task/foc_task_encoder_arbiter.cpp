@@ -15,6 +15,10 @@ void EncoderArbiterTask::UpdateRT(float Ts)
     {
         if(!enc.value()->IsResultValid())
         {
+            if(foc->state_machine.GetState() == MotorState::SENSORED_CLOSED_LOOP_CONTROL)
+            {
+                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_RESULT_INVALID);
+            }
             foc->elec_angle_rad = 0.0f;
             foc->elec_omega_rad_s = 0.0f;
             return;
@@ -34,6 +38,10 @@ void EncoderArbiterTask::UpdateRT(float Ts)
     }
     else
     {
+        if(foc->state_machine.GetState() == MotorState::SENSORED_CLOSED_LOOP_CONTROL)
+        {
+            foc->DisarmWithError(MotorError::PRIMARY_SENSOR_NOT_FOUND);
+        }
         foc->elec_angle_rad = 0.0f;
         foc->elec_omega_rad_s = 0.0f;
     }
