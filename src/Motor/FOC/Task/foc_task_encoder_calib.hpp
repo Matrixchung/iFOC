@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../foc_motor.hpp"
-#include "foc_math.hpp"
+#include "foc_types.hpp"
 
 namespace iFOC::FOC
 {
@@ -15,8 +15,11 @@ private:
         SENSOR_DIRECTION_TESTING,
         POLE_PAIRS_TESTING,
         SENSOR_ZERO_OFFSET_TESTING,
+        SENSOR_CUSTOM_CALIBRATING,
     };
     EstStage stage = EstStage::NONE;
+    uint8_t stage_passed = 0;
+    bool is_sensor_custom_calibrated = false;
 public:
     EncoderCalibTask();
     void InitNormal();

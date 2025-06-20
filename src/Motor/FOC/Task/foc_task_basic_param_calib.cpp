@@ -50,20 +50,24 @@ void BasicParamCalibTask::UpdateNormal()
         {
             sleep(100);
             memset(&data, 0, sizeof(data));
-            foc->Arm();
-            sleep(10);
             if(!foc->GetConfig().phase_resistance_valid())
             {
+                foc->Arm();
+                sleep(10);
                 stage = EstStage::PHASE_RESISTANCE_START;
                 break;
             }
             if(!foc->GetConfig().phase_inductance_valid())
             {
+                foc->Arm();
+                sleep(10);
                 stage = EstStage::PHASE_INDUCTANCE_START;
                 break;
             }
             if(!foc->GetConfig().flux_linkage_valid())
             {
+                foc->Arm();
+                sleep(10);
                 stage = EstStage::FLUX_LINKAGE_START;
                 break;
             }
