@@ -222,6 +222,9 @@ MotorState StateMachineTask::RequestState(MotorState new_state)
         case MotorState::IDLE:
         {
             foc->Disarm();
+            // FIX: when switching state from closed_loop_control modes back to IDLE, the speed_loop & curr_loop are not handled correctly.
+            foc->RemoveTaskByName("CurrLoop");
+            foc->RemoveTaskByName("SpeedLoop");
             TRANSITION_OK(new_state);
         }
         case MotorState::STARTUP_SEQUENCE:
