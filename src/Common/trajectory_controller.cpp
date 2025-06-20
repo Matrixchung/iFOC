@@ -8,7 +8,7 @@ void TrajController::PlanTrajectory(float target_pos, float current_pos, float c
     // To ensure responsiveness, current ongoing tasks are overrided.
     if(max_accel < 0.0f) max_accel = -max_accel;
     if(max_decel < 0.0f) max_decel = -max_decel;
-    if(max_accel <= 0.1f || max_decel <= 0.1f) return;
+    if(max_accel <= 0.001f || max_decel <= 0.001f) return;
 
     float dX = target_pos - current_pos;
     float min_stop_dist = (current_speed * current_speed) / (2.0f * max_decel); // minimum stopping distance from current_speed to 0
@@ -109,6 +109,18 @@ void TrajController::Update(float Ts)
         }
     }
     else stage = TrajStage::ARRIVED;
+}
+
+void TrajController::DecelerateInAdvance()
+{
+    if(stage == TrajStage::CRUISING)
+    {
+        float start_decelerate_pos = start_cruise_pos + ref_speed * cruise_time;
+        float subtract_pos = start_decelerate_pos - curr_pos;
+        final_pos -= subtract_pos;
+        state_timer = accel_time + cruise_time;
+        stage = TrajStage::DECELERATING;
+    }
 }
 
 void TrajController::Reset()

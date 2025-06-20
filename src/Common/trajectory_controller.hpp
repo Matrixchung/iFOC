@@ -39,6 +39,10 @@ public:
     /// Update the parameters, should be called frequently
     /// \param Ts Time delta, s
     void Update(float Ts);
+
+    /// If current stage is cruising, calling this will result in deceleration stage immediately.
+    void DecelerateInAdvance();
+
     [[nodiscard]] __fast_inline float GetFinalPos() const { return final_pos; }
     [[nodiscard]] __fast_inline float GetCurrPos() const { return curr_pos; }
     [[nodiscard]] __fast_inline float GetCurrSpeed() const { return curr_speed; }
