@@ -11,7 +11,7 @@ STM32SPI::STM32SPI(SPI_HandleTypeDef* _hspi, GPIOBase* _cs) : hspi(_hspi), cs(*_
 
 #if defined(STM32G4)
 HAL_StatusTypeDef my_HAL_SPI_TransmitReceive(SPI_HandleTypeDef *hspi, const uint8_t *pTxData, uint8_t *pRxData,
-                                          uint16_t Size, uint32_t Timeout);
+                                          const uint16_t Size, const uint32_t Timeout);
 #endif
 
 FuncRetCode STM32SPI::Init()
@@ -28,7 +28,7 @@ FuncRetCode STM32SPI::Init()
     return FuncRetCode::OK;
 }
 
-FuncRetCode STM32SPI::WriteBytes(const uint8_t *data, uint16_t size)
+FuncRetCode STM32SPI::WriteBytes(const uint8_t *data, const uint16_t size)
 {
     cs = 0;
     const auto ret = HAL_SPI_Transmit(hspi, data, size, 0xF);
@@ -39,7 +39,7 @@ FuncRetCode STM32SPI::WriteBytes(const uint8_t *data, uint16_t size)
     return FuncRetCode::HARDWARE_ERROR;
 }
 
-FuncRetCode STM32SPI::ReadBytes(uint8_t *data, uint16_t size)
+FuncRetCode STM32SPI::ReadBytes(uint8_t *data, const uint16_t size)
 {
     cs = 0;
     const auto ret = HAL_SPI_Receive(hspi, data, size, 0xF);
@@ -50,7 +50,7 @@ FuncRetCode STM32SPI::ReadBytes(uint8_t *data, uint16_t size)
     return FuncRetCode::HARDWARE_ERROR;
 }
 
-FuncRetCode STM32SPI::WriteReadBytes(const uint8_t *write_data, uint8_t *read_data, uint16_t size)
+FuncRetCode STM32SPI::WriteReadBytes(const uint8_t *write_data, uint8_t *read_data, const uint16_t size)
 {
     cs = 0;
 #if defined(STM32G4) // platform-specific optimization
@@ -99,7 +99,7 @@ void STM32SPI::SetCPOLCPHA(const uint8_t cpol, const uint8_t cpha)
 
 #if defined(STM32G4)
 HAL_StatusTypeDef my_HAL_SPI_TransmitReceive(SPI_HandleTypeDef *hspi, const uint8_t *pTxData, uint8_t *pRxData,
-                                          uint16_t Size, uint32_t Timeout)
+                                          const uint16_t Size, const uint32_t Timeout)
 {
     // uint32_t             tmp_mode;
     uint32_t             tickstart = HAL_GetTick();
