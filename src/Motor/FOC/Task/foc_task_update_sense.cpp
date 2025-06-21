@@ -14,11 +14,15 @@ UpdateSenseTask::UpdateSenseTask() : Task("SenseTask")
 void UpdateSenseTask::UpdateRT(float Ts)
 {
     foc->GetCurrSense()->Update(Ts);
-    // Typically, we have Ia + Ib + Ic == 0. For three-shunt detection methods, leakage current can be detected.
-    real_t leakage_current = foc->GetCurrSense()->shunt_values[0] + foc->GetCurrSense()->shunt_values[1] + foc->GetCurrSense()->shunt_values[2];
-    if(ABS(leakage_current) >= foc->GetConfig().max_current() * 0.1f) // max leakage current = 10% max current
+    // only enable leakage current detection after basic param calibration (Rs/Ld calibration will disconnect one of three phases)
+    if(to_underlying(foc->state_machine.GetState()) > to_underlying(MotorState::BASIC_PARAM_CALIBRATION))
     {
-        foc->DisarmWithError(MotorError::PHASE_IMBALANCE); // phase current imbalance
+        // Typically, we have Ia + Ib + Ic == 0. For three-shunt detection methods, leakage current can be detected.
+        real_t leakage_current = foc->GetCurrSense()->shunt_values[0] + foc->GetCurrSense()->shunt_values[1] + foc->GetCurrSense()->shunt_values[2];
+        if(ABS(leakage_current) >= foc->GetConfig().max_current() * 0.1f) // max leakage current = 10% max current
+        {
+            foc->DisarmWithError(MotorError::PHASE_IMBALANCE); // phase current imbalance
+        }
     }
     foc->Ialphabeta_measured = FOC_Clark(foc->GetCurrSense()->shunt_values);
     foc->Iqd_measured = FOC_Park(foc->Ialphabeta_measured, foc->elec_angle_rad);
