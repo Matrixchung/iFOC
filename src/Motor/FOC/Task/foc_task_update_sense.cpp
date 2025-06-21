@@ -14,9 +14,15 @@ UpdateSenseTask::UpdateSenseTask() : Task("SenseTask")
 void UpdateSenseTask::UpdateRT(float Ts)
 {
     foc->GetCurrSense()->Update(Ts);
+    // Typically, we have Ia + Ib + Ic == 0. For three-shunt detection methods, leakage current can be detected.
+    real_t leakage_current = foc->GetCurrSense()->shunt_values[0] + foc->GetCurrSense()->shunt_values[1] + foc->GetCurrSense()->shunt_values[2];
+    if(ABS(leakage_current) >= foc->GetConfig().max_current() * 0.1f) // max leakage current = 10% max current
+    {
+        foc->DisarmWithError(MotorError::PHASE_IMBALANCE); // phase current imbalance
+    }
     foc->Ialphabeta_measured = FOC_Clark(foc->GetCurrSense()->shunt_values);
     foc->Iqd_measured = FOC_Park(foc->Ialphabeta_measured, foc->elec_angle_rad);
-    if(MAX(ABS(foc->Iqd_measured.q), ABS(foc->Iqd_measured.d)) >= foc->GetConfig().max_current() * 1.1f) // 110% max current
+    if(MAX(ABS(foc->Iqd_measured.q), ABS(foc->Iqd_measured.d)) >= foc->GetConfig().max_current() * 1.2f) // 120% max current
     {
         overcurrent_tick++;
         if(overcurrent_tick > OVERCURRENT_DETECT_TICKS)
