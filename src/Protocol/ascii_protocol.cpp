@@ -436,11 +436,12 @@ void ASCIIProtocolFOC::CmdSysInfo(uint8_t *data, uint16_t len, bool use_checksum
 #endif
         float mem_usage_now = 1.0f - ((float)xPortGetFreeHeapSize() / (float)(configTOTAL_HEAP_SIZE));
         float mem_usage_max = 1.0f - ((float)xPortGetMinimumEverFreeHeapSize() / (float)(configTOTAL_HEAP_SIZE));
+        GenerateResponse(use_checksum, true, "Compile Time: %d-%d-%d %d:%d", YEAR(), MONTH(), DAY(), HOUR(), MINUTE());
         GenerateResponse(use_checksum, true, "Memory: %d/%d (%.2f,Max:%.2f)", configTOTAL_HEAP_SIZE - xPortGetFreeHeapSize(),
                                                                                             configTOTAL_HEAP_SIZE,
                                                                                             mem_usage_now,
                                                                                             mem_usage_max);
-        GenerateResponse(use_checksum, true, "Core freq.: %lu Hz", HAL::GetCoreClockHz());
+        GenerateResponse(use_checksum, true, "Core clock: %d MHz", HAL::GetCoreClockHz() / 1000000);
         GenerateResponse(use_checksum, false, "HW S/N: %llu", HAL::GetSerialNumber());
     }
 }
