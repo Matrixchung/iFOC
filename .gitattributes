@@ -3,3 +3,7 @@
 
 # Ignore third party codes
 src/ThirdParty/* linguist-vendored
+
+# Ignore test and tool folders
+test/* linguist-vendored
+tool/* linguist-vendored
