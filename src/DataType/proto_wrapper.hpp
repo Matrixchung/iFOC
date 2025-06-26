@@ -34,10 +34,10 @@ public:
     ::EmbeddedProto::Error Deserialize(size_t input_size);
 private:
     static constexpr size_t MAX_MSG_SIZE = sizeof(msg_t) * 2;
-    static constexpr size_t MAX_PACKET_SIZE = MAX_MSG_SIZE + sizeof(uint16_t) * 3;
+    static constexpr size_t MAX_PACKET_SIZE = MAX_MSG_SIZE + sizeof(uint16_t) * 4;
     msg_t p;
     uint16_t header = static_cast<uint16_t>(Base::ProtoHeader::NOT_USED);
-    uint8_t buffer[MAX_PACKET_SIZE] = {0};
+    uint8_t buffer[MAX_PACKET_SIZE]{};
 };
 
 template<ProtoMessage msg_t>

@@ -42,7 +42,7 @@ public:
 // private:
     // friend class iFOC::Task; // Friendship is neither inherited nor transitive.
     FOC::StateMachineTask state_machine;
-    DataType::ConfigNVMWrapper<DataType::Config::Motor::FOCMotorConfig> config{ProtoHeader::FOC_MOTOR_CONFIG,
+    DataType::ConfigNVMWrapper<DataType::Config::Motor::FOCMotorConfig> config{(ProtoHeader)(to_underlying(ProtoHeader::FOC_MOTOR_CONFIG_M1) + GetInternalID()),
                                                                                (uint8_t)(internal_id + _const::MOTOR_CONFIG_STORE_SECTOR_BEGIN)};
     /// READ_ONLY ///
     alphabeta_t Ialphabeta_measured{}; // [A], Given by: UpdateSenseTask
