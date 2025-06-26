@@ -1,0 +1,42 @@
+/* KVDB object */
+static struct fdb_kvdb kvdb = { 0 };
+
+void kvdb_basic_sample(fdb_kvdb_t kvdb)
+{
+    struct fdb_blob blob;
+    uint32_t boot_count = 0;
+    uint32_t another_key = 0;
+    { /* GET the KV value */
+        /* get the "boot_count" KV value */
+        fdb_kv_get_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
+        /* the blob.saved.len is more than 0 when get the value successful */
+        if (blob.saved.len > 0) {
+            uart_1.Print(true, "get the 'boot_count' value is %d\n", boot_count);
+        } else {
+            uart_1.Print(true, "get the 'boot_count' failed\n");
+        }
+        fdb_kv_get_blob(kvdb, "another", fdb_blob_make(&blob, &another_key, sizeof(another_key)));
+        if (blob.saved.len > 0) {
+            uart_1.Print(true, "get the 'another' value is %d\n", another_key);
+        } else {
+            uart_1.Print(true, "get the 'another' failed\n");
+            another_key = 65536;
+            fdb_kv_set_blob(kvdb, "another", fdb_blob_make(&blob, &another_key, sizeof(another_key)));
+        }
+    }
+
+    { /* CHANGE the KV value */
+        /* increase the boot count */
+        boot_count += 10;
+        /* change the "boot_count" KV's value */
+        fdb_kv_set_blob(kvdb, "boot_count", fdb_blob_make(&blob, &boot_count, sizeof(boot_count)));
+        uart_1.Print(true, "set the 'boot_count' value to %d\n", boot_count);
+    }
+
+}
+
+void test()
+{
+    fdb_kvdb_init(&kvdb, "env", "s", nullptr, nullptr);
+    kvdb_basic_sample(&kvdb);
+}

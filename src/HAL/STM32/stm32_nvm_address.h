@@ -67,6 +67,13 @@
 #define ADDR_FLASH_PAGE_61    ((uint32_t)0x0801E800) /* Base @ of Page 61, 2 Kbytes */
 #define ADDR_FLASH_PAGE_62    ((uint32_t)0x0801F000) /* Base @ of Page 62, 2 Kbytes */
 #define ADDR_FLASH_PAGE_63    ((uint32_t)0x0801F800) /* Base @ of Page 63, 2 Kbytes */
+
+#define FLASH_WRITE_GRAN_BITS           (64)   // DOUBLE WORD
+#define FLASH_SECTOR_SIZE_BYTES         (1024 * 2)
+#define FLASH_USER_START_ADDR           (ADDR_FLASH_PAGE_60)
+#define FLASH_USER_AREA_SIZE            (4 * FLASH_SECTOR_SIZE_BYTES)
+//#define USE_EASYFLASH
+#define USE_FLASHDB
 #endif
 
 #if defined(STM32F070x6)

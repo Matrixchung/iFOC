@@ -1,6 +1,7 @@
 #pragma once
 
 #include "foc_types.hpp"
+#include "hal_const.h"
 
 /*
  * Apart from platform-specific peripherals you would wish to use,
@@ -41,11 +42,11 @@ void SystemReboot();
 /// Used in: iFOC::DataType::ConfigNVMWrapper
 namespace NVM
 {
-    FuncRetCode EraseSector(uint8_t sector);
+    FuncRetCode Erase(uint32_t addr, size_t size);
 
-    FuncRetCode Write_NoErase(uint8_t sector, const uint8_t *buffer, uint16_t size);
+    FuncRetCode Write_NoErase(uint32_t addr, const uint8_t *buffer, size_t size);
 
-    FuncRetCode Read(uint8_t sector, uint8_t* buffer, uint16_t size);
+    FuncRetCode Read(uint32_t addr, uint8_t *buffer, size_t size);
 }
 
 /// Provides a General Purpose Timer (or DWT) for performance metrics use.

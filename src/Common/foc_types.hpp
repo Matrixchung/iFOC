@@ -7,6 +7,7 @@
 
 #include "Math/real_t.hpp"
 #include "FreeRTOS.h"
+#include "semphr.h"
 #include "func_ret_code.h"
 #include "allocator.hpp"
 #include "../DataType/Headers/Base/misconfigured_area.h"
