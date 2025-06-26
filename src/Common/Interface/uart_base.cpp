@@ -29,6 +29,7 @@ void UARTBase::Print(bool transmit, const char *fmt, ...)
     if(GetTxAvailable() < len) StartTransmit(false); // FIFO used up, we have to initiate a transmission
     WriteBytes((const uint8_t*)buffer, len);
     if(transmit) StartTransmit(false);
+    va_end(args);
 }
 
 uint16_t UARTBase::WriteBytes(const uint8_t *data, uint16_t size)
