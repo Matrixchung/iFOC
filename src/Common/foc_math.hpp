@@ -134,6 +134,21 @@ static uint8_t get_crc8(const uint8_t* data, const size_t len)
     return crc;
 }
 
+static uint16_t get_crc16_accumulate(uint16_t origin_crc, const uint8_t* data, const size_t len)
+{
+    using namespace _const_tables;
+    uint8_t crc_h = (uint8_t)(origin_crc >> 8);
+    uint8_t crc_l = (uint8_t)(origin_crc);
+    uint8_t crc_table_index = 0;
+    for(size_t i = 0; i < len; i++)
+    {
+        crc_table_index = crc_l ^ (*(data++));
+        crc_l = (uint8_t)(crc_h ^ crc16_table_h[crc_table_index]);
+        crc_h = crc16_table_l[crc_table_index];
+    }
+    return (uint16_t)(crc_h << 8 | crc_l);
+}
+
 /// Get CRC16 result of data[len] \n
 /// Poly: X^16 + X^15 + X^2 + 1 (0x8005), CRC-16-IBM(CRC-16/MODBUS) \n
 /// Initial Value: 0xFFFF, Input Flip: Yes, Output Flip: No \n
@@ -143,17 +158,7 @@ static uint8_t get_crc8(const uint8_t* data, const size_t len)
 /// \return
 static uint16_t get_crc16(const uint8_t* data, const size_t len)
 {
-    using namespace _const_tables;
-    uint8_t crc_h = 0xFF;
-    uint8_t crc_l = 0xFF;
-    uint8_t crc_table_index = 0;
-    for(size_t i = 0; i < len; i++)
-    {
-        crc_table_index = crc_l ^ (*(data++));
-        crc_l = (uint8_t)(crc_h ^ crc16_table_h[crc_table_index]);
-        crc_h = crc16_table_l[crc_table_index];
-    }
-    return (uint16_t)(crc_h << 8 | crc_l);
+    return get_crc16_accumulate(0xFFFF, data, len);
 }
 
 #pragma GCC diagnostic push
