@@ -15,6 +15,5 @@ enum MisconfiguredArea {
   BUS_SENSE_CONFIGS_OUT_OF_RANGE = 64;
 
   I2C_FREQ_OUT_OF_RANGE = 128;
-
-  NVM_READ_WRITE_DEVICE_EMPTY = 256;
+  
 }
