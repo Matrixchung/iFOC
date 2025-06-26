@@ -46,8 +46,8 @@ private:
 #if defined(USE_EASYFLASH) || defined(USE_FLASHDB)
     char db_key[2]{};
 public:
-    static size_t GetNVMUsedSize();
-    static size_t GetNVMTotalSize();
+    static size_t GetNVMUsedSize() { return _internal::get_kvdb_used_size(); }
+    static size_t GetNVMTotalSize() { return _internal::get_kvdb_total_size(); }
 #endif
 public:
     ConfigNVMWrapper(Base::ProtoHeader h, uint8_t s) : header(h), nvm_sector(s)
