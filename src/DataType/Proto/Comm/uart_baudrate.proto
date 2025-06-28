@@ -1,0 +1,13 @@
+syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
+package iFOC.DataType.Comm;
+
+enum UARTBaudrate {
+  BAUD_115200 = 0;
+  BAUD_9600 = 1;
+  BAUD_230400 = 2;
+  BAUD_460800 = 3;
+  BAUD_921600 = 4;
+  BAUD_1843200 = 5;
+}

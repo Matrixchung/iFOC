@@ -15,7 +15,7 @@ class STM32UART final : public UARTBase
 {
 public:
     explicit STM32UART(UART_HandleTypeDef *_huart);
-    FuncRetCode Init(DataType::Config::BoardConfig::UARTBaudrate baud) final;
+    FuncRetCode Init(DataType::Comm::UARTBaudrate baud) final;
     FuncRetCode StartTransmit(bool blocked) final;
     void OnIdleIRQ(UART_HandleTypeDef *_huart, uint16_t Size);
     void OnTxCpltIRQ(UART_HandleTypeDef *_huart);

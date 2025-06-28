@@ -21,6 +21,8 @@
 #include <limits>
 
 // Include external proto definitions
+#include "uart_protocol.h"
+#include "uart_baudrate.h"
 
 namespace iFOC {
 namespace DataType {
@@ -30,22 +32,20 @@ class BoardConfig final: public ::EmbeddedProto::MessageInterface
 {
   public:
         REFLECT(
-        MEMBER_SIZE_OFFSET(BoardConfig, speed_loop_freq_),
-        MEMBER_SIZE_OFFSET(BoardConfig, bus_overvoltage_limit_),
         MEMBER_SIZE_OFFSET(BoardConfig, bus_undervoltage_limit_),
-        MEMBER_SIZE_OFFSET(BoardConfig, uart_1_protocol_),
-        MEMBER_SIZE_OFFSET(BoardConfig, bus_sense_shunt_ohm_),
-        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_f_lp_),
         MEMBER_SIZE_OFFSET(BoardConfig, bus_max_negative_current_),
         MEMBER_SIZE_OFFSET(BoardConfig, pwm_wave_freq_),
-        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_gain_),
+        MEMBER_SIZE_OFFSET(BoardConfig, play_startup_tone_),
+        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_f_lp_),
+        MEMBER_SIZE_OFFSET(BoardConfig, bus_max_positive_current_),
+        MEMBER_SIZE_OFFSET(BoardConfig, speed_loop_freq_),
         MEMBER_SIZE_OFFSET(BoardConfig, current_sense_shunt_ohm_),
-        MEMBER_SIZE_OFFSET(BoardConfig, bus_sense_dir_reversed_),
+        MEMBER_SIZE_OFFSET(BoardConfig, bus_sense_shunt_ohm_),
+        MEMBER_SIZE_OFFSET(BoardConfig, bus_overvoltage_limit_),
         MEMBER_SIZE_OFFSET(BoardConfig, max_regen_current_),
         MEMBER_SIZE_OFFSET(BoardConfig, current_sense_dir_reversed_),
-        MEMBER_SIZE_OFFSET(BoardConfig, play_startup_tone_),
-        MEMBER_SIZE_OFFSET(BoardConfig, uart_1_baudrate_),
-        MEMBER_SIZE_OFFSET(BoardConfig, bus_max_positive_current_)
+        MEMBER_SIZE_OFFSET(BoardConfig, bus_sense_dir_reversed_),
+        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_gain_)
     )
 BoardConfig() = default;
     BoardConfig(const BoardConfig& rhs )
@@ -89,24 +89,6 @@ BoardConfig() = default;
     }
 
     ~BoardConfig() override = default;
-
-    enum class UARTProtocol : uint32_t
-    {
-      ASCII = 0,
-      VOFA = 1,
-      RAW_PROTO = 2,
-      MATLAB = 3
-    };
-
-    enum class UARTBaudrate : uint32_t
-    {
-      BAUD_115200 = 0,
-      BAUD_9600 = 1,
-      BAUD_230400 = 2,
-      BAUD_460800 = 3,
-      BAUD_921600 = 4,
-      BAUD_1843200 = 5
-    };
 
     enum class FieldNumber : uint32_t
     {
@@ -173,17 +155,17 @@ BoardConfig() = default;
 
     static constexpr char const* UART_1_PROTOCOL_NAME = "uart_1_protocol";
     inline void clear_uart_1_protocol() { uart_1_protocol_.clear(); }
-    inline void set_uart_1_protocol(const UARTProtocol& value) { uart_1_protocol_ = value; }
-    inline void set_uart_1_protocol(const UARTProtocol&& value) { uart_1_protocol_ = value; }
-    inline const UARTProtocol& get_uart_1_protocol() const { return uart_1_protocol_.get(); }
-    inline UARTProtocol uart_1_protocol() const { return uart_1_protocol_.get(); }
+    inline void set_uart_1_protocol(const Comm::UARTProtocol& value) { uart_1_protocol_ = value; }
+    inline void set_uart_1_protocol(const Comm::UARTProtocol&& value) { uart_1_protocol_ = value; }
+    inline const Comm::UARTProtocol& get_uart_1_protocol() const { return uart_1_protocol_.get(); }
+    inline Comm::UARTProtocol uart_1_protocol() const { return uart_1_protocol_.get(); }
 
     static constexpr char const* UART_1_BAUDRATE_NAME = "uart_1_baudrate";
     inline void clear_uart_1_baudrate() { uart_1_baudrate_.clear(); }
-    inline void set_uart_1_baudrate(const UARTBaudrate& value) { uart_1_baudrate_ = value; }
-    inline void set_uart_1_baudrate(const UARTBaudrate&& value) { uart_1_baudrate_ = value; }
-    inline const UARTBaudrate& get_uart_1_baudrate() const { return uart_1_baudrate_.get(); }
-    inline UARTBaudrate uart_1_baudrate() const { return uart_1_baudrate_.get(); }
+    inline void set_uart_1_baudrate(const Comm::UARTBaudrate& value) { uart_1_baudrate_ = value; }
+    inline void set_uart_1_baudrate(const Comm::UARTBaudrate&& value) { uart_1_baudrate_ = value; }
+    inline const Comm::UARTBaudrate& get_uart_1_baudrate() const { return uart_1_baudrate_.get(); }
+    inline Comm::UARTBaudrate uart_1_baudrate() const { return uart_1_baudrate_.get(); }
 
     static constexpr char const* PWM_WAVE_FREQ_NAME = "pwm_wave_freq";
     inline void clear_pwm_wave_freq() { pwm_wave_freq_.clear(); }
@@ -302,12 +284,12 @@ BoardConfig() = default;
     {
       ::EmbeddedProto::Error return_value = ::EmbeddedProto::Error::NO_ERRORS;
 
-      if((static_cast<UARTProtocol>(0) != uart_1_protocol_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      if((static_cast<Comm::UARTProtocol>(0) != uart_1_protocol_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = uart_1_protocol_.serialize_with_id(static_cast<uint32_t>(FieldNumber::UART_1_PROTOCOL), buffer, false);
       }
 
-      if((static_cast<UARTBaudrate>(0) != uart_1_baudrate_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      if((static_cast<Comm::UARTBaudrate>(0) != uart_1_baudrate_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = uart_1_baudrate_.serialize_with_id(static_cast<uint32_t>(FieldNumber::UART_1_BAUDRATE), buffer, false);
       }
@@ -663,8 +645,8 @@ BoardConfig() = default;
   private:
 
 
-      EmbeddedProto::enumeration<UARTProtocol> uart_1_protocol_ = static_cast<UARTProtocol>(0);
-      EmbeddedProto::enumeration<UARTBaudrate> uart_1_baudrate_ = static_cast<UARTBaudrate>(0);
+      EmbeddedProto::enumeration<Comm::UARTProtocol> uart_1_protocol_ = static_cast<Comm::UARTProtocol>(0);
+      EmbeddedProto::enumeration<Comm::UARTBaudrate> uart_1_baudrate_ = static_cast<Comm::UARTBaudrate>(0);
       EmbeddedProto::uint32 pwm_wave_freq_ = 0U;
       EmbeddedProto::uint32 speed_loop_freq_ = 0U;
       EmbeddedProto::floatfixed bus_overvoltage_limit_ = 0.0;

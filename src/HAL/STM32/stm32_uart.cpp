@@ -6,7 +6,7 @@ namespace iFOC::HAL
 {
 STM32UART::STM32UART(UART_HandleTypeDef *_huart) : UARTBase(), huart(_huart) {}
 
-FuncRetCode STM32UART::Init(DataType::Config::BoardConfig::UARTBaudrate baud)
+FuncRetCode STM32UART::Init(DataType::Comm::UARTBaudrate baud)
 {
     FuncRetCode ret = tx_fifo.init(TX_FIFO_BUFFER_SIZE);
     if(ret != FuncRetCode::OK) return ret;
@@ -16,11 +16,11 @@ FuncRetCode STM32UART::Init(DataType::Config::BoardConfig::UARTBaudrate baud)
     uint32_t baudrate = 115200;
     switch(baud)
     {
-        case DataType::Config::BoardConfig::UARTBaudrate::BAUD_9600: baudrate = 9600; break;
-        case DataType::Config::BoardConfig::UARTBaudrate::BAUD_230400: baudrate = 230400; break;
-        case DataType::Config::BoardConfig::UARTBaudrate::BAUD_460800: baudrate = 460800; break;
-        case DataType::Config::BoardConfig::UARTBaudrate::BAUD_921600: baudrate = 921600; break;
-        case DataType::Config::BoardConfig::UARTBaudrate::BAUD_1843200: baudrate = 1843200; break;
+        case DataType::Comm::UARTBaudrate::BAUD_9600: baudrate = 9600; break;
+        case DataType::Comm::UARTBaudrate::BAUD_230400: baudrate = 230400; break;
+        case DataType::Comm::UARTBaudrate::BAUD_460800: baudrate = 460800; break;
+        case DataType::Comm::UARTBaudrate::BAUD_921600: baudrate = 921600; break;
+        case DataType::Comm::UARTBaudrate::BAUD_1843200: baudrate = 1843200; break;
         default: break;
     }
     // DMA Settings

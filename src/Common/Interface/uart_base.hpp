@@ -4,11 +4,10 @@
 #include <functional>
 #include "func_ret_code.h"
 #include "foc_types.hpp"
-#include "../../DataType/Headers/Config/Board/board_config.h"
+#include "../../DataType/Headers/Comm/uart_baudrate.h"
 #include "../../DataType/Ringbuf/kfifo.hpp"
 #include "../foc_task.hpp"
 #include "semphr.h"
-#include "task.h"
 
 namespace iFOC::HAL
 {
@@ -53,7 +52,7 @@ public:
     /// xSemaphoreGive(tx_sem); and RxEventHandlerTask must be started.
     /// \param baud UARTBaudrate, fallback to 115200 if argument invalid
     /// \return FuncRetCode
-    virtual FuncRetCode Init(DataType::Config::BoardConfig::UARTBaudrate baud) = 0;
+    virtual FuncRetCode Init(DataType::Comm::UARTBaudrate baud) = 0;
 
     /// Write a specific amount of data to the FIFO.
     /// \param data pointer to src array
