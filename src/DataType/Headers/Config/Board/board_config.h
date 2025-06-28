@@ -32,20 +32,20 @@ class BoardConfig final: public ::EmbeddedProto::MessageInterface
 {
   public:
         REFLECT(
-        MEMBER_SIZE_OFFSET(BoardConfig, bus_undervoltage_limit_),
-        MEMBER_SIZE_OFFSET(BoardConfig, bus_max_negative_current_),
         MEMBER_SIZE_OFFSET(BoardConfig, pwm_wave_freq_),
-        MEMBER_SIZE_OFFSET(BoardConfig, play_startup_tone_),
-        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_f_lp_),
-        MEMBER_SIZE_OFFSET(BoardConfig, bus_max_positive_current_),
         MEMBER_SIZE_OFFSET(BoardConfig, speed_loop_freq_),
-        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_shunt_ohm_),
-        MEMBER_SIZE_OFFSET(BoardConfig, bus_sense_shunt_ohm_),
         MEMBER_SIZE_OFFSET(BoardConfig, bus_overvoltage_limit_),
-        MEMBER_SIZE_OFFSET(BoardConfig, max_regen_current_),
-        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_dir_reversed_),
+        MEMBER_SIZE_OFFSET(BoardConfig, bus_undervoltage_limit_),
+        MEMBER_SIZE_OFFSET(BoardConfig, bus_max_positive_current_),
+        MEMBER_SIZE_OFFSET(BoardConfig, bus_max_negative_current_),
+        MEMBER_SIZE_OFFSET(BoardConfig, bus_sense_shunt_ohm_),
         MEMBER_SIZE_OFFSET(BoardConfig, bus_sense_dir_reversed_),
-        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_gain_)
+        MEMBER_SIZE_OFFSET(BoardConfig, max_regen_current_),
+        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_gain_),
+        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_shunt_ohm_),
+        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_dir_reversed_),
+        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_f_lp_),
+        MEMBER_SIZE_OFFSET(BoardConfig, play_startup_tone_)
     )
 BoardConfig() = default;
     BoardConfig(const BoardConfig& rhs )

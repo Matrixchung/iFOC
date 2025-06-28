@@ -41,11 +41,14 @@ def process_header_file(file_path):
         re.DOTALL
     )
     
-    members = set()
+    # members = set()
+    members = []
     for match in member_var_pattern.finditer(private_match.group(1)):
         var_name = match.group(1)
         print(f"  - {var_name}_")
-        members.add(match.group(1))
+        # members.add(match.group(1))
+        if var_name not in members:
+            members.append(var_name)
     
     if not members:
         print(f"No member variables found in private section of {file_path}, skipping")
