@@ -21,16 +21,15 @@ namespace iFOC::DataType::_internal
         static fdb_err_t result = FDB_INIT_FAILED;
         static bool is_init_called = false;
         if(is_init_called) return result;
-        fdb_kvdb_control(&config_kvdb, FDB_KVDB_CTRL_SET_LOCK, (void*)lock);
-        fdb_kvdb_control(&config_kvdb, FDB_KVDB_CTRL_SET_UNLOCK, (void*)unlock);
-        result = fdb_kvdb_init(&config_kvdb, "cfg", "s", nullptr, nullptr);
+        HAL::NVM::fdb_kvdb_control(&config_kvdb, FDB_KVDB_CTRL_SET_LOCK, (void*)lock);
+        HAL::NVM::fdb_kvdb_control(&config_kvdb, FDB_KVDB_CTRL_SET_UNLOCK, (void*)unlock);
+        result = HAL::NVM::fdb_kvdb_init(&config_kvdb, "cfg", "s", nullptr, nullptr);
         is_init_called = true;
         return result;
     }
     static bool get_kv_used_cb(fdb_kv_t kv, void *arg1, void *arg2)
     {
         size_t *using_size = static_cast<size_t *>(arg1);
-        fdb_kvdb_t db = static_cast<fdb_kvdb_t>(arg2);
         if(kv->crc_is_ok)
         {
             *using_size += kv->len;
@@ -43,7 +42,7 @@ namespace iFOC::DataType::_internal
         size_t ret = 0;
         fdb_kv kv{};
         if(config_kvdb.parent.lock) config_kvdb.parent.lock(&config_kvdb.parent);
-        kv_iterator(&config_kvdb, &kv, &ret, &config_kvdb, get_kv_used_cb);
+        HAL::NVM::kv_iterator(&config_kvdb, &kv, &ret, &config_kvdb, get_kv_used_cb);
         if(config_kvdb.parent.unlock) config_kvdb.parent.unlock(&config_kvdb.parent);
         return ret;
     }

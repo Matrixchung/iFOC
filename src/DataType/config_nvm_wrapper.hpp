@@ -84,7 +84,7 @@ FuncRetCode ConfigNVMWrapper<msg_t>::ReadNVMConfig()
     auto flashdb_ret = _internal::kvdb_init();
     if(flashdb_ret != fdb_err_t::FDB_NO_ERR) return FuncRetCode::INVALID_RESULT;
     fdb_blob blob{};
-    fdb_kv_get_blob(&_internal::config_kvdb, db_key, fdb_blob_make(&blob, wrapper->GetBuffer(), wrapper->GetBufferSize()));
+    HAL::NVM::fdb_kv_get_blob(&_internal::config_kvdb, db_key, HAL::NVM::fdb_blob_make(&blob, wrapper->GetBuffer(), wrapper->GetBufferSize()));
     if(blob.saved.len > 0) ret = FuncRetCode::OK;
     else ret = FuncRetCode::PARAM_NOT_EXIST;
 #else
@@ -116,7 +116,7 @@ FuncRetCode ConfigNVMWrapper<msg_t>::SaveNVMConfig()
         auto flashdb_ret = _internal::kvdb_init();
         if(flashdb_ret != fdb_err_t::FDB_NO_ERR) return FuncRetCode::INVALID_RESULT;
         fdb_blob blob{};
-        flashdb_ret = fdb_kv_set_blob(&_internal::config_kvdb, db_key, fdb_blob_make(&blob, wrapper->GetBuffer(), len));
+        flashdb_ret = HAL::NVM::fdb_kv_set_blob(&_internal::config_kvdb, db_key, HAL::NVM::fdb_blob_make(&blob, wrapper->GetBuffer(), len));
         if(flashdb_ret == fdb_err_t::FDB_NO_ERR) return FuncRetCode::OK;
         return FuncRetCode::HARDWARE_ERROR;
 #else
@@ -138,7 +138,7 @@ FuncRetCode ConfigNVMWrapper<msg_t>::ClearNVMConfig()
 #elif defined(USE_FLASHDB)
     auto flashdb_ret = _internal::kvdb_init();
     if(flashdb_ret != fdb_err_t::FDB_NO_ERR) return FuncRetCode::HARDWARE_ERROR;
-    flashdb_ret = fdb_kv_del(&_internal::config_kvdb, db_key);
+    flashdb_ret = HAL::NVM::fdb_kv_del(&_internal::config_kvdb, db_key);
     if(flashdb_ret != fdb_err_t::FDB_NO_ERR) return FuncRetCode::INVALID_RESULT;
     return FuncRetCode::OK;
 #else

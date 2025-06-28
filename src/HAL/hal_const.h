@@ -24,6 +24,10 @@
 #error "At least one of the required constant is not defined, please check hal_const.h"
 #endif
 
+#if defined(USE_EASYFLASH) && defined(USE_FLASHDB)
+#error "No more than one NVM backbone handler can be selected"
+#endif
+
 #if (FLASH_WRITE_GRAN_BITS % 8 != 0)
 #error "FLASH_WRITE_GRAN_BITS % 8 != 0"
 #endif

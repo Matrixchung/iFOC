@@ -327,17 +327,17 @@ struct fdb_kvdb {
 typedef struct fdb_kvdb *fdb_kvdb_t;
 
 /* TSDB structure */
-struct fdb_tsdb {
-    struct fdb_db parent;                        /**< inherit from fdb_db */
-    struct tsdb_sec_info cur_sec;                /**< current using sector */
-    fdb_time_t last_time;                        /**< last TSL timestamp */
-    fdb_get_time get_time;                       /**< the current timestamp get function */
-    size_t max_len;                              /**< the maximum length of each log */
-    bool rollover;                               /**< the oldest data will rollover by newest data, default is true */
-
-    void *user_data;
-};
-typedef struct fdb_tsdb *fdb_tsdb_t;
+// struct fdb_tsdb {
+//     struct fdb_db parent;                        /**< inherit from fdb_db */
+//     struct tsdb_sec_info cur_sec;                /**< current using sector */
+//     fdb_time_t last_time;                        /**< last TSL timestamp */
+//     fdb_get_time get_time;                       /**< the current timestamp get function */
+//     size_t max_len;                              /**< the maximum length of each log */
+//     bool rollover;                               /**< the oldest data will rollover by newest data, default is true */
+//
+//     void *user_data;
+// };
+// typedef struct fdb_tsdb *fdb_tsdb_t;
 
 /* blob structure */
 struct fdb_blob {

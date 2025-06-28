@@ -18,6 +18,8 @@
 
 #ifdef USE_FLASHDB
 
+namespace iFOC::HAL::NVM
+{
 #define FDB_LOG_TAG "[kv]"
 /* rewrite log prefix */
 #undef  FDB_LOG_PREFIX2
@@ -1974,7 +1976,7 @@ fdb_err_t fdb_kvdb_check(fdb_kvdb_t db)
 
     return result;
 }
-
+}
 #endif /* defined(FDB_USING_KVDB) */
 
 #endif

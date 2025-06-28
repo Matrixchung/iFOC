@@ -53,6 +53,8 @@
 /* invalid address */
 #define FDB_FAILED_ADDR                      0xFFFFFFFF
 
+namespace iFOC::HAL::NVM
+{
 size_t _fdb_set_status(uint8_t status_table[], size_t status_num, size_t status_index);
 size_t _fdb_get_status(uint8_t status_table[], size_t status_num);
 uint32_t _fdb_continue_ff_addr(fdb_db_t db, uint32_t start, uint32_t end);
@@ -65,5 +67,6 @@ size_t _fdb_read_status(fdb_db_t db, uint32_t addr, uint8_t status_table[], size
 fdb_err_t _fdb_flash_read(fdb_db_t db, uint32_t addr, void *buf, size_t size);
 fdb_err_t _fdb_flash_erase(fdb_db_t db, uint32_t addr, size_t size);
 fdb_err_t _fdb_flash_write(fdb_db_t db, uint32_t addr, const void *buf, size_t size, bool sync);
+}
 
 #endif /* _FDB_LOW_LVL_H_ */
