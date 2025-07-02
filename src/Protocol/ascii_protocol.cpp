@@ -448,7 +448,7 @@ void ASCIIProtocolFOC::CmdSysInfo(uint8_t *data, uint16_t len, bool use_checksum
             GenerateResponse(use_checksum, true, "KVDB: %d/%d Bytes (%.2f)", used_size, total_size, ((float)used_size / (float)total_size));
 #endif
         GenerateResponse(use_checksum, true, "Core clock: %d MHz", HAL::GetCoreClockHz() / 1000000);
-        GenerateResponse(use_checksum, false, "HW S/N: %llu", HAL::GetSerialNumber());
+        GenerateResponse(use_checksum, false, "HW S/N: %lu", HAL::GetSerialNumber());
     }
 }
 

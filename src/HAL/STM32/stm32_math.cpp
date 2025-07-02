@@ -54,10 +54,10 @@ uint64_t _get_sn()
     return ((uint64_t) uuid_mixed_part << 16) | (uint64_t)(uuid1 >> 16);
 }
 
-uint64_t GetSerialNumber()
+uint32_t GetSerialNumber()
 {
     static uint64_t sn = _get_sn();
-    return sn;
+    return (uint32_t)sn;
 }
 
 }

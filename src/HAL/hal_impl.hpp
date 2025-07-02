@@ -31,9 +31,9 @@ void DelayCycle(volatile uint32_t cycle);
 /// \return core frequency, in [Hz]
 uint32_t GetCoreClockHz();
 
-/// Get Serial Number (strongly required unique across all devices). Typically we use 48-bits SN.
-/// \return serial number, in uint64_t. Range: [0, 18,446,744,073,709,551,615]
-uint64_t GetSerialNumber();
+/// Get Serial Number (strongly required unique across all devices). Typically we use 32-bits SN.
+/// \return serial number, in uint32_t. Range: [0, 4294967295]
+uint32_t GetSerialNumber();
 
 /// This function does what it said.
 void SystemReboot();
