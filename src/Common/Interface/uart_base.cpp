@@ -34,6 +34,12 @@ void UARTBase::Print(bool transmit, const char *fmt, ...)
 
 uint16_t UARTBase::WriteBytes(const uint8_t *data, uint16_t size)
 {
+    if(xPortIsInsideInterrupt()) // If from ISR, we can directly insert data to the FIFO (caller must be >= SYSCALL_PRIORITY)
+    {
+        uint16_t len = MIN(size, GetTxAvailable());
+        tx_fifo.put(data, len);
+        return len;
+    }
     if(xSemaphoreTake(tx_fifo_mutex, pdMS_TO_TICKS(READ_WRITE_TIMEOUT_MS)) == pdTRUE)
     {
         uint16_t len = MIN(size, GetTxAvailable());

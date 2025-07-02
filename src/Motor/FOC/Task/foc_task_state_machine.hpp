@@ -18,8 +18,10 @@ public:
     MotorState BackToLastState();
     bool CheckStateRequirement(MotorState new_state);
     __fast_inline MotorState GetState() { return current_state; }
-    __fast_inline void RegisterSuccessCallback(auto && cb) { trans_success_cb = std::move(cb); }
-    __fast_inline void RegisterFailureCallback(auto && cb) { trans_failure_cb = std::move(cb); }
+    __fast_inline void RegisterSuccessCallback(auto cb) { trans_success_cb = cb; }
+    __fast_inline void RegisterFailureCallback(auto cb) { trans_failure_cb = cb; }
+    // __fast_inline void RegisterSuccessCallback(auto && cb) { trans_success_cb = std::move(cb); }
+    // __fast_inline void RegisterFailureCallback(auto && cb) { trans_failure_cb = std::move(cb); }
 protected:
     MotorState current_state = MotorState::IDLE;
     MotorState last_state = MotorState::IDLE;

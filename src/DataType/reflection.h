@@ -136,7 +136,7 @@ using ReflectMap = std::map<
         const char*,
         MemberInfo,
         Reflection::CharPtrCompare,
-        Allocator<std::pair<const char* const, MemberInfo>>
+        Allocator<std::pair<const char* const, MemberInfo>> // stored in memory? is it necessary?
 >;
 }
 

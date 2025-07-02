@@ -40,24 +40,24 @@ static int erase(long offset, size_t size)
     return size;
 }
 
-//#include "ascii_tiny_printf.hpp"
-//#include "cpp_classes.hpp"
+// #include "ascii_tiny_printf.hpp"
+// #include "cpp_classes.hpp"
 //
-//void fdb_debug_print(const char *format, ...)
-//{
-//    va_list args;
+// void fdb_debug_print(const char *format, ...)
+// {
+//     va_list args;
 //
-//    /* args point to the first variable parameter */
-//    va_start(args, format);
+//     /* args point to the first variable parameter */
+//     va_start(args, format);
 //
-//    /* You can add your code under here. */
-//    char buffer[128];
-//    auto len = (uint16_t)iFOC::vsnprintf_(buffer, sizeof(buffer), format, args);
-//    if(uart_1.GetTxAvailable() < len) uart_1.StartTransmit(false);
-//    uart_1.WriteBytes((const uint8_t*)buffer, len);
-//    uart_1.StartTransmit(false);
+//     /* You can add your code under here. */
+//     char buffer[128];
+//     auto len = (uint16_t)iFOC::vsnprintf_(buffer, sizeof(buffer), format, args);
+//     if(uart_1.GetTxAvailable() < len) uart_1.StartTransmit(false);
+//     uart_1.WriteBytes((const uint8_t*)buffer, len);
+//     uart_1.StartTransmit(false);
 //
-//    va_end(args);
-//}
+//     va_end(args);
+// }
 
 #endif

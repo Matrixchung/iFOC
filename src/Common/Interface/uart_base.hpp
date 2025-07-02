@@ -46,7 +46,7 @@ protected:
     // __fast_inline void WaitUntilRXNE(TickType_t delay = portMAX_DELAY) { xSemaphoreTake(rx_sem, delay); };
 public:
     UARTBase();
-    ~UARTBase();
+    virtual ~UARTBase();
 
     /// Initialize the UART interface. \n
     /// xSemaphoreGive(tx_sem); and RxEventHandlerTask must be started.
@@ -74,7 +74,7 @@ public:
 
     void Print(bool transmit, const char *fmt, ...);
 
-    __fast_inline void RegisterRxHandler(EventCallback cb) { event_handler.RegisterHandler(std::move(cb)); };
+    __fast_inline void RegisterRxHandler(EventCallback cb) { event_handler.RegisterHandler(cb); };
 
     __fast_inline auto GetRxLen() { return rx_fifo.used(); };
     __fast_inline auto GetTxPending() { return tx_fifo.used(); };

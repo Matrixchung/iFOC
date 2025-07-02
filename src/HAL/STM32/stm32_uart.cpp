@@ -59,28 +59,22 @@ FuncRetCode STM32UART::StartTransmit(bool blocked)
 {
     if(!blocked)
     {
-        if(xSemaphoreTake(tx_sem, READ_WRITE_TIMEOUT_MS) == pdTRUE)
+        if(xSemaphoreTakeAuto(tx_sem, READ_WRITE_TIMEOUT_MS) == pdTRUE)
         {
             auto len = tx_fifo.get(tx_buffer.data(), tx_buffer.max_size());
-            if(len == 0) xSemaphoreGive(tx_sem);
+            if(len == 0) xSemaphoreGiveAuto(tx_sem);
             else if(HAL_UART_Transmit_DMA(huart, (const uint8_t*)tx_buffer.data(), len) != HAL_OK)
             {
                 // BUSY, give back semaphore
-                xSemaphoreGive(tx_sem);
+                xSemaphoreGiveAuto(tx_sem);
                 return FuncRetCode::BUSY;
             }
             return FuncRetCode::OK;
         }
         return FuncRetCode::REMOTE_TIMEOUT;
     }
-    else
-    {
-        // xSemaphoreTake(tx_fifo_mutex, portMAX_DELAY);
-        auto len = tx_fifo.get(tx_buffer.data(), tx_buffer.max_size());
-        // xSemaphoreGive(tx_fifo_mutex);
-        if(HAL_UART_Transmit(huart, (const uint8_t*)tx_buffer.data(), len, 0xF) != HAL_OK) return FuncRetCode::BUSY;
-        // CallTxCpltCallback();
-    }
+    auto len = tx_fifo.get(tx_buffer.data(), tx_buffer.max_size());
+    if(HAL_UART_Transmit(huart, (const uint8_t*)tx_buffer.data(), len, 0xF) != HAL_OK) return FuncRetCode::BUSY;
     return FuncRetCode::OK;
 }
 
