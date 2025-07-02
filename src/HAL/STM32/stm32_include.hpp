@@ -6,3 +6,4 @@
 #include "stm32_spi.hpp"
 #include "stm32_two_shunt_currsense.hpp"
 #include "stm32_uart.hpp"
+#include "stm32_can.hpp"
