@@ -1,8 +1,12 @@
 #pragma once
 
+#include <deque>
 #include <string>
 #include <vector>
 #include <list>
+#include <map>
+#include <unordered_map>
+
 #include "portable.h"
 
 /// \brief Custom memory allocator for STL containers using FreeRTOS Heap
@@ -27,8 +31,8 @@ public:
     using value_type = T;
     using pointer = T*;
     using const_pointer = const T*;
-    using reference = T&;
-    using const_reference = const T&;
+    // using reference = T&;
+    // using const_reference = const T&;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
 
@@ -62,5 +66,14 @@ using Vector = std::vector<T, Allocator<T>>;
 
 template<typename T>
 using List = std::list<T, Allocator<T>>;
+
+template<typename T>
+using Deque = std::deque<T, Allocator<T>>;
+
+template<typename T1, typename T2>
+using Map = std::map<T1, T2, std::less<T1>, Allocator<std::pair<const T1, T2>>>;
+
+template<typename T1, typename T2>
+using HashMap = std::unordered_map<T1, T2, std::hash<T1>, std::equal_to<T1>, Allocator<std::pair<const T1, T2>>>;
 
 }
