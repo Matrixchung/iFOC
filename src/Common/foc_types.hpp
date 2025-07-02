@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstring>
 #include <optional>
+#include <functional>
 
 #include "Math/real_t.hpp"
 #include "FreeRTOS.h"
@@ -75,4 +76,7 @@ static void operator delete(void* ptr) noexcept\
 {                      \
     vPortFree(ptr); \
 }
+
+#define xSemaphoreTakeAuto(xSemaphore, xBlockTime) (xPortIsInsideInterrupt() ? (xSemaphoreTakeFromISR((xSemaphore), nullptr)) : (xSemaphoreTake((xSemaphore), (xBlockTime))))
+#define xSemaphoreGiveAuto(xSemaphore) (xPortIsInsideInterrupt() ? xSemaphoreGiveFromISR((xSemaphore), nullptr) : xSemaphoreGive((xSemaphore)))
 }
