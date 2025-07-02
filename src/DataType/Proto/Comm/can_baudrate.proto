@@ -1,0 +1,19 @@
+syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
+package iFOC.DataType.Comm;
+
+enum CANBaudrate {
+  BAUD_AUTO_DETECT = 0;
+  BAUD_10_KBPS = 1;
+  BAUD_20_KBPS = 2;
+  BAUD_50_KBPS = 3;
+  BAUD_100_KBPS = 4;
+  BAUD_125_KBPS = 5;
+  BAUD_250_KBPS = 6;
+  BAUD_500_KBPS = 7;
+  BAUD_800_KBPS = 8;
+  BAUD_1_MBPS = 9;
+  BAUD_2_MBPS = 10;
+  BAUD_5_MBPS = 11;
+}
