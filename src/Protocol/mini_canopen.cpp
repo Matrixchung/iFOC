@@ -4,17 +4,21 @@
 #define SLSS_ADDRESS 0x7E4
 #define MLSS_ADDRESS 0x7E5
 
-#define SDO_TIMEOUT_MS 3000
+#define SDO_TIMEOUT_MS 2000 // Only through timeout can error transfer line be reseted.
 
-#define DEBUG_PRINT(...) uart_1.Print(true, __VA_ARGS__)
-// #define DEBUG_PRINT(...)
+// #define DEBUG_PRINT(...) uart_1.Print(true, __VA_ARGS__)
+
+#ifndef DEBUG_PRINT(...)
+#define DEBUG_PRINT(...)
+#endif
 
 namespace iFOC
 {
 MiniCANOpen::MiniCANOpen(MiniCANOpen::CANSendFunc func)
 {
     can_send = func;
-    sdo_transfers.reserve(SDO_MAX_SIMULTANEOUS_TRANSFERS);
+    // sdo_transfers.reserve(SDO_MAX_SIMULTANEOUS_TRANSFERS);
+    sdo_transfers.resize(SDO_MAX_SIMULTANEOUS_TRANSFERS);
 }
 
 MiniCANOpen::~MiniCANOpen()
@@ -344,10 +348,10 @@ void MiniCANOpen::RegisterEMCYCallback(EMCYCallback cb)
     emcy_callback = cb;
 }
 
-void MiniCANOpen::RegisterSDOCallback(SDOCallback cb)
-{
-    sdo_callback = cb;
-}
+// void MiniCANOpen::RegisterSDOCallback(SDOCallback cb)
+// {
+//     sdo_callback = cb;
+// }
 
 FuncRetCode MiniCANOpen::SDOTransfer::push_back(const uint8_t* ptr, size_t count)
 {
