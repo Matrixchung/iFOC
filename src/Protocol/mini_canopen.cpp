@@ -236,19 +236,19 @@ FuncRetCode MiniCANOpen::SetSerialNumber(uint32_t serial_number)
     return WriteODValue(0x1018, 0x04, 4, &serial_number);
 }
 
-FuncRetCode MiniCANOpen::WriteODValue(uint16_t index, uint8_t subindex, uint8_t value_size, const void* value)
+FuncRetCode MiniCANOpen::WriteODValue(uint16_t index, uint8_t subindex, uint8_t value_size, const void* value, bool bypass)
 {
     auto entry = FindODEntry(index);
     if(!entry || subindex >= entry.value()->subIndexes.size()) return FuncRetCode::PARAM_NOT_EXIST;
     auto& sub = entry.value()->subIndexes[subindex];
-    // if(sub.accessType == ODAccessType::RO) return FuncRetCode::ACCESS_VIOLATION; // Disable access check
+    if(!bypass && sub.accessType == ODAccessType::RO) return FuncRetCode::ACCESS_VIOLATION; // Disable access check
     if(value_size > sub.size) return FuncRetCode::PARAM_OUT_BOUND;
     memcpy(sub.pObject, value, value_size);
     if(entry.value()->rw_callback) entry.value()->rw_callback(ODRWType::WRITE, entry.value(), subindex);
     return FuncRetCode::OK;
 }
 
-FuncRetCode MiniCANOpen::ReadODValue(uint16_t index, uint8_t subindex, uint8_t& actual_size, void* dest)
+FuncRetCode MiniCANOpen::ReadODValue(uint16_t index, uint8_t subindex, uint8_t& actual_size, void* dest, bool bypass)
 {
     auto entry = FindODEntry(index);
     if(!entry || subindex >= entry.value()->subIndexes.size())
@@ -257,7 +257,7 @@ FuncRetCode MiniCANOpen::ReadODValue(uint16_t index, uint8_t subindex, uint8_t& 
         return FuncRetCode::PARAM_NOT_EXIST;
     }
     auto& sub = entry.value()->subIndexes[subindex];
-    // if(sub.accessType == ODAccessType::WO) return FuncRetCode::ACCESS_VIOLATION;
+    if(!bypass && sub.accessType == ODAccessType::WO) return FuncRetCode::ACCESS_VIOLATION;
     actual_size = sub.size;
     memcpy(dest, sub.pObject, actual_size);
     if(entry.value()->rw_callback) entry.value()->rw_callback(ODRWType::READ, entry.value(), subindex);
@@ -1459,7 +1459,7 @@ void MiniCANOpen::SwitchCurrentHandleState(const HandleState& new_state)
     StartOrStop(handle_lss, None, None);
     StartOrStop(handle_sdo, None, ResetAllSDO());
     StartOrStop(handle_sync, None, None); // startSYNC, stopSYNC
-    StartOrStop(handle_lifeguard, None, None); // lifeGuardInit, lifeGuartStop
+    StartOrStop(handle_lifeguard, LifeguardInit(), LifeguardStop()); // lifeGuardInit, lifeGuardStop
     StartOrStop(handle_emergency, None, None);
     StartOrStop(handle_pdo, None, None); // PDOInit, PDOStop
     StartOrStop(handle_bootup, None, SendBootUp());
@@ -1670,7 +1670,7 @@ std::optional<MiniCANOpen::SDOTransfer*> MiniCANOpen::GetSDOLineFree(SDORole exp
 
 FuncRetCode MiniCANOpen::ParseSDOLineToOD(const SDOTransfer& transfer)
 {
-    return WriteODValue(transfer.target_index, transfer.target_subindex, transfer.data.size(), transfer.data.data());
+    return WriteODValue(transfer.target_index, transfer.target_subindex, transfer.data.size(), transfer.data.data(), false);
 }
 
 FuncRetCode MiniCANOpen::ParseODToSDOLine(SDOTransfer& transfer)
@@ -1679,7 +1679,7 @@ FuncRetCode MiniCANOpen::ParseODToSDOLine(SDOTransfer& transfer)
     if(actual_size > SDOTransfer::SDO_MAX_TRANSFER_SIZE) return FuncRetCode::BUFFER_FULL;
     transfer.data.clear();
     transfer.data.resize(actual_size);
-    return ReadODValue(transfer.target_index, transfer.target_subindex, actual_size, transfer.data.data());
+    return ReadODValue(transfer.target_index, transfer.target_subindex, actual_size, transfer.data.data(), false);
 }
 
 void MiniCANOpen::StartSDOTimer(SDOTransfer& transfer)
@@ -1721,6 +1721,47 @@ void MiniCANOpen::SDOTransferTimerCallback(uint16_t id)
             ResetSDOLine(transfer);
         }
     }
+}
+
+void MiniCANOpen::LifeguardInit()
+{
+    if(m_NodeId == 0xFF) return;
+    uint16_t heartbeat_time_ms = 0;
+    uint8_t actual_size = 0;
+    if(ReadODValue(0x1017, 0x00, actual_size, &heartbeat_time_ms) == FuncRetCode::OK && actual_size == 2 && heartbeat_time_ms > 0)
+    {
+        producer_heartbeat_swtimer_id = alarm_timer.GetUnusedTimerID();
+        alarm_timer.AddTimer(producer_heartbeat_swtimer_id, heartbeat_time_ms, std::bind(&MiniCANOpen::ProducerHeartbeatAlarmCallback, this, std::placeholders::_1));
+    }
+}
+
+void MiniCANOpen::LifeguardStop()
+{
+    if(producer_heartbeat_swtimer_id != 0xFFFF)
+    {
+        alarm_timer.DelTimer(producer_heartbeat_swtimer_id);
+        producer_heartbeat_swtimer_id = 0xFFFF;
+    }
+}
+
+void MiniCANOpen::ProducerHeartbeatAlarmCallback(uint16_t id)
+{
+    if(m_NodeId == 0xFF) return;
+    uint16_t heartbeat_time_ms = 0;
+    uint8_t actual_size = 0;
+    if(ReadODValue(0x1017, 0x00, actual_size, &heartbeat_time_ms) == FuncRetCode::OK && actual_size == 2 && heartbeat_time_ms > 0)
+    {
+        DataType::Comm::CANMessage msg
+        {
+            .cob_id = (uint16_t)((uint16_t)GetNodeID() + 0x700),
+            .is_rtr = false,
+            .len = 1
+        };
+        msg.data[0] = to_underlying(m_NodeState);
+        can_send(msg);
+        alarm_timer.SetTimerInterval(producer_heartbeat_swtimer_id, heartbeat_time_ms);
+    }
+    else LifeguardStop();
 }
 
 MiniCANOpen::DS301FuncCode MiniCANOpen::GetFuncCodeFromCOB(uint16_t cob_id)

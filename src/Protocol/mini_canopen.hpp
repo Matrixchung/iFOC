@@ -17,10 +17,10 @@ public:
     allocator_type allocator;
     enum class NodeState : uint8_t
     {
-        Initialisation,
-        PreOperational,
-        Operational,
-        Stopped
+        Initialisation = 0x01,
+        PreOperational = 0x7F,
+        Operational = 0x05,
+        Stopped = 0x04,
     };
     enum NMTCommand : uint8_t
     {
@@ -120,8 +120,8 @@ public:
     FuncRetCode SetProductCode(uint32_t product_code);
     FuncRetCode SetRevisionNumber(uint32_t revision_number);
     FuncRetCode SetSerialNumber(uint32_t serial_number);
-    FuncRetCode WriteODValue(uint16_t index, uint8_t subindex, uint8_t value_size, const void* value);
-    FuncRetCode ReadODValue(uint16_t index, uint8_t subindex, uint8_t& actual_size, void* dest);
+    FuncRetCode WriteODValue(uint16_t index, uint8_t subindex, uint8_t value_size, const void* value, bool bypass = true); // bypass: bypass R/W permission
+    FuncRetCode ReadODValue(uint16_t index, uint8_t subindex, uint8_t& actual_size, void* dest, bool bypass = true);
     uint8_t GetODValueSize(uint16_t index, uint8_t subindex);
     std::optional<ODEntry*> FindODEntry(uint16_t index);
     [[nodiscard]] uint8_t GetNodeID() const;
@@ -331,6 +331,12 @@ private:
     void StopSDOTimer(SDOTransfer& transfer);
     void ResetSDOTimer(const SDOTransfer& transfer);
     void SDOTransferTimerCallback(uint16_t id);
+
+    /* Producer Heartbeat Alarm */
+    uint16_t producer_heartbeat_swtimer_id = 0xFFFF;
+    void LifeguardInit();
+    void LifeguardStop();
+    void ProducerHeartbeatAlarmCallback(uint16_t id);
 
     static DS301FuncCode GetFuncCodeFromCOB(uint16_t cob_id);
     static uint8_t GetNodeIDFromCOB(uint16_t cob_id);
