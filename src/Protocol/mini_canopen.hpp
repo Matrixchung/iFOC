@@ -100,12 +100,20 @@ public:
     using NodeStateCallback = std::function<void(NodeState prev_state, NodeState new_state)>;
     using LSSCallback = std::function<void(uint8_t command)>;
     using LSSStoreCallback = std::function<void(uint8_t& error_code, uint8_t& spec_error)>;
+    using EMCYCallback = std::function<void(uint8_t emcy_node_id, uint16_t eec, uint8_t error_reg, uint32_t mef)>;
+    using SDOCallback = std::function<void(uint16_t target_index, uint8_t target_subindex)>;
     explicit MiniCANOpen(CANSendFunc func);
     ~MiniCANOpen();
 
     void OnRxMessage(const DataType::Comm::CANMessage& msg);
+    void Tick(uint32_t ms);
 
     void SetNodeState(NodeState new_state);
+    // On handling EMCY message: send emergency protocol with eec, error_reg and mef
+    //                     Also: store the error_reg into 0x1001:00, store MEF into 0x1003:01
+    void SetEMCYError(uint16_t eec, uint8_t error_reg, uint32_t mef);
+    // On clearing EMCY message: clear error_reg & MEF, send emergency protocol with eec = 0x0000
+    void ClearEMCYError();
     void AddODEntry(const ODEntry& entry); // Add if not exist, else override
     FuncRetCode SetVendorID(uint32_t vendor_id);
     FuncRetCode SetProductCode(uint32_t product_code);
@@ -113,6 +121,7 @@ public:
     FuncRetCode SetSerialNumber(uint32_t serial_number);
     FuncRetCode WriteODValue(uint16_t index, uint8_t subindex, uint8_t value_size, const void* value);
     FuncRetCode ReadODValue(uint16_t index, uint8_t subindex, uint8_t& actual_size, void* dest);
+    uint8_t GetODValueSize(uint16_t index, uint8_t subindex);
     std::optional<ODEntry*> FindODEntry(uint16_t index);
     [[nodiscard]] uint8_t GetNodeID() const;
     void SetNodeID(uint8_t node_id);
@@ -120,6 +129,8 @@ public:
     void RegisterNodeStateCallback(NodeStateCallback cb);
     void RegisterLSSCallback(LSSCallback cb);
     void RegisterLSSStoreCallback(LSSStoreCallback cb);
+    void RegisterEMCYCallback(EMCYCallback cb);
+    void RegisterSDOCallback(SDOCallback cb);
 private:
     enum DS301FuncCode : uint8_t
     {
@@ -138,6 +149,100 @@ private:
         RX_SDO = 0x0C,
         NODE_GUARD = 0x0E,
         LSS = 0x0F
+    };
+    enum SDORole : uint8_t
+    {
+        SDO_UNKNOWN = 0x0,
+        SDO_SERVER = 0x1,
+        SDO_CLIENT = 0x2,
+    };
+    enum SDOState : uint8_t
+    {
+        STATE_RESET = 0x00,
+        STATE_FINISHED = 0x01,
+        STATE_ABORTED_RCV = 0x80,
+        STATE_ABORTED_INTERNAL = 0x85,
+        STATE_DOWNLOAD_IN_PROGRESS = 0x2,
+        STATE_UPLOAD_IN_PROGRESS = 0x3,
+        STATE_BLOCK_DOWNLOAD_IN_PROGRESS = 0x4,
+        STATE_BLOCK_UPLOAD_IN_PROGRESS = 0x5
+    };
+    enum SDOAbortCode : uint32_t
+    {
+        SDOABT_TOGGLE_NOT_ALTERNED = 0x05030000,
+        SDOABT_TIMED_OUT = 0x05040000,
+        SDOABT_CS_NOT_VALID = 0x05040001,
+        SDOABT_INVALID_BLOCK_SIZE = 0x05040002,
+        SDOABT_OUT_OF_MEMORY = 0x05040005,          // Size data exceed SDO_MAX_LENGTH_TRANSFER
+        SDOABT_GENERAL_ERROR = 0x08000000,          // Error size of SDO message
+        SDOABT_LOCAL_CTRL_ERROR = 0x80000021
+    };
+    enum SDORXStep : uint8_t
+    {
+        RX_STEP_INIT,
+        RX_STEP_STARTED,
+        RX_STEP_END
+    };
+    struct SDOTransfer
+    {
+        static constexpr size_t SDO_MAX_TRANSFER_SIZE = 64;
+        uint8_t sdo_number = 0;            /**< The index of the SDO client / server in our OD minus 0x1280 / 0x1200, real_index = sdo_number + 0x1280 / 0x1200 */
+        SDORole role = SDO_UNKNOWN;        /**< Takes the values SDO_CLIENT or SDO_SERVER */
+        SDOState state = STATE_RESET;      /**< state of the transmission: Takes the value STATE_... */
+        uint8_t toggle = 0;
+        uint8_t peer_crc_support = 0;      /**< True if peer supports CRC */
+        uint8_t block_size = 0;            /**< Number of segments per block with 0 < blksize < 128 */
+        uint8_t ack_sequence = 0;          /**< sequence number of last segment that was received successfully */
+        uint8_t sequence_number = 0;       /**< Last sequence number received OK or transmitted */
+        uint8_t end_field = 0;             /**< nbr of bytes in last segment of last block that do not contain data */
+        SDORXStep rx_step = RX_STEP_INIT;  /**< data consumer receive step - set to RX_STEP_END when last segment of a block received */
+        uint8_t target_subindex = 0;
+        bool swtimer_started = false;
+        uint16_t swtimer_id = 0;
+        uint16_t target_index = 0;
+        // uint16_t timer = 0;                /**< Time counter to implement a timeout, in milliseconds */
+        uint32_t abort_code = 0;           /**< Sent or received */
+                                           /**< index and subindex of the dictionary where to store */
+                                           /**< (for a received SDO) or to read (for a transmit SDO) */
+        uint32_t count = 0;                /**< Number of data received or to be sent. */
+        uint32_t expected_count = 0;       /**< SDOlineRestBytes() */
+        // uint32_t offset = 0;               /**< stack pointer of data[]
+        //                                       * Used only to tranfer part of a line to or from a SDO.
+        //                                       * offset is always pointing on the next free cell of data[].
+        //                                       * WARNING s_transfer.data is subject to ENDIANISATION
+        //                                       * (with respect to CANOPEN_BIG_ENDIAN)
+        //                                       */
+        uint32_t obj_size = 0;             /**< Size in bytes of the object provided by data producer */
+        // uint32_t last_block_offset = 0;    /**< Value of offset before last block */
+        uint8_t temp_data[8]{};            /**< temporary segment storage */
+        Vector<uint8_t> data{};
+        SDOTransfer() { data.reserve(8); }
+        void Reset()
+        {
+            sdo_number = 0;
+            role = SDO_UNKNOWN;
+            state = STATE_RESET;
+            toggle = 0;
+            peer_crc_support = 0;
+            block_size = 0;
+            ack_sequence = 0;
+            sequence_number = 0;
+            end_field = 0;
+            rx_step = RX_STEP_INIT;
+            target_subindex = 0;
+            target_index = 0;
+            swtimer_started = false;
+            swtimer_id = 0;
+            abort_code = 0;
+            count = 0;
+            expected_count = 0;
+            obj_size = 0;
+            memset(&temp_data[0], 0, sizeof(temp_data));
+            data.clear();
+        }
+        // [[nodiscard]] uint8_t GetSWTimerID() const { return SWTIMER_START_ID + sdo_number; }
+        FuncRetCode push_back(const uint8_t *ptr, size_t count);
+        FuncRetCode extract_from_head(uint8_t *dst, size_t count);
     };
     enum LSSServices : uint8_t
     {
@@ -203,13 +308,28 @@ private:
     };
     void ProcessNMTMessage(const DataType::Comm::CANMessage& msg);
     void ProcessSYNCMessage(const DataType::Comm::CANMessage& msg);
-    void ProcessEMCYMessage(const DataType::Comm::CANMessage& msg);
+    void ProcessEMCYMessage(const DataType::Comm::CANMessage& msg) const; // EMCY message from other nodes
     void ProcessPDOMessage(const DataType::Comm::CANMessage& msg);
     void ProcessSDOMessage(const DataType::Comm::CANMessage& msg);
     void ProcessLSSMessage(const DataType::Comm::CANMessage& msg);
     void SwitchCurrentHandleState(const HandleState& new_state);
     void SendSlaveLSSMessage(LSSServices command, void *data1, void *data2) const;
     void SendBootUp() const;
+    /* SDO related helper functions */
+    void ResetAllSDO();
+    void SendSDO(uint8_t sdo_number, SDORole who_am_i, uint8_t *data);
+    void SendAbortSDO(uint8_t sdo_number, SDORole who_am_i, uint16_t target_index, uint8_t target_subindex, SDOAbortCode abort_code);
+    void SendFailedSDO(uint8_t sdo_number, SDORole who_am_i, uint16_t target_index, uint8_t target_subindex, SDOAbortCode abort_code);
+    void ResetSDOLine(SDOTransfer& transfer);
+    void InitSDOLine(SDOTransfer& transfer, uint8_t sdo_number, uint16_t target_index, uint8_t target_subindex, SDOState state);
+    std::optional<SDOTransfer*> GetSDOLineOnUse(uint8_t sdo_number, SDORole who_am_i);
+    std::optional<SDOTransfer*> GetSDOLineFree(SDORole expected_who_am_i);
+    FuncRetCode ParseSDOLineToOD(const SDOTransfer& transfer);
+    FuncRetCode ParseODToSDOLine(SDOTransfer& transfer);
+    void StartSDOTimer(SDOTransfer& transfer);
+    void StopSDOTimer(SDOTransfer& transfer);
+    void ResetSDOTimer(const SDOTransfer& transfer);
+    void SDOTransferTimerCallback(uint16_t id);
     static DS301FuncCode GetFuncCodeFromCOB(uint16_t cob_id);
     static uint8_t GetNodeIDFromCOB(uint16_t cob_id);
     uint8_t m_NodeId = 0xFF;
@@ -218,8 +338,12 @@ private:
     HashMap<uint16_t, ODEntry> m_objectDict{};
     LSSTransfer lss_transfer;
     SoftwareTimer alarm_timer;
+    static constexpr size_t SDO_MAX_SIMULTANEOUS_TRANSFERS = 4;
+    Vector<SDOTransfer> sdo_transfers;
     CANSendFunc can_send = nullptr;
     NMTCallback nmt_callback = nullptr;
     NodeStateCallback node_state_callback = nullptr;
+    EMCYCallback emcy_callback = nullptr;
+    SDOCallback sdo_callback = nullptr;
 };
 }
