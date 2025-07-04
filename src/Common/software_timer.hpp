@@ -26,6 +26,7 @@ public:
     FuncRetCode ResetTimer(uint16_t id);
     void UpdateTimer(uint32_t tickrate);
 private:
-    List<Timer> timers{};
+    // List<Timer> timers{};
+    std::array<Timer, 16> timers{}; // no dynamic memory allocation
 };
 }
