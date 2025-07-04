@@ -5,6 +5,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <queue>
 #include <unordered_map>
 
 #include "portable.h"
@@ -66,6 +67,9 @@ using Vector = std::vector<T, Allocator<T>>;
 
 template<typename T>
 using List = std::list<T, Allocator<T>>;
+
+template<typename T>
+using Queue = std::queue<T, Allocator<T>>;
 
 template<typename T>
 using Deque = std::deque<T, Allocator<T>>;
