@@ -1,5 +1,8 @@
 #include "mini_canopen.hpp"
 #include "cpp_classes.hpp"
+#include <algorithm>
+
+#include "foc_math.hpp"
 
 #define SLSS_ADDRESS 0x7E4
 #define MLSS_ADDRESS 0x7E5

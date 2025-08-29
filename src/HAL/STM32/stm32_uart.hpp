@@ -1,7 +1,7 @@
 #pragma once
 
 #include "uart_base.hpp"
-#include "main.h"
+#include "hal_const.h"
 
 #if defined(HAL_UART_MODULE_ENABLED)
 

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "can_base.hpp"
-#include "main.h"
+#include "hal_const.h"
 
-#if defined(HAL_FDCAN_MODULE_ENABLED)
+#if defined (HAL_FDCAN_MODULE_ENABLED)
 #define USE_STM32_FDCAN
-#else defined(HAL_CAN_MODULE_ENABLED)
+#elif defined (HAL_CAN_MODULE_ENABLED)
 #define USE_STM32_CAN
 #endif
 

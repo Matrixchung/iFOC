@@ -2,7 +2,7 @@
 
 #include "../../Common/Interface/spi_base.hpp"
 #include "../../Common/Interface/gpio_base.hpp"
-#include "main.h"
+#include "hal_const.h"
 
 #if defined(HAL_SPI_MODULE_ENABLED)
 

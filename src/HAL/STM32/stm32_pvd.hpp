@@ -1,6 +1,6 @@
 #pragma once
 
-#include "main.h"
+#include "hal_const.h"
 
 namespace iFOC
 {

@@ -1,5 +1,5 @@
 #include "hal_impl.hpp"
-#include "main.h"
+#include "hal_const.h"
 
 #if defined(USE_HAL_DRIVER)
 

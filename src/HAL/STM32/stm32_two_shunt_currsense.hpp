@@ -2,7 +2,7 @@
 
 #include "../../Sense/curr_sense_base.hpp"
 #include "../../Common/Filter/lowpass_filter.hpp"
-#include "main.h"
+#include "hal_const.h"
 
 #if defined(HAL_ADC_MODULE_ENABLED)
 

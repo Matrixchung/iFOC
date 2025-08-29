@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../Common/Interface/gpio_base.hpp"
-#include "main.h"
+#include "hal_const.h"
 
 #if defined(HAL_GPIO_MODULE_ENABLED)
 

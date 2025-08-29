@@ -1,7 +1,7 @@
 #pragma once
 
 #include "foc_driver_base.hpp"
-#include "main.h"
+#include "hal_const.h"
 
 #if defined(HAL_TIM_MODULE_ENABLED)
 

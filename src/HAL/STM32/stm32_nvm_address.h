@@ -1,6 +1,6 @@
 #pragma once
 
-#include "main.h"
+#include "hal_const.h"
 
 #if defined(STM32G431xx)
 #define ADDR_FLASH_PAGE_0     ((uint32_t)0x08000000) /* Base @ of Page 0, 2 Kbytes */
@@ -70,8 +70,8 @@
 
 #define FLASH_WRITE_GRAN_BITS           (64)   // DOUBLE WORD
 #define FLASH_SECTOR_SIZE_BYTES         (1024 * 2)
-#define FLASH_USER_START_ADDR           (ADDR_FLASH_PAGE_60)
-#define FLASH_USER_AREA_SIZE            (4 * FLASH_SECTOR_SIZE_BYTES)
+#define FLASH_USER_START_ADDR           (ADDR_FLASH_PAGE_62)
+#define FLASH_USER_AREA_SIZE            (2 * FLASH_SECTOR_SIZE_BYTES)
 //#define USE_EASYFLASH
 #define USE_FLASHDB
 #endif
