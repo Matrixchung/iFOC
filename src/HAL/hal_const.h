@@ -1,9 +1,11 @@
 #pragma once
 
 #if defined __has_include
-#  if __has_include ("main.h")
+#  if __has_include ("main.h") // STM32 Environment
 #  include "main.h"
-#  else
+#  elif __has_include ("wk_gpio.h") // AT32 with Workbench Environment
+#  include "wk_gpio.h"
+#else
 #error "No main.h specified, please check hal_const.h"
 #  endif
 #else
@@ -13,6 +15,8 @@
 #ifdef USE_HAL_DRIVER // STM32 Environment
 #include "stm32_nvm_address.h"
 
+#elif defined(AT32F403Axx) || defined(AT32F407xx) // AT32F40x Environment
+#include "at32wk_nvm_address.h"
 #endif
 
 /* Checking const validity */
