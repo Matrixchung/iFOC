@@ -4,6 +4,7 @@
 #  if __has_include ("main.h") // STM32 Environment
 #  include "main.h"
 #  elif __has_include ("wk_gpio.h") // AT32 with Workbench Environment
+#  define AT32WK_ENV
 #  include "wk_gpio.h"
 #else
 #error "No main.h specified, please check hal_const.h"
