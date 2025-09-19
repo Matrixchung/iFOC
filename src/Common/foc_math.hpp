@@ -149,6 +149,29 @@ static uint16_t get_crc16_accumulate(uint16_t origin_crc, const uint8_t* data, c
     return (uint16_t)(crc_h << 8 | crc_l);
 }
 
+static void get_rgb_color_wheel(uint8_t pos, uint8_t *r, uint8_t *g, uint8_t *b)
+{
+    if(pos < 85)
+    {
+        *r = pos * 3;
+        *g = 255 - *r;
+        *b = 0;
+        return;
+    }
+    if(pos < 170)
+    {
+        pos -= 85;
+        *g = 0;
+        *b = pos * 3;
+        *r = 255 - *b;
+        return;
+    }
+    pos -= 170;
+    *r = 0;
+    *g = pos * 3;
+    *b = 255 - *g;
+}
+
 /// Get CRC16 result of data[len] \n
 /// Poly: X^16 + X^15 + X^2 + 1 (0x8005), CRC-16-IBM(CRC-16/MODBUS) \n
 /// Initial Value: 0xFFFF, Input Flip: Yes, Output Flip: No \n
