@@ -4,6 +4,7 @@
 #include "driver_base.hpp"
 #include "../Sense/curr_sense_base.hpp"
 #include "../Sense/bus_sense_base.hpp"
+#include "../Sense/temp_sense_base.hpp"
 #include "../Encoder/encoder_base.hpp"
 #include "../Encoder/task_update_encoder.hpp"
 #include "../DataType/Headers/Base/motor_error.h"
@@ -21,12 +22,6 @@ namespace _const
     static constexpr uint8_t MOTOR_CONFIG_STORE_SECTOR_BEGIN = NVM_BOARD_CONFIG_STORE_SECTOR + 1;
 }
 
-class MotorTaskTimes
-{
-public:
-
-};
-
 template<uint8_t shunt_count>
 class MotorBase
 {
@@ -35,7 +30,7 @@ class MotorBase
 protected:
     using MotorError = iFOC::DataType::Base::MotorError;
 public:
-    explicit MotorBase(uint8_t _id) : internal_id(_id) {};
+    explicit MotorBase(uint8_t _id) : internal_id(_id) {}
     MotorBase() : MotorBase(SYSTEM_MOTOR_NUM++) {};
     /// Initialize the motor instance. You must have at least TWO processes completed before: \n
     /// 1) LinkDriver() \n
@@ -95,10 +90,16 @@ public:
     void BypassTaskByName(Args... args);
     template<typename... Args>
     void UnbypassTaskByName(Args... args);
-    [[nodiscard]] __fast_inline Sense::BusSenseBase * GetBusSense();
+    [[nodiscard]] __fast_inline Sense::BusSenseBase * GetBusSense() const;
     __fast_inline void LinkBusSense(Sense::BusSenseBase *bus);
     template<uint8_t other_shunt> void LinkBusSense(MotorBase<other_shunt>& other);
-    [[nodiscard]] __fast_inline uint8_t GetInternalID();
+    __fast_inline void LinkCoreTempSense(Sense::TempSenseBase *core);
+    __fast_inline void LinkMosfetTempSense(Sense::TempSenseBase *mosfet);
+    __fast_inline void LinkMotorTempSense(Sense::TempSenseBase *motor);
+    std::optional<Sense::TempSenseBase*> GetCoreTempSense();
+    std::optional<Sense::TempSenseBase*> GetMosfetTempSense();
+    std::optional<Sense::TempSenseBase*> GetMotorTempSense();
+    [[nodiscard]] __fast_inline uint8_t GetInternalID() const;
     // void ThrowError(MotorError e);
     __fast_inline void ClearError();
     [[nodiscard]] __fast_inline MotorError GetError();
@@ -128,6 +129,10 @@ protected:
     Driver::DriverBase* driver{};
     Sense::CurrSenseBase<shunt_count>* curr_sense{};
     Sense::BusSenseBase* bus_sense{};
+
+    Sense::TempSenseBase* core_temp{};
+    Sense::TempSenseBase* mosfet_temp{};
+    Sense::TempSenseBase* motor_temp{};
 
     /// \brief Watchdog feature: if enabled, watchdog_cnt should be periodically updated by any of the user input (set to 0),
     /// otherwise, when the counter (added up in Mid task) exceeds preset limit, a motor shutdown will be immediately triggered.
@@ -242,7 +247,7 @@ void MotorBase<shunt_count>::UnbypassTaskByName(Args... args)
 }
 
 template<uint8_t shunt_count>
-Sense::BusSenseBase *MotorBase<shunt_count>::GetBusSense()
+Sense::BusSenseBase *MotorBase<shunt_count>::GetBusSense() const
 {
     return (Sense::BusSenseBase *) bus_sense;
 }
@@ -262,7 +267,47 @@ void MotorBase<shunt_count>::LinkBusSense(MotorBase<other_shunt> &other)
 }
 
 template<uint8_t shunt_count>
-uint8_t MotorBase<shunt_count>::GetInternalID()
+void MotorBase<shunt_count>::LinkCoreTempSense(Sense::TempSenseBase *core)
+{
+    core_temp = core;
+}
+
+template<uint8_t shunt_count>
+void MotorBase<shunt_count>::LinkMosfetTempSense(Sense::TempSenseBase *mosfet)
+{
+    mosfet_temp = mosfet;
+}
+
+template<uint8_t shunt_count>
+void MotorBase<shunt_count>::LinkMotorTempSense(Sense::TempSenseBase *motor)
+{
+    motor_temp = motor;
+}
+
+template <uint8_t shunt_count>
+std::optional<Sense::TempSenseBase*> MotorBase<shunt_count>::GetCoreTempSense()
+{
+    /// WARNING: std::make_optional(nullptr) -> has_value() == true
+    if(!core_temp) return std::nullopt;
+    return std::make_optional<Sense::TempSenseBase*>(core_temp);
+}
+
+template <uint8_t shunt_count>
+std::optional<Sense::TempSenseBase*> MotorBase<shunt_count>::GetMosfetTempSense()
+{
+    if(!mosfet_temp) return std::nullopt;
+    return std::make_optional<Sense::TempSenseBase*>(mosfet_temp);
+}
+
+template <uint8_t shunt_count>
+std::optional<Sense::TempSenseBase*> MotorBase<shunt_count>::GetMotorTempSense()
+{
+    if(!motor_temp) return std::nullopt;
+    return std::make_optional<Sense::TempSenseBase*>(motor_temp);
+}
+
+template<uint8_t shunt_count>
+uint8_t MotorBase<shunt_count>::GetInternalID() const
 {
     return internal_id;
 }

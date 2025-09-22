@@ -43,10 +43,16 @@ void UpdateSenseTask::UpdateRT(float Ts)
 void UpdateSenseTask::UpdateNormal()
 {
     if(foc->GetInternalID() == 0) foc->GetBusSense()->Update(); // only update BusSense if is primary instance
-    if(foc->GetBusSense()->current > BoardConfig.GetConfig().bus_max_positive_current())
-        foc->DisarmWithError(DataType::Base::MotorError::DC_BUS_OVER_DRAIN_CURRENT);
-    if(foc->GetBusSense()->current < BoardConfig.GetConfig().bus_max_negative_current())
-        foc->DisarmWithError(DataType::Base::MotorError::DC_BUS_OVER_RECHARGE_CURRENT);
+    if(foc->GetBusSense()->current > BoardConfig().GetConfig().bus_max_positive_current())
+        foc->DisarmWithError(MotorError::DC_BUS_OVER_DRAIN_CURRENT);
+    if(foc->GetBusSense()->current < BoardConfig().GetConfig().bus_max_negative_current())
+        foc->DisarmWithError(MotorError::DC_BUS_OVER_RECHARGE_CURRENT);
+    if(const auto core = foc->GetCoreTempSense())
+        core.value()->Update();
+    if(const auto mosfet = foc->GetMosfetTempSense())
+        mosfet.value()->Update();
+    if(const auto motor = foc->GetMotorTempSense())
+        motor.value()->Update();
     sleep(10);
 }
 }
