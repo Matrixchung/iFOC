@@ -6,7 +6,7 @@
 
 namespace iFOC::Driver
 {
-#define config iFOC::BoardConfig.GetConfig()
+#define config iFOC::BoardConfig().GetConfig()
 
 #if defined(STM32G4) || defined(STM32F3)
     // More about Dithering Mode: see STM32G4 RM0440

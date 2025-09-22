@@ -11,10 +11,10 @@ namespace iFOC::HAL
 ///                       higher than LIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY(5). \n
 ///                    2) USART DMA Rx Circular Mode, Tx Normal Mode. (Alignment: BYTE) \n
 ///                    3) USART Overrun Flag(ORE) Disabled
-class STM32UART final : public UARTBase
+class UART final : public UARTBase
 {
 public:
-    explicit STM32UART(UART_HandleTypeDef *_huart);
+    explicit UART(UART_HandleTypeDef *_huart);
     FuncRetCode Init(DataType::Comm::UARTBaudrate baud) final;
     FuncRetCode StartTransmit(bool blocked) final;
     void OnIdleIRQ(UART_HandleTypeDef *_huart, uint16_t Size);
@@ -22,7 +22,6 @@ public:
 private:
     static constexpr size_t TX_FIFO_BUFFER_SIZE = (configTOTAL_HEAP_SIZE >= 16384) ? 512 : 256;
     static constexpr size_t RX_FIFO_BUFFER_SIZE = (configTOTAL_HEAP_SIZE >= 16384) ? 512 : 256;
-    static constexpr size_t HALF_RX_FIFO_BUFFER_SIZE = RX_FIFO_BUFFER_SIZE / 2;
     UART_HandleTypeDef *huart;
     std::array<uint8_t, TX_FIFO_BUFFER_SIZE> tx_buffer;
     std::array<uint8_t, RX_FIFO_BUFFER_SIZE> rx_buffer;

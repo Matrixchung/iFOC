@@ -4,9 +4,9 @@
 
 namespace iFOC::HAL
 {
-STM32CAN::STM32CAN(can_handle_t* _hcan) : CANBase(), hcan(_hcan) {}
+CAN::CAN(can_handle_t* _hcan) : hcan(_hcan) {}
 
-FuncRetCode STM32CAN::Init(DataType::Comm::CANBaudrate baud)
+FuncRetCode CAN::Init(DataType::Comm::CANBaudrate baud)
 {
 #ifdef USE_STM32_FDCAN
     if(HAL_FDCAN_DeInit(hcan) != HAL_OK) return FuncRetCode::PARAM_NOT_EXIST;
@@ -59,7 +59,7 @@ FuncRetCode STM32CAN::Init(DataType::Comm::CANBaudrate baud)
 #endif
 }
 
-FuncRetCode STM32CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
+FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
 {
     if(xSemaphoreTakeAuto(tx_sem, WRITE_TIMEOUT_MS) == pdTRUE)
     {
@@ -83,7 +83,7 @@ FuncRetCode STM32CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
     return FuncRetCode::REMOTE_TIMEOUT;
 }
 
-void STM32CAN::OnIRQ(can_handle_t *_can)
+void CAN::OnIRQ(can_handle_t *_can)
 {
     if(_can != hcan) return;
 #ifdef USE_STM32_FDCAN

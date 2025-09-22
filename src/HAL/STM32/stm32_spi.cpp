@@ -6,15 +6,15 @@
 
 namespace iFOC::HAL
 {
-STM32SPI::STM32SPI(SPI_HandleTypeDef* _hspi, GPIOBase& _cs) : hspi(_hspi), cs(_cs) {};
-STM32SPI::STM32SPI(SPI_HandleTypeDef* _hspi, GPIOBase* _cs) : hspi(_hspi), cs(*_cs) {};
+SPI::SPI(SPI_HandleTypeDef* _hspi, GPIOBase& _cs) : hspi(_hspi), cs(_cs) {};
+SPI::SPI(SPI_HandleTypeDef* _hspi, GPIOBase* _cs) : hspi(_hspi), cs(*_cs) {};
 
 #if defined(STM32G4)
 HAL_StatusTypeDef my_HAL_SPI_TransmitReceive(SPI_HandleTypeDef *hspi, const uint8_t *pTxData, uint8_t *pRxData,
                                           const uint16_t Size, const uint32_t Timeout);
 #endif
 
-FuncRetCode STM32SPI::Init()
+FuncRetCode SPI::Init()
 {
     cs.ModeOutPP();
     cs = 1;
@@ -28,7 +28,7 @@ FuncRetCode STM32SPI::Init()
     return FuncRetCode::OK;
 }
 
-FuncRetCode STM32SPI::WriteBytes(const uint8_t *data, const uint16_t size)
+FuncRetCode SPI::WriteBytes(const uint8_t *data, const uint16_t size)
 {
     cs = 0;
     const auto ret = HAL_SPI_Transmit(hspi, data, size, 0xF);
@@ -39,7 +39,7 @@ FuncRetCode STM32SPI::WriteBytes(const uint8_t *data, const uint16_t size)
     return FuncRetCode::HARDWARE_ERROR;
 }
 
-FuncRetCode STM32SPI::ReadBytes(uint8_t *data, const uint16_t size)
+FuncRetCode SPI::ReadBytes(uint8_t *data, const uint16_t size)
 {
     cs = 0;
     const auto ret = HAL_SPI_Receive(hspi, data, size, 0xF);
@@ -50,7 +50,7 @@ FuncRetCode STM32SPI::ReadBytes(uint8_t *data, const uint16_t size)
     return FuncRetCode::HARDWARE_ERROR;
 }
 
-FuncRetCode STM32SPI::WriteReadBytes(const uint8_t *write_data, uint8_t *read_data, const uint16_t size)
+FuncRetCode SPI::WriteReadBytes(const uint8_t *write_data, uint8_t *read_data, const uint16_t size)
 {
     cs = 0;
 #if defined(STM32G4) // platform-specific optimization
@@ -66,13 +66,13 @@ FuncRetCode STM32SPI::WriteReadBytes(const uint8_t *write_data, uint8_t *read_da
 }
 
 
-void STM32SPI::SetDataWidth(SPIBase::DataWidth w)
+void SPI::SetDataWidth(SPIBase::DataWidth w)
 {
     hspi->Init.DataSize = SPI_DATASIZE_8BIT;
     if(w == SPIBase::DataWidth::HALF_WORD) hspi->Init.DataSize = SPI_DATASIZE_16BIT;
 }
 
-void STM32SPI::SetClock(const uint32_t clock)
+void SPI::SetClock(const uint32_t clock)
 {
 #if defined(STM32G4)
     const auto spi_base_clock = HAL::GetCoreClockHz();
@@ -89,7 +89,7 @@ void STM32SPI::SetClock(const uint32_t clock)
     else hspi->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
 }
 
-void STM32SPI::SetCPOLCPHA(const uint8_t cpol, const uint8_t cpha)
+void SPI::SetCPOLCPHA(const uint8_t cpol, const uint8_t cpha)
 {
     if(cpol == 1) hspi->Init.CLKPolarity = SPI_POLARITY_HIGH;
     else hspi->Init.CLKPolarity = SPI_POLARITY_LOW;

@@ -4,9 +4,9 @@
 
 namespace iFOC::HAL
 {
-STM32UART::STM32UART(UART_HandleTypeDef *_huart) : UARTBase(), huart(_huart) {}
+UART::UART(UART_HandleTypeDef *_huart) : UARTBase(), huart(_huart) {}
 
-FuncRetCode STM32UART::Init(DataType::Comm::UARTBaudrate baud)
+FuncRetCode UART::Init(DataType::Comm::UARTBaudrate baud)
 {
     FuncRetCode ret = tx_fifo.init(TX_FIFO_BUFFER_SIZE);
     if(ret != FuncRetCode::OK) return ret;
@@ -55,7 +55,7 @@ FuncRetCode STM32UART::Init(DataType::Comm::UARTBaudrate baud)
     return FuncRetCode::OK;
 }
 
-FuncRetCode STM32UART::StartTransmit(bool blocked)
+FuncRetCode UART::StartTransmit(bool blocked)
 {
     if(!blocked)
     {
@@ -83,7 +83,7 @@ FuncRetCode STM32UART::StartTransmit(bool blocked)
 /// Note 1: If DMA is in circular mode, and TC event happened, HAL Library will set IDLE event again with
 ///         Size == BUFFER_SIZE.\n
 /// Note 2: All single data packet size > RX_FIFO_BUFFER_SIZE will probably be truncated or get corrupted. \n
-void STM32UART::OnIdleIRQ(UART_HandleTypeDef *_huart, uint16_t Size)
+void UART::OnIdleIRQ(UART_HandleTypeDef *_huart, uint16_t Size)
 {
     if(_huart == huart)
     {
@@ -122,7 +122,7 @@ void STM32UART::OnIdleIRQ(UART_HandleTypeDef *_huart, uint16_t Size)
     }
 }
 
-void STM32UART::OnTxCpltIRQ(UART_HandleTypeDef *_huart)
+void UART::OnTxCpltIRQ(UART_HandleTypeDef *_huart)
 {
     if(_huart == huart)
     {

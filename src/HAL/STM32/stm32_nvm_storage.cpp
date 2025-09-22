@@ -6,7 +6,6 @@
 #include "stm32_nvm_address.h"
 
 #if defined(STM32G431xx)
-#define FLASH_USER_START_ADDR_ (ADDR_FLASH_PAGE_56)
 #define FLASH_ADDR_ALIGN (FLASH_WRITE_GRAN_BITS / 8)
 
 static constexpr uint32_t GetPage(const uint32_t Addr)

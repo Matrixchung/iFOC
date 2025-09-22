@@ -7,6 +7,7 @@
 #  if __has_include ("arm_math.h") && __has_include ("arm_common_tables.h")
 #    include "arm_math.h"
 #    include "arm_common_tables.h"
+#define ARM_MATH_PRESENT
 void our_arm_sin_cos_f32(float32_t theta, float32_t & rSinVal, float32_t & rCosVal);
 #  endif
 #else
@@ -28,7 +29,7 @@ namespace iFOC::HAL
 //     sin = -(float)((int32_t)CORDIC->RDATA) / (float)Q31;
 //     cos = -(float)((int32_t)CORDIC->RDATA) / (float)Q31;
 // }
-#if defined(ARM_MATH_DSP) // currently fastest on STM32G4
+#if defined(ARM_MATH_DSP) && defined(ARM_MATH_PRESENT) // currently fastest on STM32G4
 void sinf_cosf_impl(const real_t theta, real_t& sin, real_t& cos)
 {
     // arm_sin_cos_f32(theta, &sin, &cos); // ORIGINAL arm_sin_cos_f32 input is in DEGREE!!!
@@ -62,6 +63,7 @@ uint32_t GetSerialNumber()
 
 }
 
+#if defined(ARM_MATH_PRESENT)
 void our_arm_sin_cos_f32(float32_t theta, float32_t & rSinVal, float32_t & rCosVal)
 {
     float32_t fract, in;
@@ -122,5 +124,6 @@ void our_arm_sin_cos_f32(float32_t theta, float32_t & rSinVal, float32_t & rCosV
 
     if (theta < 0.0f) rSinVal = -rSinVal;
 }
+#endif
 
 #endif

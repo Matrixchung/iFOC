@@ -7,10 +7,10 @@
 
 namespace iFOC::HAL
 {
-    class STM32GPIO final : public GPIOBase
+    class GPIO final : public GPIOBase
     {
     public:
-        STM32GPIO(GPIO_TypeDef *_port, uint32_t _pin) : port(_port), pin(_pin) {};
+        GPIO(GPIO_TypeDef *_port, uint32_t _pin) : port(_port), pin(_pin) {};
         __fast_inline void Set() final;
         __fast_inline void Clear() final;
         __fast_inline void Write(bool val) final;
@@ -24,33 +24,33 @@ namespace iFOC::HAL
         uint32_t pin;
     };
 
-    __fast_inline void STM32GPIO::Set()
+    __fast_inline void GPIO::Set()
     {
         LL_GPIO_SetOutputPin(port, pin);
     }
 
-    __fast_inline void STM32GPIO::Clear()
+    __fast_inline void GPIO::Clear()
     {
         LL_GPIO_ResetOutputPin(port, pin);
     }
 
-    __fast_inline void STM32GPIO::Write(const bool val)
+    __fast_inline void GPIO::Write(const bool val)
     {
         if(val) Set();
         else Clear();
     }
 
-    __fast_inline bool STM32GPIO::Read() const
+    __fast_inline bool GPIO::Read() const
     {
         return LL_GPIO_IsInputPinSet(port, pin);
     }
 
-    __fast_inline void STM32GPIO::Toggle()
+    __fast_inline void GPIO::Toggle()
     {
         LL_GPIO_TogglePin(port, pin);
     }
 
-    __fast_inline void STM32GPIO::SetMode(const GPIOBase::GPIOMode mode)
+    __fast_inline void GPIO::SetMode(const GPIOBase::GPIOMode mode)
     {
         switch(mode)
         {
@@ -84,7 +84,7 @@ namespace iFOC::HAL
                 __builtin_unreachable();
         }
     }
-    __fast_inline void STM32GPIO::SetPull(const GPIOPull pull)
+    __fast_inline void GPIO::SetPull(const GPIOPull pull)
     {
 #if defined(STM32F1)
         if(pull == GPIOBase::GPIOPull::PULL_NO) ;

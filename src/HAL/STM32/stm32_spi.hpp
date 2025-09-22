@@ -8,11 +8,11 @@
 
 namespace iFOC::HAL
 {
-class STM32SPI final : public SPIBase
+class SPI final : public SPIBase
 {
 public:
-    STM32SPI(SPI_HandleTypeDef* _hspi, GPIOBase& _cs);
-    STM32SPI(SPI_HandleTypeDef* _hspi, GPIOBase* _cs);
+    SPI(SPI_HandleTypeDef* _hspi, GPIOBase& _cs);
+    SPI(SPI_HandleTypeDef* _hspi, GPIOBase* _cs);
     FuncRetCode Init() final;
     FuncRetCode WriteBytes(const uint8_t* data, const uint16_t size) final;
     FuncRetCode ReadBytes(uint8_t* data, const uint16_t size) final;
