@@ -14,9 +14,11 @@ public:
     ADCPortBase() = default;
     ADCPortBase(const ADCPortBase&) = delete;
     ADCPortBase(ADCPortBase&&) = delete;
-    virtual real_t GetVoltage() { return 0.0f; }
-    virtual real_t GetFullRangeVoltage() { return 0.0f; }
-    virtual uint32_t GetRawValue() { return 0; }
-    virtual uint32_t GetFullRange() { return 0; }
+    [[nodiscard]] real_t GetVoltage() { return GetVoltage_mV() * 0.001f; }
+    [[nodiscard]] virtual real_t GetVoltage_mV() { return 0.0f; }
+    [[nodiscard]] virtual real_t GetFullRangeVoltage() const { return 0.0f; }
+    [[nodiscard]] virtual uint32_t GetRawValue() { return 0; }
+    [[nodiscard]] virtual uint32_t GetVrefRawValue() { return 0; }
+    [[nodiscard]] virtual uint32_t GetFullRange() const { return 0; }
 };
 }

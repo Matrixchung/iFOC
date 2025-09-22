@@ -11,10 +11,11 @@ class ADCPort final : public ADCPortBase
 {
 public:
     ADCPort(uint16_t* _pVal, uint16_t* _pVrefint);
-    real_t GetVoltage() override;
-    real_t GetFullRangeVoltage() override;
+    real_t GetVoltage_mV() override;
+    real_t GetFullRangeVoltage() const override;
     uint32_t GetRawValue() override;
-    uint32_t GetFullRange() override;
+    uint32_t GetVrefRawValue() override;
+    uint32_t GetFullRange() const override;
 private:
     uint16_t* m_pVal;
     uint16_t* m_pVrefint;
