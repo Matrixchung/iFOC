@@ -113,14 +113,17 @@ FuncRetCode UART::StartTransmit(bool blocked)
 
 void UART::OnUARTIRQ()
 {
-    if(usart_interrupt_flag_get(huart, USART_IDLEF_FLAG) != RESET)
+    // if(usart_interrupt_flag_get(huart, USART_IDLEF_FLAG) != RESET)
+    if(huart->sts & USART_IDLEF_FLAG)
     {
         uint16_t recv_total_size = rx_buffer.max_size() - rx_dma->dtcnt;
         uint16_t recv_size = recv_total_size - last_dma_rx_size;
         rx_fifo.put(rx_buffer.data() + last_dma_rx_size, recv_size);
         last_dma_rx_size = recv_total_size;
         vTaskNotifyGiveFromISR(event_handler.GetHandle(), nullptr);
-        usart_flag_clear(huart, USART_IDLEF_FLAG);
+        // usart_flag_clear(huart, USART_IDLEF_FLAG);
+        UNUSED(huart->sts);
+        UNUSED(huart->dt);
     }
 }
 
@@ -189,7 +192,8 @@ FuncRetCode UART::TransmitBlocking(uint8_t* data, const uint16_t size, const Tic
     {
         state = State::UART_STATE_BUSY_TX;
         auto tickstart = xTaskGetTickCount();
-        while(usart_flag_get(huart, USART_TDBE_FLAG) == RESET)
+        // while(usart_flag_get(huart, USART_TDBE_FLAG) == RESET)
+        while(!(huart->sts & USART_TDBE_FLAG))
         {
             if(xTaskGetTickCount() - tickstart > timeout)
             {
@@ -198,11 +202,13 @@ FuncRetCode UART::TransmitBlocking(uint8_t* data, const uint16_t size, const Tic
             }
         }
         tickstart = xTaskGetTickCount();
-        usart_flag_clear(huart, USART_TDBE_FLAG);
+        // usart_flag_clear(huart, USART_TDBE_FLAG);
+        huart->sts = ~USART_TDBE_FLAG;
         for(uint16_t i = 0; i < size; i++)
         {
             usart_data_transmit(huart, (uint16_t)data[i]);
-            while(usart_flag_get(huart, USART_TDC_FLAG) == RESET)
+            // while(usart_flag_get(huart, USART_TDC_FLAG) == RESET)
+            while(!(huart->sts & USART_TDC_FLAG))
             {
                 if(xTaskGetTickCount() - tickstart > timeout)
                 {
@@ -211,7 +217,8 @@ FuncRetCode UART::TransmitBlocking(uint8_t* data, const uint16_t size, const Tic
                 }
             }
             tickstart = xTaskGetTickCount();
-            usart_flag_clear(huart, USART_TDC_FLAG);
+            // usart_flag_clear(huart, USART_TDC_FLAG);
+            huart->sts = ~USART_TDC_FLAG;
         }
         state = State::UART_STATE_READY;
         return FuncRetCode::OK;
@@ -229,9 +236,13 @@ FuncRetCode UART::TransmitDMA(uint8_t* data, const uint16_t size)
         tx_dma->dtcnt = size;
         tx_dma->paddr = (uint32_t)&huart->dt;
         tx_dma->maddr = (uint32_t)data;
-        usart_flag_clear(huart, USART_PERR_FLAG | USART_FERR_FLAG | USART_NERR_FLAG);
-        dma_interrupt_enable(tx_dma, DMA_HDT_INT, FALSE);
-        dma_interrupt_enable(tx_dma, DMA_FDT_INT | DMA_DTERR_INT, TRUE);
+        // usart_flag_clear(huart, USART_PERR_FLAG | USART_FERR_FLAG | USART_NERR_FLAG);
+        UNUSED(huart->sts);
+        UNUSED(huart->dt);
+        // dma_interrupt_enable(tx_dma, DMA_HDT_INT, FALSE);
+        tx_dma->ctrl &= ~DMA_HDT_INT;
+        // dma_interrupt_enable(tx_dma, DMA_FDT_INT | DMA_DTERR_INT, TRUE);
+        tx_dma->ctrl |= (DMA_FDT_INT | DMA_DTERR_INT);
         dma_channel_enable(tx_dma, TRUE);
         return FuncRetCode::OK;
     }

@@ -22,6 +22,7 @@ public:
     void SetDataWidth(DataWidth w) override;
     void SetClock(uint32_t clock) override;
     void SetCPOLCPHA(uint8_t cpol, uint8_t cpha) override;
+    void SetCS(bool state) override;
 private:
     spi_type* hspi;
     GPIOBase& cs;

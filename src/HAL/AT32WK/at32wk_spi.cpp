@@ -3,6 +3,7 @@
 #if defined(AT32WK_ENV) && defined(SPI_MODULE_ENABLED)
 
 #include "hal_impl.hpp"
+#include "foc_math.hpp"
 
 namespace iFOC::HAL
 {
@@ -18,8 +19,11 @@ SPI::SPI(spi_type* _hspi, GPIOBase* _cs) : hspi(_hspi), cs(*_cs)
 FuncRetCode SPI::Init()
 {
     cs.ModeOutPP();
-    cs = 1;
+    cs.Set();
+    spi_enable(hspi, FALSE);
+    DelayUs(1);
     spi_i2s_reset(hspi);
+    DelayUs(1);
     spi_init_struct.transmission_mode = SPI_TRANSMIT_FULL_DUPLEX;
     spi_init_struct.master_slave_mode = SPI_MODE_MASTER;
     spi_init_struct.first_bit_transmission = SPI_FIRST_BIT_MSB;
@@ -35,17 +39,19 @@ FuncRetCode SPI::WriteBytes(const uint8_t* data, const uint16_t size)
     uint8_t* tx_address = (uint8_t*)data;
     uint16_t len = size;
     constexpr uint32_t TIMEOUT = 10;
-    cs = 0;
-    spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+    cs.Clear();
+    // spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+    UNUSED(hspi->dt);
     while(len--)
     {
-        while(spi_i2s_flag_get(hspi, SPI_I2S_TDBE_FLAG) == RESET)
+        while(!(hspi->sts & SPI_I2S_TDBE_FLAG))
         {
             if(xTaskGetTickCount() - tickstart > TIMEOUT)
             {
                 // spi_enable(hspi, FALSE);
-                cs = 1;
-                spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+                cs.Set();
+                // spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+                UNUSED(hspi->dt);
                 return FuncRetCode::HARDWARE_ERROR;
             }
         }
@@ -53,8 +59,9 @@ FuncRetCode SPI::WriteBytes(const uint8_t* data, const uint16_t size)
         spi_i2s_data_transmit(hspi, (uint8_t)*tx_address);
         tx_address++;
     }
-    cs = 1;
-    spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+    cs.Set();
+    // spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+    UNUSED(hspi->dt);
     return FuncRetCode::OK;
 }
 
@@ -69,38 +76,46 @@ FuncRetCode SPI::WriteReadBytes(const uint8_t *write_data, uint8_t *read_data, c
     uint8_t* tx_address = (uint8_t*)write_data;
     uint8_t* rx_address = (uint8_t*)read_data;
     uint16_t len = size;
-    constexpr uint32_t TIMEOUT = 10;
-    cs = 0;
-    spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+    cs.Clear();
+    // spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+    UNUSED(hspi->dt);
     while(len--)
     {
-        while(spi_i2s_flag_get(hspi, SPI_I2S_TDBE_FLAG) == RESET)
+        constexpr uint32_t TIMEOUT = 10;
+        // while(spi_i2s_flag_get(hspi, SPI_I2S_TDBE_FLAG) == RESET)
+        while(!(hspi->sts & SPI_I2S_TDBE_FLAG))
         {
             if(xTaskGetTickCount() - tickstart > TIMEOUT)
             {
-                cs = 1;
-                spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+                cs.Set();
+                // spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+                UNUSED(hspi->dt);
                 return FuncRetCode::HARDWARE_ERROR;
             }
         }
         tickstart = xTaskGetTickCount();
-        spi_i2s_data_transmit(hspi, (uint8_t)*tx_address);
+        // spi_i2s_data_transmit(hspi, (uint8_t)*tx_address);
+        hspi->dt = *tx_address;
         tx_address++;
-        while(spi_i2s_flag_get(hspi, SPI_I2S_RDBF_FLAG) == RESET)
+        // while(spi_i2s_flag_get(hspi, SPI_I2S_RDBF_FLAG) == RESET)
+        while(!(hspi->sts & SPI_I2S_RDBF_FLAG))
         {
             if(xTaskGetTickCount() - tickstart > TIMEOUT)
             {
-                cs = 1;
-                spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+                cs.Set();
+                // spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+                UNUSED(hspi->dt);
                 return FuncRetCode::REMOTE_TIMEOUT;
             }
         }
-        spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+        // spi_i2s_flag_clear(hspi, SPI_I2S_RDBF_FLAG);
+        UNUSED(hspi->dt);
         tickstart = xTaskGetTickCount();
-        *rx_address = (uint8_t)spi_i2s_data_receive(hspi);
+        // *rx_address = (uint8_t)spi_i2s_data_receive(hspi);
+        *rx_address = (uint8_t)hspi->dt;
         rx_address++;
     }
-    cs = 1;
+    cs.Set();
     return FuncRetCode::OK;
 }
 
@@ -136,6 +151,11 @@ void SPI::SetCPOLCPHA(const uint8_t cpol, const uint8_t cpha)
     else spi_init_struct.clock_polarity = SPI_CLOCK_POLARITY_LOW;
     if(cpha == 1) spi_init_struct.clock_phase = SPI_CLOCK_PHASE_2EDGE;
     else spi_init_struct.clock_phase = SPI_CLOCK_PHASE_1EDGE;
+}
+
+void SPI::SetCS(bool state)
+{
+    cs = state;
 }
 }
 
