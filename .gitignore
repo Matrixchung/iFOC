@@ -9,3 +9,6 @@
 .idea/
 .vscode/
 *.iml
+
+# generated but unused nunavut dsdls
+tool/UAVCAN/public_regulated_data_types/dsdl/**/*.h

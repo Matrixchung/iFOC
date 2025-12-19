@@ -1,0 +1,21 @@
+#
+# Request info about a remote file system entry (file, directory, etc).
+#
+
+Path.1.0 path
+
+@sealed
+
+---
+
+#
+# File size in bytes.
+# Should be set to zero for directories.
+#
+uint40 size
+
+Error.1.0 error
+
+EntryType.1.0 entry_type
+
+@sealed

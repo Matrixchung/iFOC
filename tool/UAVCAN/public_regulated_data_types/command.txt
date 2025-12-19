@@ -1,0 +1,1 @@
+.\nnvg.exe --target-language c --language-standard c++20 --target-endianness=little --allow-unregulated-fixed-port-id ./uavcan --outdir ./dsdl
