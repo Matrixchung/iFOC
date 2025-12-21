@@ -7,6 +7,7 @@
 #include <map>
 #include <queue>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "portable.h"
 
@@ -75,10 +76,13 @@ using Queue = std::queue<T, Allocator<T>>;
 template<typename T>
 using Deque = std::deque<T, Allocator<T>>;
 
-template<typename T1, typename T2>
-using Map = std::map<T1, T2, std::less<T1>, Allocator<std::pair<const T1, T2>>>;
+template<typename Key, typename Value, typename Compare = std::less<Key>>
+using Map = std::map<Key, Value, Compare, Allocator<std::pair<const Key, Value>>>;
 
-template<typename T1, typename T2>
-using HashMap = std::unordered_map<T1, T2, std::hash<T1>, std::equal_to<T1>, Allocator<std::pair<const T1, T2>>>;
+template<typename Key, typename Value, typename Hash = std::hash<Key>, typename Pred = std::equal_to<Key>>
+using HashMap = std::unordered_map<Key, Value, Hash, Pred, Allocator<std::pair<const Key, Value>>>;
+
+template<typename T, typename Hash = std::hash<T>, typename Pred = std::equal_to<T>>
+using HashSet = std::unordered_set<T, Hash, Pred, Allocator<T>>;
 
 }
