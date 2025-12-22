@@ -15,6 +15,10 @@ static void DelayMs(uint32_t ms)
 {
     while(ms--) DelayUs(1000);
 }
+static void osDelayMs(uint32_t ms)
+{
+    vTaskDelay(ms / portTICK_PERIOD_MS);
+}
 }
 
 namespace iFOC
@@ -170,6 +174,18 @@ static void get_rgb_color_wheel(uint8_t pos, uint8_t *r, uint8_t *g, uint8_t *b)
     *r = 0;
     *g = pos * 3;
     *b = 255 - *g;
+}
+
+template<typename T>
+static uint8_t count_bits(T n)
+{
+    uint8_t count = 0;
+    while(n)
+    {
+        n &= n - 1;
+        ++count;
+    }
+    return count;
 }
 
 /// Get CRC16 result of data[len] \n
