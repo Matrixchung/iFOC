@@ -141,16 +141,16 @@ public:
         return *this;
     }
 
-    constexpr void
-    swap(triple& __p)
-    noexcept(std::__and_<std::__is_nothrow_swappable<T1>,
-            std::__is_nothrow_swappable<T2>>::value)
-    {
-        using std::swap;
-        swap(value, __p.value);
-        swap(limit, __p.limit);
-        swap(unit, __p.unit);
-    }
+    // constexpr void
+    // swap(triple& __p)
+    // noexcept(std::__and_<std::__is_nothrow_swappable<T1>,
+    //         std::__is_nothrow_swappable<T2>>::value)
+    // {
+    //     using std::swap;
+    //     swap(value, __p.value);
+    //     swap(limit, __p.limit);
+    //     swap(unit, __p.unit);
+    // }
 };
 
 template <class T1, class T2>
