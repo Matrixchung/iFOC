@@ -26,12 +26,14 @@ private:
 
 inline void GPIO::Set()
 {
-    gpio_bits_set(port, pin);
+    // gpio_bits_set(port, pin);
+    port->scr = pin;
 }
 
 inline void GPIO::Clear()
 {
-    gpio_bits_reset(port, pin);
+    // gpio_bits_reset(port, pin);
+    port->clr = pin;
 }
 
 inline void GPIO::Write(bool val)
@@ -42,7 +44,8 @@ inline void GPIO::Write(bool val)
 
 inline bool GPIO::Read() const
 {
-    return gpio_input_data_bit_read(port, pin);
+    // return gpio_input_data_bit_read(port, pin);
+    return pin == (pin & port->idt);
 }
 
 inline void GPIO::Toggle()
@@ -57,35 +60,35 @@ inline void GPIO::SetMode(GPIOMode mode)
     gpio_init_struct.gpio_pins = pin;
     switch(mode)
     {
-        case GPIOBase::GPIOMode::OUTPUT_PUSHPULL:
+        case GPIOMode::OUTPUT_PUSHPULL:
         {
             gpio_init_struct.gpio_out_type = GPIO_OUTPUT_PUSH_PULL;
             gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
             gpio_init(port, &gpio_init_struct);
             break;
         }
-        case GPIOBase::GPIOMode::OUTPUT_OPENDRAIN:
+        case GPIOMode::OUTPUT_OPENDRAIN:
         {
             gpio_init_struct.gpio_out_type = GPIO_OUTPUT_OPEN_DRAIN;
             gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
             gpio_init(port, &gpio_init_struct);
             break;
         }
-        case GPIOBase::GPIOMode::ALTERNATE_MODE:
+        case GPIOMode::ALTERNATE_MODE:
         {
             gpio_init_struct.gpio_out_type = GPIO_OUTPUT_PUSH_PULL;
             gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
             gpio_init(port, &gpio_init_struct);
             break;
         }
-        case GPIOBase::GPIOMode::INPUT:
+        case GPIOMode::INPUT:
         {
             gpio_init_struct.gpio_out_type = GPIO_OUTPUT_PUSH_PULL;
             gpio_init_struct.gpio_mode = GPIO_MODE_INPUT;
             gpio_init(port, &gpio_init_struct);
             break;
         }
-        case GPIOBase::GPIOMode::ANALOG:
+        case GPIOMode::ANALOG:
         {
             gpio_init_struct.gpio_mode = GPIO_MODE_ANALOG;
             gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
