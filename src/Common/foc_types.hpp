@@ -11,7 +11,6 @@
 #include "semphr.h"
 #include "func_ret_code.h"
 #include "allocator.hpp"
-#include "../DataType/Headers/Base/misconfigured_area.h"
 
 namespace iFOC
 {
@@ -41,7 +40,6 @@ struct alphabeta_t
     real_t beta = 0;
 };
 
-extern volatile std::underlying_type_t<DataType::Base::MisconfiguredArea> misconfigured_area;
 extern volatile float RT_LOOP_TS;
 extern volatile float MID_LOOP_TS;
 extern volatile uint8_t SYSTEM_MOTOR_NUM;

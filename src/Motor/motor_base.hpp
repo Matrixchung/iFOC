@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Common/task_processor.hpp"
+#include "../Common/Interface/indicator_base.hpp"
 #include "driver_base.hpp"
 #include "../Sense/curr_sense_base.hpp"
 #include "../Sense/bus_sense_base.hpp"
@@ -41,9 +42,9 @@ public:
     virtual FuncRetCode Init(bool initTIM) = 0;
 
     /// Attempt to arm the motor (put everything into work) \n
-    /// If failed, a specific MotorError enum will be returned.
-    /// \return MotorError, if attempt to arm the motor was failed.
-    virtual MotorError Arm() = 0;
+    /// If failed, a false value will be returned.
+    /// \return bool
+    virtual bool Arm() = 0;
 
     /// Disarm the motor.
     virtual void Disarm() = 0;
@@ -85,7 +86,7 @@ public:
     FuncRetCode InsertTaskBeforeName(const char* next, Task* task);
     FuncRetCode InsertTaskAfterName(const char* prev, Task* task);
     FuncRetCode RemoveTaskByName(const char* name);
-    std::optional<Task*> GetTaskByName(const char* name);
+    Task* GetTaskByName(const char* name);
     template<typename... Args>
     void BypassTaskByName(Args... args);
     template<typename... Args>
@@ -96,26 +97,30 @@ public:
     __fast_inline void LinkCoreTempSense(Sense::TempSenseBase *core);
     __fast_inline void LinkMosfetTempSense(Sense::TempSenseBase *mosfet);
     __fast_inline void LinkMotorTempSense(Sense::TempSenseBase *motor);
-    std::optional<Sense::TempSenseBase*> GetCoreTempSense();
-    std::optional<Sense::TempSenseBase*> GetMosfetTempSense();
-    std::optional<Sense::TempSenseBase*> GetMotorTempSense();
+    __fast_inline void LinkIndicator(HAL::IndicatorImpl auto *ind);
+    Sense::TempSenseBase* GetCoreTempSense() const;
+    Sense::TempSenseBase* GetMosfetTempSense() const;
+    Sense::TempSenseBase* GetMotorTempSense() const;
+    HAL::IndicatorBase* GetIndicator();
     [[nodiscard]] __fast_inline uint8_t GetInternalID() const;
-    // void ThrowError(MotorError e);
-    __fast_inline void ClearError();
-    [[nodiscard]] __fast_inline MotorError GetError();
-    [[nodiscard]] __fast_inline bool CheckError(MotorError e);
+    void ThrowError(MotorError e);
+    void ClearError();
+    void ClearError(MotorError e);
+    void ClearError(std::underlying_type_t<MotorError> e);
+    [[nodiscard]] __fast_inline std::underlying_type_t<MotorError> GetError() const;
+    [[nodiscard]] __fast_inline bool CheckError(MotorError e) const;
     FuncRetCode AppendEncoder(Encoder::EncoderBase* encoder);
     FuncRetCode RemoveEncoderByName(const char* name);
     FuncRetCode RemoveEncoderByIndex(uint8_t index);
-    [[nodiscard]] std::optional<Encoder::EncoderBase*> GetEncoderByName(const char* name);
-    [[nodiscard]] __fast_inline uint8_t GetPrimaryEncoderIndex();
-    [[nodiscard]] __fast_inline std::optional<Encoder::EncoderBase*> GetPrimaryEncoder();
+    [[nodiscard]] Encoder::EncoderBase* GetEncoderByName(const char* name) const;
+    [[nodiscard]] __fast_inline uint8_t GetPrimaryEncoderIndex() const;
+    [[nodiscard]] __fast_inline Encoder::EncoderBase* GetPrimaryEncoder() const;
     [[nodiscard]] __fast_inline const Vector<Encoder::EncoderBase*>& GetEncoders();
     __fast_inline void SetPrimaryEncoderIndex(uint8_t idx);
     __fast_inline void RegisterProtocol(ProtocolBase* protocol);
-    [[nodiscard]] __fast_inline MotorState GetCurrentState();
-    [[nodiscard]] __fast_inline bool IsArmed();
-    [[nodiscard]] __fast_inline MotorControlMode GetControlMode();
+    [[nodiscard]] __fast_inline MotorState GetCurrentState() const;
+    [[nodiscard]] __fast_inline bool IsArmed() const;
+    [[nodiscard]] __fast_inline MotorControlMode GetControlMode() const;
     __fast_inline void SetControlMode(MotorControlMode mode);
     __fast_inline TaskProcessor& GetTaskProcessor();
     __fast_inline void UpdateWatchdog();
@@ -133,6 +138,7 @@ protected:
     Sense::TempSenseBase* core_temp{};
     Sense::TempSenseBase* mosfet_temp{};
     Sense::TempSenseBase* motor_temp{};
+    HAL::IndicatorBase* indicator{};
 
     /// \brief Watchdog feature: if enabled, watchdog_cnt should be periodically updated by any of the user input (set to 0),
     /// otherwise, when the counter (added up in Mid task) exceeds preset limit, a motor shutdown will be immediately triggered.
@@ -147,7 +153,7 @@ protected:
     bool is_armed = false;
     /// \brief Primary Encoder index which has been selected as data source
     uint8_t primary_encoder_idx = 0;
-    MotorError error = MotorError::NONE;
+    std::underlying_type_t<MotorError> error = to_underlying(MotorError::NONE);
     MotorState current_state = MotorState::IDLE;
     MotorControlMode control_mode = MotorControlMode::CTRL_MODE_POSITION;
 };
@@ -181,7 +187,7 @@ __fast_inline void MotorBase<shunt_count>::DispatchMidTasks(float Ts)
     {
         if(watchdog_cnt >= watchdog_timeout_cnt)
         {
-            DisarmWithError(MotorError::SYSTEM_CRITICAL_WATCHDOG_TIMEOUT);
+            DisarmWithError(MotorError::SYSTEM_MID_WATCHDOG_TIMEOUT);
         }
         else watchdog_cnt++;
     }
@@ -226,9 +232,9 @@ FuncRetCode MotorBase<shunt_count>::RemoveTaskByName(const char *name)
 
 // we should prevent UpdateEncoderTask get found from here
 template<uint8_t shunt_count>
-std::optional<Task*> MotorBase<shunt_count>::GetTaskByName(const char *name)
+Task* MotorBase<shunt_count>::GetTaskByName(const char *name)
 {
-    if(GetEncoderByName(name)) return std::nullopt;
+    if(GetEncoderByName(name)) return nullptr;
     return tasks.GetTaskByName(name);
 }
 
@@ -285,25 +291,33 @@ void MotorBase<shunt_count>::LinkMotorTempSense(Sense::TempSenseBase *motor)
 }
 
 template <uint8_t shunt_count>
-std::optional<Sense::TempSenseBase*> MotorBase<shunt_count>::GetCoreTempSense()
+void MotorBase<shunt_count>::LinkIndicator(HAL::IndicatorImpl auto* ind)
 {
-    /// WARNING: std::make_optional(nullptr) -> has_value() == true
-    if(!core_temp) return std::nullopt;
-    return std::make_optional<Sense::TempSenseBase*>(core_temp);
+    indicator = ind;
 }
 
 template <uint8_t shunt_count>
-std::optional<Sense::TempSenseBase*> MotorBase<shunt_count>::GetMosfetTempSense()
+Sense::TempSenseBase* MotorBase<shunt_count>::GetCoreTempSense() const
 {
-    if(!mosfet_temp) return std::nullopt;
-    return std::make_optional<Sense::TempSenseBase*>(mosfet_temp);
+    return core_temp;
 }
 
 template <uint8_t shunt_count>
-std::optional<Sense::TempSenseBase*> MotorBase<shunt_count>::GetMotorTempSense()
+Sense::TempSenseBase* MotorBase<shunt_count>::GetMosfetTempSense() const
 {
-    if(!motor_temp) return std::nullopt;
-    return std::make_optional<Sense::TempSenseBase*>(motor_temp);
+    return mosfet_temp;
+}
+
+template <uint8_t shunt_count>
+Sense::TempSenseBase* MotorBase<shunt_count>::GetMotorTempSense() const
+{
+    return mosfet_temp;
+}
+
+template <uint8_t shunt_count>
+HAL::IndicatorBase* MotorBase<shunt_count>::GetIndicator()
+{
+    return indicator;
 }
 
 template<uint8_t shunt_count>
@@ -312,30 +326,41 @@ uint8_t MotorBase<shunt_count>::GetInternalID() const
     return internal_id;
 }
 
-// template<uint8_t shunt_count>
-// void MotorBase<shunt_count>::ThrowError(MotorBase::MotorError e)
-// {
-//     if(e < MotorError::_NON_CRITICAL_ERROR_ABOVE_) error = e;
-//     else DisarmWithError(e);
-// }
+template <uint8_t shunt_count>
+void MotorBase<shunt_count>::ThrowError(MotorError e)
+{
+    error |= to_underlying(e);
+}
 
 template<uint8_t shunt_count>
 void MotorBase<shunt_count>::ClearError()
 {
-    error = MotorError::NONE;
+    error = to_underlying(MotorError::NONE);
     UpdateWatchdog();
 }
 
+template <uint8_t shunt_count>
+void MotorBase<shunt_count>::ClearError(const MotorError e)
+{
+    error &= ~to_underlying(e);
+}
+
+template <uint8_t shunt_count>
+void MotorBase<shunt_count>::ClearError(std::underlying_type_t<MotorError> e)
+{
+    error &= ~e;
+}
+
 template<uint8_t shunt_count>
-MotorError MotorBase<shunt_count>::GetError()
+std::underlying_type_t<MotorError> MotorBase<shunt_count>::GetError() const
 {
     return error;
 }
 
 template<uint8_t shunt_count>
-bool MotorBase<shunt_count>::CheckError(MotorError e)
+bool MotorBase<shunt_count>::CheckError(const MotorError e) const
 {
-    return to_underlying(error) & to_underlying(e);
+    return error & to_underlying(e);
 }
 
 template<uint8_t shunt_count>
@@ -382,25 +407,25 @@ FuncRetCode MotorBase<shunt_count>::RemoveEncoderByIndex(uint8_t index)
 }
 
 template<uint8_t shunt_count>
-std::optional<Encoder::EncoderBase*> MotorBase<shunt_count>::GetEncoderByName(const char *name)
+Encoder::EncoderBase* MotorBase<shunt_count>::GetEncoderByName(const char *name) const
 {
     for(auto enc : encoders)
     {
-        if(*enc == name) return std::make_optional(enc);
+        if(*enc == name) return enc;
     }
-    return std::nullopt;
+    return nullptr;
 }
 
 template<uint8_t shunt_count>
-uint8_t MotorBase<shunt_count>::GetPrimaryEncoderIndex()
+uint8_t MotorBase<shunt_count>::GetPrimaryEncoderIndex() const
 {
     return primary_encoder_idx;
 }
 
 template<uint8_t shunt_count>
-std::optional<Encoder::EncoderBase*> MotorBase<shunt_count>::GetPrimaryEncoder()
+Encoder::EncoderBase* MotorBase<shunt_count>::GetPrimaryEncoder() const
 {
-    if(encoders.size() <= primary_encoder_idx) return std::nullopt;
+    if(encoders.size() <= primary_encoder_idx) return nullptr;
     return encoders[primary_encoder_idx];
 }
 
@@ -425,19 +450,19 @@ void MotorBase<shunt_count>::RegisterProtocol(ProtocolBase *protocol)
 }
 
 template<uint8_t shunt_count>
-__fast_inline MotorState MotorBase<shunt_count>::GetCurrentState()
+__fast_inline MotorState MotorBase<shunt_count>::GetCurrentState() const
 {
     return current_state;
 }
 
 template<uint8_t shunt_count>
-__fast_inline bool MotorBase<shunt_count>::IsArmed()
+__fast_inline bool MotorBase<shunt_count>::IsArmed() const
 {
     return is_armed;
 }
 
 template<uint8_t shunt_count>
-__fast_inline MotorControlMode MotorBase<shunt_count>::GetControlMode()
+__fast_inline MotorControlMode MotorBase<shunt_count>::GetControlMode() const
 {
     return control_mode;
 }

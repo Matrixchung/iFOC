@@ -5,10 +5,7 @@ namespace iFOC::HAL
 {
 I2CSW::I2CSW(GPIOBase &_scl, GPIOBase &_sda) : scl(_scl), sda(_sda) {};
 
-I2CSW::I2CSW(GPIOBase &_scl, GPIOBase &_sda, uint32_t _freq) : scl(_scl), sda(_sda), freq(_freq)
-{
-    if(!BETWEEN(freq, 50000, 10000000)) misconfigured_area |= to_underlying(MisconfiguredArea::I2C_FREQ_OUT_OF_RANGE);
-}
+I2CSW::I2CSW(GPIOBase &_scl, GPIOBase &_sda, uint32_t _freq) : scl(_scl), sda(_sda), freq(_freq) {};
 
 I2CSW::I2CSW(GPIOBase *_scl, GPIOBase *_sda) : I2CSW(*_scl, *_sda) {};
 I2CSW::I2CSW(GPIOBase *_scl, GPIOBase *_sda, uint32_t _freq) : I2CSW(*_scl, *_sda, _freq) {};
