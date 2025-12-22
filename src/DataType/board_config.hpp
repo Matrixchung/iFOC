@@ -4,6 +4,11 @@
  * BoardConfig: singleton instance that can be accessed everywhere
  */
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
+
 #include "Headers/Config/Board/board_config.h"
 #include "config_nvm_wrapper.hpp"
 
@@ -14,13 +19,10 @@ namespace _const
     static constexpr uint8_t NVM_BOARD_CONFIG_STORE_SECTOR = 0;
 }
 
-// static auto& BoardConfig()
-// {
-//     static DataType::ConfigNVMWrapper<DataType::Config::BoardConfig> instance(DataType::Base::ProtoHeader::BOARD_CONFIG,
-//                                                                               _const::NVM_BOARD_CONFIG_STORE_SECTOR);
-//     return instance;
-// }
-
-extern DataType::ConfigNVMWrapper<DataType::Config::BoardConfig> BoardConfig;
+DataType::ConfigNVMWrapper<DataType::Config::BoardConfig>& BoardConfig();
 
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
