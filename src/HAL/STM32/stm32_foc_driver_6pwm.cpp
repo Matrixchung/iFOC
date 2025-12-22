@@ -22,7 +22,7 @@ FuncRetCode FOCDriver6PWM::Init(bool initCNT)
     LL_TIM_DisableCounter(htim);
     auto pwm_freq = config.pwm_wave_freq();
     if(pwm_freq == 0) pwm_freq = 20000; // fallback to 20KHz
-#if defined(STM32G4) // STM32G4: f(PCLK1) = f(TIMER)
+#if defined(STM32G4) || defined(STM32F4) // STM32G4: f(PCLK1) = f(TIMER)
     const auto timer_base_clock = HAL::GetCoreClockHz();
 #endif
     uint32_t arr = (timer_base_clock / pwm_freq) / 2;
