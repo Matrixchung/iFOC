@@ -14,5 +14,4 @@ public:
     virtual void EnableAllOutputs() = 0;
     virtual void DisableAllOutputs() = 0;
 };
-
 }

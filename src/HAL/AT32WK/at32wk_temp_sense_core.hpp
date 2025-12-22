@@ -8,7 +8,7 @@
 
 namespace iFOC::Sense
 {
-class TempSenseCore : public TempSenseBase
+class TempSenseCore final : public TempSenseBase
 {
 public:
     explicit TempSenseCore(HAL::ADCPortBase* _port);
