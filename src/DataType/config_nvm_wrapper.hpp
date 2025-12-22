@@ -76,7 +76,7 @@ msg_t& ConfigNVMWrapper<msg_t>::GetConfig()
 template<ProtoMessage msg_t>
 FuncRetCode ConfigNVMWrapper<msg_t>::ReadNVMConfig()
 {
-    if(xPortIsInsideInterrupt()) return FuncRetCode::ACCESS_VIOLATION; // can't be running inside isr
+    // if(xPortIsInsideInterrupt()) return FuncRetCode::ACCESS_VIOLATION; // can't be running inside isr
 #if defined(USE_EASYFLASH)
     auto ret = FuncRetCode::NOT_SUPPORTED;
 #elif defined(USE_FLASHDB)
@@ -105,7 +105,7 @@ FuncRetCode ConfigNVMWrapper<msg_t>::ReadNVMConfig()
 template<ProtoMessage msg_t>
 FuncRetCode ConfigNVMWrapper<msg_t>::SaveNVMConfig()
 {
-    if(xPortIsInsideInterrupt()) return FuncRetCode::ACCESS_VIOLATION; // can't be running inside isr
+    // if(xPortIsInsideInterrupt()) return FuncRetCode::ACCESS_VIOLATION; // can't be running inside isr
     size_t len = 0;
     auto result = wrapper->Serialize(len);
     if(result == EmbeddedProto::Error::NO_ERRORS)

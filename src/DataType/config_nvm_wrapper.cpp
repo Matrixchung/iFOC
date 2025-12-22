@@ -10,11 +10,11 @@ namespace iFOC::DataType::_internal
     SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
     static void lock(fdb_db_t db)
     {
-        xSemaphoreTake(mutex, portMAX_DELAY);
+        if(!xPortIsInsideInterrupt()) xSemaphoreTake(mutex, portMAX_DELAY);
     }
     static void unlock(fdb_db_t db)
     {
-        xSemaphoreGive(mutex);
+        if(!xPortIsInsideInterrupt()) xSemaphoreGive(mutex);
     }
     fdb_err_t kvdb_init()
     {
