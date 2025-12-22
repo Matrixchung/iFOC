@@ -35,6 +35,10 @@ uint32_t GetCoreClockHz();
 /// \return serial number, in uint32_t. Range: [0, 4294967295]
 uint32_t GetSerialNumber();
 
+/// Get uptime seconds, in [sec]
+/// \return current uptime, in [sec]
+uint32_t GetUptimeSeconds();
+
 /// This function does what it said.
 void SystemReboot();
 

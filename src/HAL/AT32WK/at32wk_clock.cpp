@@ -33,6 +33,8 @@ namespace iFOC::HAL
 
     uint32_t GetCoreClockHz() { return SystemCoreClock; }
 
+    uint32_t GetUptimeSeconds() { return rtc_counter_get(); }
+
     void DelayInit()
     {
 #ifdef USE_DWT_COUNTER
