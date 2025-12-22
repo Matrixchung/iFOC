@@ -61,7 +61,7 @@ public:
     template<typename... Args>
     __fast_inline void RegisterTask(Args... args) { (..., _register_task(args)); }
 
-    __fast_inline bool IsTaskRegistered(TaskType type) { return config.task_register_states & (1 << to_underlying(type)); }
+    [[nodiscard]] __fast_inline bool IsTaskRegistered(const TaskType type) const { return config.task_register_states & (1 << to_underlying(type)); }
 
     inline void SetBypass(bool bypass)
     {

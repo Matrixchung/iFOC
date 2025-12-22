@@ -22,14 +22,16 @@ protected:
     static constexpr TickType_t READ_WRITE_TIMEOUT_MS = 100;
     class RxEventHandlerTask final : public Task
     {
+        OVERRIDE_NEW();
+        DELETE_COPY_CONSTRUCTOR(RxEventHandlerTask);
     private:
-        UARTBase* uart;
+        UARTBase* uart = nullptr;
     public:
-        Vector<EventCallback> event_list;
-        std::array<uint8_t, 256> buffer;
+        Vector<EventCallback> event_list{};
+        std::array<uint8_t, 256> buffer{};
         explicit RxEventHandlerTask(UARTBase* _uart);
-        void InitNormal() final;
-        void UpdateNormal() final;
+        void InitNormal() override;
+        void UpdateNormal() override;
         void RegisterHandler(EventCallback cb);
     };
     friend class RxEventHandlerTask;

@@ -83,7 +83,7 @@ void UARTBase::RxEventHandlerTask::UpdateNormal()
             auto len = uart->ReadBytes(buffer.data(), buffer.max_size(), false);
             if(len > 0) for(const auto& cb : event_list) if(cb(buffer.data(), len)) break;
         }
-        uart->Print(1, "Time:%d\n", timer.elapsed_time_us);
+        // uart->Print(1, "Time:%d\n", timer.elapsed_time_us);
     }
 }
 
