@@ -13,7 +13,7 @@ real_t TempSenseNTC::Update()
     auto raw_value = port->GetRawValue();
     if(raw_value == 0)
     {
-        temp_celsius = MAXFLOAT;
+        temp_celsius = std::numeric_limits<real_t>::max();
         return temp_celsius;
     }
     real_t ntc_resistance = rdiv / (((float)port->GetFullRange() / (float)raw_value) - 1.0f);
