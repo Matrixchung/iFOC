@@ -6,9 +6,8 @@ namespace iFOC::Driver
 {
 class FOCDriverBase : public DriverBase
 {
-protected:
-    uint32_t max_compare = 0;
 public:
+    uint32_t max_compare = 0;
     enum class Bridge : uint8_t
     {
         HB_U = 1,
