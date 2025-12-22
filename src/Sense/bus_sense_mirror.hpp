@@ -8,15 +8,9 @@ class BusSenseMirror final : public BusSenseBase
 {
 public:
     BusSenseMirror() = delete;
-    explicit BusSenseMirror(BusSenseBase* _other) : other(_other) {};
-    void Update() final;
+    explicit BusSenseMirror(BusSenseBase* _other);
+    void Update() override;
 private:
     BusSenseBase* other = nullptr;
 };
-
-void BusSenseMirror::Update()
-{
-    voltage = other->voltage;
-    current = other->current;
-}
 }
