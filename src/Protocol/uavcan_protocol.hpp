@@ -4,6 +4,8 @@
 #include "../Common/Interface/can_base.hpp"
 #include "../ThirdParty/libcanard/canard.h"
 #include "../Common/foc_task.hpp"
+#include "../ThirdParty/libcanard/dsdl/uavcan/_register/Name_1_0.h"
+#include "../ThirdParty/libcanard/dsdl/uavcan/_register/Value_1_0.h"
 
 namespace iFOC::Protocol
 {
@@ -46,7 +48,7 @@ private:
     // struct _SubscriptionHash { std::size_t operator() (const CanardRxSubscription &k) const; };
     // struct _SubscriptionEqual { bool operator() (const CanardRxSubscription &lhs, const CanardRxSubscription &rhs) const; };
     // HashSet<CanardRxSubscription, _SubscriptionHash, _SubscriptionEqual> rx_subscriptions{}; // resource-heavy stuff
-    Vector<CanardRxSubscription> rx_subscriptions{};
+    List<CanardRxSubscription> rx_subscriptions{}; // SUBSCRIPTION INSTANCES SHALL NOT BE MOVED WHILE IN USE.
     // CanardRxSubscription storage area ends
     struct
     {
@@ -57,10 +59,17 @@ private:
     void SendHeartbeat();
     void SendPortList();
     void SendGetInfoResponse(const CanardRxTransfer& transfer); // For responses, we need the original metadata as param.
+    void SendGetTransportStatsResponse(const CanardRxTransfer& transfer);
+    void SendRegisterListResponse(const CanardRxTransfer& transfer);
+    void SendRegisterAccessResponse(const CanardRxTransfer& transfer);
+    void GetRegisterNameByGlobalIndex(char* dst, uint16_t max_size, uint16_t index);
+    bool ReadRegisterByName(const uavcan_register_Name_1_0& name, uavcan_register_Value_1_0& dst_value);
+    bool CheckRegisterByName(const uavcan_register_Name_1_0& name);
+    bool WriteRegisterByName(const uavcan_register_Name_1_0& name, const uavcan_register_Value_1_0& value);
     void OnRxEvent(const DataType::Comm::CANMessage& message);
     FuncRetCode SubscribeTransfer(CanardTransferKind kind, CanardPortID port, size_t max_size, CanardMicrosecond timeout_us);
     FuncRetCode UnsubscribeTransfer(CanardTransferKind kind, CanardPortID port);
-    int8_t TransmitFrame(CanardMutableFrame* frame);
+    int8_t TransmitFrame(CanardMutableFrame* frame) const;
     static void* canard_mem_alloc(void* ref, size_t size);
     static void canard_mem_free(void* ref, size_t size, void* ptr);
 };

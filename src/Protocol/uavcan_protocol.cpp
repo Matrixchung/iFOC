@@ -4,15 +4,19 @@
 
 // DSDL definitions import
 // Cyphal(UAVCAN v1) definitions below
+#include "Access_1_0.h"
 #include "../ThirdParty/libcanard/dsdl/nunavut/support/serialization.h"
 #include "../ThirdParty/libcanard/dsdl/uavcan/node/Heartbeat_1_0.h"
 #include "../ThirdParty/libcanard/dsdl/uavcan/node/GetInfo_1_0.h"
+#include "../ThirdParty/libcanard/dsdl/uavcan/node/GetTransportStatistics_0_1.h"
 #include "../ThirdParty/libcanard/dsdl/uavcan/node/port/List_1_0.h"
+#include "../ThirdParty/libcanard/dsdl/uavcan/_register/List_1_0.h"
 // UAVCAN v0(Legacy) definitions below
 
 
 #define KILO 1000L
 #define MEGA ((int64_t) KILO * KILO)
+#define NODE_NAME ("com.ifoc.driver") // TODO: Replace with compile-time -D or other definitions
 
 static void _fill_subscriptions_to_subject_list(const CanardTreeNode* const tree, uavcan_node_port_SubjectIDList_1_0* const obj)
 {
@@ -54,16 +58,31 @@ void UAVCANProtocol::Init()
     const CanardMemoryResource memory = {nullptr, canard_mem_free, canard_mem_alloc};
     canard = canardInit(memory);
     canard.node_id = motor->GetConfig().node_id();
-    tx_queue = canardTxInit(256, CANARD_MTU_CAN_CLASSIC, memory); // TODO: For CAN FD, the MTU is 64.
-    can->RegisterRxHandler(std::bind(&UAVCANProtocol::OnRxEvent, this, std::placeholders::_1));
+    tx_queue = canardTxInit(128, CANARD_MTU_CAN_CLASSIC, memory); // TODO: For CAN FD, the MTU is 64.
     polling_task.Start();
-    // Subscribe topics below
+    // ### Subscribe Cyphal topics below ###
     // Request - GetInfo
     SubscribeTransfer(CanardTransferKindRequest,
                       uavcan_node_GetInfo_1_0_FIXED_PORT_ID_,
                       uavcan_node_GetInfo_Request_1_0_EXTENT_BYTES_,
                       CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC);
-
+    // Request - GetTransportStatistics
+    SubscribeTransfer(CanardTransferKindRequest,
+                      uavcan_node_GetTransportStatistics_0_1_FIXED_PORT_ID_,
+                      uavcan_node_GetTransportStatistics_Request_0_1_EXTENT_BYTES_,
+                      CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC);
+    // Request - register_List
+    SubscribeTransfer(CanardTransferKindRequest,
+                      uavcan_register_List_1_0_FIXED_PORT_ID_,
+                      uavcan_register_List_Request_1_0_EXTENT_BYTES_,
+                      CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC);
+    // Request - register_Access
+    SubscribeTransfer(CanardTransferKindRequest,
+                      uavcan_register_Access_1_0_FIXED_PORT_ID_,
+                      uavcan_register_Access_Request_1_0_EXTENT_BYTES_,
+                      CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC);
+    // Finally, attach the interrupt handler.
+    can->RegisterRxHandler(std::bind(&UAVCANProtocol::OnRxEvent, this, std::placeholders::_1));
 }
 
 void UAVCANProtocol::ProcessTransfer(const CanardRxTransfer& transfer)
@@ -81,6 +100,21 @@ void UAVCANProtocol::ProcessTransfer(const CanardRxTransfer& transfer)
             {
                 // The request object is empty so we don't bother deserializing it. Just send the response.
                 SendGetInfoResponse(transfer);
+                break;
+            }
+            case uavcan_node_GetTransportStatistics_0_1_FIXED_PORT_ID_:
+            {
+                SendGetTransportStatsResponse(transfer);
+                break;
+            }
+            case uavcan_register_Access_1_0_FIXED_PORT_ID_:
+            {
+                SendRegisterAccessResponse(transfer);
+                break;
+            }
+            case uavcan_register_List_1_0_FIXED_PORT_ID_:
+            {
+                SendRegisterListResponse(transfer);
                 break;
             }
             default: break; // unimplemented requests
@@ -189,6 +223,8 @@ void UAVCANProtocol::SendGetInfoResponse(const CanardRxTransfer& transfer)
     };
     auto serial_number = HAL::GetSerialNumber();
     memcpy(response.unique_id, &serial_number, sizeof(serial_number));
+    response.name.count = strlen(NODE_NAME);
+    memcpy(&response.name.elements, NODE_NAME, response.name.count);
 
     CanardPayload payload{};
     constexpr size_t original_max_size = uavcan_node_GetInfo_Response_1_0_SERIALIZATION_BUFFER_SIZE_BYTES_;
@@ -210,6 +246,489 @@ void UAVCANProtocol::SendGetInfoResponse(const CanardRxTransfer& transfer)
                     );
     }
     canard.memory.deallocate(nullptr, original_max_size, (void*)payload.data);
+}
+
+void UAVCANProtocol::SendGetTransportStatsResponse(const CanardRxTransfer& transfer)
+{
+    uavcan_node_GetTransportStatistics_Response_0_1 response{};
+    // fill transfer statistics
+    response.transfer_statistics.num_emitted = tx_frame_sent;
+    response.transfer_statistics.num_errored = tx_frame_failed + tx_frame_expired;
+    response.transfer_statistics.num_received = rx_frame_received;
+    // fill interface stats
+    response.network_interface_statistics.elements[response.network_interface_statistics.count++] = response.transfer_statistics;
+
+    CanardPayload payload{};
+    constexpr size_t original_max_size = uavcan_node_GetTransportStatistics_Response_0_1_SERIALIZATION_BUFFER_SIZE_BYTES_;
+    payload.size = original_max_size;
+    payload.data = canard.memory.allocate(nullptr, payload.size);
+    const auto err = uavcan_node_GetTransportStatistics_Response_0_1_serialize_(&response, (uint8_t*)payload.data, &payload.size);
+    if(err >= 0)
+    {
+        CanardTransferMetadata response_meta = transfer.metadata;
+        response_meta.transfer_kind = CanardTransferKindResponse;
+        const auto now_usec = xTaskGetTickCount() * 1000;
+        canardTxPush(&tx_queue,
+                     &canard,
+                     transfer.timestamp_usec + MEGA,
+                     &response_meta,
+                     payload,
+                     now_usec,
+                     &tx_frame_expired);
+    }
+    canard.memory.deallocate(nullptr, original_max_size, (void*)payload.data);
+}
+
+void UAVCANProtocol::SendRegisterListResponse(const CanardRxTransfer& transfer)
+{
+    uavcan_register_List_Request_1_0 request{};
+    auto size = transfer.payload.size;
+    if(uavcan_register_List_Request_1_0_deserialize_(&request, (const uint8_t*)transfer.payload.data, &size) >= 0)
+    {
+        uavcan_register_List_Response_1_0 resp{};
+        char str[64]{};
+        GetRegisterNameByGlobalIndex(str, sizeof(str), request.index);
+        auto len = strlen(str);
+        if(len > 1) // ignore underscore
+        {
+            resp.name.name.count = nunavutChooseMin(len - 1, uavcan_register_Name_1_0_name_ARRAY_CAPACITY_);
+            memcpy(resp.name.name.elements, str, resp.name.name.count);
+        }
+
+        CanardPayload payload{};
+        constexpr size_t original_max_size = uavcan_register_List_Response_1_0_SERIALIZATION_BUFFER_SIZE_BYTES_;
+        payload.size = original_max_size;
+        payload.data = canard.memory.allocate(nullptr, payload.size);
+        const auto err = uavcan_register_List_Response_1_0_serialize_(&resp, (uint8_t*)payload.data, &payload.size);
+        if(err >= 0)
+        {
+            CanardTransferMetadata response_meta = transfer.metadata;
+            response_meta.transfer_kind = CanardTransferKindResponse;
+            const auto now_usec = xTaskGetTickCount() * 1000;
+            canardTxPush(&tx_queue,
+                         &canard,
+                         transfer.timestamp_usec + MEGA,
+                         &response_meta,
+                         payload,
+                         now_usec,
+                         &tx_frame_expired);
+        }
+        canard.memory.deallocate(nullptr, original_max_size, (void*)payload.data);
+    }
+}
+
+void UAVCANProtocol::SendRegisterAccessResponse(const CanardRxTransfer& transfer)
+{
+    /*
+     *   READ/WRITE BEHAVIORS
+     *
+     * The write operation is performed first, unless skipped by sending an "empty" value in the request.
+     * The server may attempt to convert the type of the supplied value to the correct type if there is a type mitmatch
+     * (e.g. uint8 may be converted to uint16); however, servers are not required to perform implicit type conversion,
+     * and the rules of such conversion are not explicitly specified, so this behavior should not be relied upon.
+     *
+     * On the next step the register will be read regardless of the outcome of the write operation. As such, if the write
+     * operation could not be performed (e.g. due to a type mismatch or any other issue), the register will retain its old
+     * value. By evaluating the response the caller can determine whether the register was written successfully.
+     *
+     * If only read is desired but not write, the caller shall provide a value of type 'empty'. That will signal the
+     * server that the write operation shall be skipped, and it will proceed to read the register immediately.
+     *
+     * If the requested register does not exist, the write operation will have no effect and the returned value will
+     * be empty. Existing register should NOT return 'empty' when read since that would make them indistinguishable from
+     * nonexistent registers.
+     */
+    uavcan_register_Access_Request_1_0 request{};
+    auto size = transfer.payload.size;
+    if(uavcan_register_Access_Request_1_0_deserialize_(&request, (const uint8_t*)transfer.payload.data, &size) >= 0)
+    {
+        uavcan_register_Access_Response_1_0 resp{};
+
+        // If we're asked to write a new value:
+        if(!uavcan_register_Value_1_0_is_empty_(&request.value))
+        {
+            // read first to ensure there IS such a register
+            if(CheckRegisterByName(request.name))
+            {
+                // write here
+                WriteRegisterByName(request.name, request.value);
+            }
+        }
+
+        // Read current register state
+        uavcan_register_Value_1_0_select_empty_(&resp.value);
+        ReadRegisterByName(request.name, resp.value);
+
+        resp._mutable = true; // mutable
+        resp.persistent = true; // persistent registers
+
+        resp.timestamp.microsecond = uavcan_time_SynchronizedTimestamp_1_0_UNKNOWN;
+
+        CanardPayload payload{};
+        constexpr size_t original_max_size = uavcan_register_Access_Response_1_0_SERIALIZATION_BUFFER_SIZE_BYTES_;
+        payload.size = original_max_size;
+        payload.data = canard.memory.allocate(nullptr, payload.size);
+        const auto err = uavcan_register_Access_Response_1_0_serialize_(&resp, (uint8_t*)payload.data, &payload.size);
+        if(err >= 0)
+        {
+            CanardTransferMetadata response_meta = transfer.metadata;
+            response_meta.transfer_kind = CanardTransferKindResponse;
+            const auto now_usec = xTaskGetTickCount() * 1000;
+            canardTxPush(&tx_queue,
+                         &canard,
+                         transfer.timestamp_usec + MEGA,
+                         &response_meta,
+                         payload,
+                         now_usec,
+                         &tx_frame_expired);
+        }
+        canard.memory.deallocate(nullptr, original_max_size, (void*)payload.data);
+    }
+}
+
+void UAVCANProtocol::GetRegisterNameByGlobalIndex(char* dst, uint16_t max_size, uint16_t index)
+{
+    // This service allows the caller to discover the names of all registers available on the server
+    // by iterating the index field from zero until an empty name is returned. -- Cyphal Specs v1.0
+
+    // Considering the protocol is linked to every motor instance,
+    // so the MotorConfig could only appear once in every cyphal node.
+    // But for convenience, BoardConfig across different cyphal nodes may be the same.
+    // For example: given a dual-motor driver, we will have two nodes (let their ids be 1 and 2)
+    // node #1 will have registers: [BoardConfig, MotorConfig], node #2 will have the same registers.
+    // Changing either of the BoardConfig will result in reflection of the other one's.
+
+    // global index rule: first BoardConfig, then MotorConfig
+    // naming rule: board.xxx, and motor.xxx, remember removing the ending underscore "_"
+    const auto& board_map = BoardConfig().GetConfig().GetReflectMap();
+    const auto& motor_map = GetMotor<FOCMotor>()->GetConfig().GetReflectMap();
+    const uint16_t total_registers = board_map.size() +
+                                     motor_map.size();
+    // index: [0 - total_registers - 1]
+    if(index >= total_registers) return;
+    uint16_t iter_index = 0;
+    for(const auto& [name, info] : board_map)
+    {
+        if(iter_index == index)
+        {
+            snprintf(dst, max_size, "board.%s", name);
+            return;
+        }
+        iter_index++;
+    }
+    for(const auto& [name, info] : motor_map)
+    {
+        if(iter_index == index)
+        {
+            snprintf(dst, max_size, "motor.%s", name);
+            return;
+        }
+        iter_index++;
+    }
+    return;
+}
+
+bool UAVCANProtocol::ReadRegisterByName(const uavcan_register_Name_1_0& name, uavcan_register_Value_1_0& dst_value)
+{
+    /*
+     *  Protobuf Field Type  |      Cyphal Report Type
+     *        FLOAT                       real32
+     *        INT32            integer32 (accept integer32/16/8)
+     *        INT64                      integer64
+     *       UINT32            natural32 (accept natural32/16/8)
+     *       UINT64                      natural64
+     *        BOOL                       natural8
+     */
+    uavcan_register_Value_1_0_select_empty_(&dst_value);
+
+    char buffer[uavcan_register_Name_1_0_name_ARRAY_CAPACITY_ + 2]{};
+    if(name.name.count >= sizeof(buffer)) return false;
+    memcpy(buffer, name.name.elements, name.name.count);
+    buffer[name.name.count] = '\0';
+    auto original_len = strlen(buffer);
+    if(original_len <= 7) return false;
+
+    const ReflectMap* reflect = nullptr;
+    uint8_t *start_ptr = nullptr;
+    // check access region
+    if(strncmp(buffer, "board.", 6) == 0)
+    {
+        reflect = &BoardConfig().GetConfig().GetReflectMap();
+        start_ptr = (uint8_t*)(&BoardConfig().GetConfig());
+    }
+    else if(strncmp(buffer, "motor.", 6) == 0)
+    {
+        reflect = &(GetMotor<FOCMotor>()->GetConfig().GetReflectMap());
+        start_ptr = (uint8_t*)&(GetMotor<FOCMotor>()->GetConfig());
+    }
+    else return false;
+
+    // trim target string
+    original_len -= 6;
+    memmove(buffer, buffer + 6, original_len + 1);
+
+    // add underscore
+    if(buffer[original_len - 1] != '_')
+    {
+        buffer[original_len] = '_';
+        original_len++;
+    }
+    buffer[original_len] = '\0';
+
+    if(const auto& it = reflect->find(buffer); it != reflect->end())
+    {
+        const auto& info = it->second;
+        uint8_t *ptr = start_ptr + info.second;
+        switch(info.first)
+        {
+            case Reflection::ProtoFieldType::FLOAT:
+            {
+                uavcan_register_Value_1_0_select_real32_(&dst_value);
+                dst_value.real32.value.count = 1;
+                memcpy(dst_value.real32.value.elements, ptr, sizeof(float));
+                return true;
+            }
+            case Reflection::ProtoFieldType::DOUBLE:
+            {
+                uavcan_register_Value_1_0_select_real64_(&dst_value);
+                dst_value.real64.value.count = 1;
+                memcpy(dst_value.real64.value.elements, ptr, sizeof(double));
+                return true;
+            }
+            case Reflection::ProtoFieldType::INT32:
+            {
+                uavcan_register_Value_1_0_select_integer32_(&dst_value);
+                dst_value.integer32.value.count = 1;
+                memcpy(dst_value.integer32.value.elements, ptr, sizeof(int32_t));
+                return true;
+            }
+            case Reflection::ProtoFieldType::INT64:
+            {
+                uavcan_register_Value_1_0_select_integer64_(&dst_value);
+                dst_value.integer64.value.count = 1;
+                memcpy(dst_value.integer64.value.elements, ptr, sizeof(int64_t));
+                return true;
+            }
+            case Reflection::ProtoFieldType::UINT32:
+            {
+                uavcan_register_Value_1_0_select_natural32_(&dst_value);
+                dst_value.natural32.value.count = 1;
+                memcpy(dst_value.natural32.value.elements, ptr, sizeof(uint32_t));
+                return true;
+            }
+            case Reflection::ProtoFieldType::UINT64:
+            {
+                uavcan_register_Value_1_0_select_natural64_(&dst_value);
+                dst_value.natural64.value.count = 1;
+                memcpy(dst_value.natural64.value.elements, ptr, sizeof(uint64_t));
+                return true;
+            }
+            case Reflection::ProtoFieldType::BOOL:
+            {
+                uavcan_register_Value_1_0_select_natural8_(&dst_value);
+                dst_value.natural8.value.count = 1;
+                memcpy(dst_value.natural8.value.elements, ptr, sizeof(uint8_t));
+                return true;
+            }
+            default: break;
+        }
+    }
+    return false;
+}
+
+bool UAVCANProtocol::CheckRegisterByName(const uavcan_register_Name_1_0& name)
+{
+    char buffer[uavcan_register_Name_1_0_name_ARRAY_CAPACITY_ + 2]{};
+    if(name.name.count >= sizeof(buffer)) return false;
+    memcpy(buffer, name.name.elements, name.name.count);
+    buffer[name.name.count] = '\0';
+    auto original_len = strlen(buffer);
+    if(original_len <= 7) return false;
+
+    const ReflectMap* reflect = nullptr;
+    // check access region
+    if(strncmp(buffer, "board.", 6) == 0)
+    {
+        reflect = &BoardConfig().GetConfig().GetReflectMap();
+    }
+    else if(strncmp(buffer, "motor.", 6) == 0)
+    {
+        reflect = &(GetMotor<FOCMotor>()->GetConfig().GetReflectMap());
+    }
+    else return false;
+
+    // trim target string
+    original_len -= 6;
+    memmove(buffer, buffer + 6, original_len + 1);
+
+    // add underscore
+    if(buffer[original_len - 1] != '_')
+    {
+        buffer[original_len] = '_';
+        original_len++;
+    }
+    buffer[original_len] = '\0';
+
+    if(const auto& it = reflect->find(buffer); it != reflect->end()) return true;
+    return false;
+}
+
+bool UAVCANProtocol::WriteRegisterByName(const uavcan_register_Name_1_0& name, const uavcan_register_Value_1_0& value)
+{
+    if(uavcan_register_Value_1_0_is_empty_(&value)) return false; // an empty value can't be written
+    // currently unsupported data types:
+    if(uavcan_register_Value_1_0_is_unstructured_(&value)) return false;
+    if(uavcan_register_Value_1_0_is_string_(&value)) return false;
+    if(uavcan_register_Value_1_0_is_bit_(&value)) return false;
+
+    /*
+     *  Protobuf Field Type  |      Cyphal Report Type
+     *        FLOAT                       real32
+     *        INT32            integer32 (accept integer32/16/8)
+     *        INT64                      integer64
+     *       UINT32            natural32 (accept natural32/16/8)
+     *       UINT64                      natural64
+     *        BOOL                       natural8
+     */
+    // Cyphal is little-endian protocol maybe?
+
+    // parse name
+    char buffer[uavcan_register_Name_1_0_name_ARRAY_CAPACITY_ + 2]{};
+    if(name.name.count >= sizeof(buffer)) return false;
+    memcpy(buffer, name.name.elements, name.name.count);
+    buffer[name.name.count] = '\0';
+    auto original_len = strlen(buffer);
+    if(original_len <= 7) return false;
+
+    const ReflectMap* reflect = nullptr;
+    uint8_t *start_ptr = nullptr;
+    // check access region
+    if(strncmp(buffer, "board.", 6) == 0)
+    {
+        reflect = &BoardConfig().GetConfig().GetReflectMap();
+        start_ptr = (uint8_t*)(&BoardConfig().GetConfig());
+    }
+    else if(strncmp(buffer, "motor.", 6) == 0)
+    {
+        reflect = &(GetMotor<FOCMotor>()->GetConfig().GetReflectMap());
+        start_ptr = (uint8_t*)&(GetMotor<FOCMotor>()->GetConfig());
+    }
+    else return false;
+
+    // trim target string
+    original_len -= 6;
+    memmove(buffer, buffer + 6, original_len + 1);
+
+    // add underscore
+    if(buffer[original_len - 1] != '_')
+    {
+        buffer[original_len] = '_';
+        original_len++;
+    }
+    buffer[original_len] = '\0';
+
+    if(const auto& it = reflect->find(buffer); it != reflect->end())
+    {
+        const auto& info = it->second;
+        uint8_t *ptr = start_ptr + info.second;
+        switch(info.first)
+        {
+            case Reflection::ProtoFieldType::FLOAT:
+            {
+                if(!uavcan_register_Value_1_0_is_real32_(&value)) return false;
+                if(value.real32.value.count != 1) return false;
+                float temp = 0.0f;
+                memcpy(&temp, value.real32.value.elements, sizeof(float));
+                *(float*)ptr = temp;
+                return true;
+            }
+            case Reflection::ProtoFieldType::INT32:
+            {
+                if(uavcan_register_Value_1_0_is_integer32_(&value))
+                {
+                    if(value.integer32.value.count != 1) return false;
+                    int32_t temp = 0;
+                    memcpy(&temp, value.integer32.value.elements, sizeof(int32_t));
+                    *(int32_t*)ptr = temp;
+                    return true;
+                }
+                if(uavcan_register_Value_1_0_is_integer16_(&value))
+                {
+                    if(value.integer16.value.count != 1) return false;
+                    int16_t temp = 0;
+                    memcpy(&temp, value.integer16.value.elements, sizeof(int16_t));
+                    *(int32_t*)ptr = (int32_t)temp;
+                    return true;
+                }
+                if(uavcan_register_Value_1_0_is_integer8_(&value))
+                {
+                    if(value.integer8.value.count != 1) return false;
+                    int8_t temp = 0;
+                    memcpy(&temp, value.integer8.value.elements, sizeof(int8_t));
+                    *(int32_t*)ptr = (int32_t)temp;
+                    return true;
+                }
+                return false;
+            }
+            case Reflection::ProtoFieldType::INT64:
+            {
+                if(!uavcan_register_Value_1_0_is_integer64_(&value)) return false;
+                if(value.integer64.value.count != 1) return false;
+                int64_t temp = 0;
+                memcpy(&temp, value.integer64.value.elements, sizeof(int64_t));
+                *(int64_t*)ptr = temp;
+                return true;
+            }
+            case Reflection::ProtoFieldType::UINT32:
+            {
+                if(uavcan_register_Value_1_0_is_natural32_(&value))
+                {
+                    if(value.natural32.value.count != 1) return false;
+                    uint32_t temp = 0;
+                    memcpy(&temp, value.natural32.value.elements, sizeof(uint32_t));
+                    *(uint32_t*)ptr = temp;
+                    return true;
+                }
+                if(uavcan_register_Value_1_0_is_natural16_(&value))
+                {
+                    if(value.natural16.value.count != 1) return false;
+                    uint16_t temp = 0;
+                    memcpy(&temp, value.natural16.value.elements, sizeof(uint16_t));
+                    *(uint32_t*)ptr = (uint32_t)temp;
+                    return true;
+                }
+                if(uavcan_register_Value_1_0_is_natural8_(&value))
+                {
+                    if(value.natural8.value.count != 1) return false;
+                    uint8_t temp = 0;
+                    memcpy(&temp, value.natural8.value.elements, sizeof(uint8_t));
+                    *(uint32_t*)ptr = (uint32_t)temp;
+                    return true;
+                }
+                return false;
+            }
+            case Reflection::ProtoFieldType::UINT64:
+            {
+                if(!uavcan_register_Value_1_0_is_natural64_(&value)) return false;
+                if(value.natural64.value.count != 1) return false;
+                uint64_t temp = 0;
+                memcpy(&temp, value.natural64.value.elements, sizeof(uint64_t));
+                *(uint64_t*)ptr = temp;
+                return true;
+            }
+            case Reflection::ProtoFieldType::BOOL:
+            {
+                if(!uavcan_register_Value_1_0_is_natural8_(&value)) return false;
+                if(value.natural8.value.count != 1) return false;
+                uint8_t temp = 0;
+                memcpy(&temp, value.natural8.value.elements, sizeof(uint8_t));
+                *(uint8_t*)ptr = temp;
+                return true;
+            }
+            default: break;
+        }
+    }
+    return false;
 }
 
 UAVCANProtocol::PollingTask::PollingTask(UAVCANProtocol* p) : Task("UAVCANPoll"), parent(p)
@@ -332,8 +851,9 @@ FuncRetCode UAVCANProtocol::SubscribeTransfer(CanardTransferKind kind, CanardPor
      */
     /*
      * From struct CanardRxSubscription, we can get the only identifiable elements are: "extent" and "port_id" (READ-ONLY in struct definitions)
-     * In case of preventing repeated duplicated subscriptions, we use custom vector to store the existing subscriptions.
+     * In case of preventing repeated duplicated subscriptions, we use custom vector(x) list to store the existing subscriptions.
      */
+    // IMPORTANT: SUBSCRIPTION INSTANCES SHALL NOT BE MOVED WHILE IN USE.
     // #1: search for existing subscriptions with same port & max_size(extent)
     CanardRxSubscription* target = nullptr;
     for(auto& i : rx_subscriptions) // using &
@@ -366,7 +886,7 @@ FuncRetCode UAVCANProtocol::UnsubscribeTransfer(CanardTransferKind kind, CanardP
 
 }
 
-int8_t UAVCANProtocol::TransmitFrame(CanardMutableFrame* frame)
+int8_t UAVCANProtocol::TransmitFrame(CanardMutableFrame* frame) const
 {
     DataType::Comm::CANMessage message
     {
