@@ -76,13 +76,14 @@ FuncRetCode WS2812::Init()
 
 void WS2812::Update()
 {
-    for(uint8_t i = 0; i < light_count; i++) SetDMABuf32(i);
     dma_channel_enable(hdma, FALSE);
+    for(uint8_t i = 0; i < light_count; i++) SetDMABuf32(i);
     hdma->maddr = (uint32_t)((uint32_t*)dma_buffer.data());
     hdma->paddr = (uint32_t)CCR_address;
     hdma->dtcnt = DMA_BUF_LEN(light_count);
     dma_channel_enable(hdma, TRUE);
-    tmr_dma_request_enable(htim, dma_request, TRUE);
+    // tmr_dma_request_enable(htim, dma_request, TRUE);
+    htim->iden |= dma_request;
     tmr_channel_enable(htim, channel, TRUE);
     tmr_output_enable(htim, TRUE);
     tmr_counter_enable(htim, TRUE);
