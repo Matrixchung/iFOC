@@ -22,6 +22,7 @@ public:
     void SetDataWidth(DataWidth w) final;
     void SetClock(uint32_t clock) final;
     void SetCPOLCPHA(uint8_t cpol, uint8_t cpha) final;
+    void SetCS(bool state) final;
 private:
     SPI_HandleTypeDef *hspi;
     GPIOBase& cs;

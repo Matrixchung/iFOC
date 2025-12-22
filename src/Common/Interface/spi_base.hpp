@@ -22,6 +22,7 @@ public:
     virtual void SetDataWidth(DataWidth w) {};
     virtual void SetClock(const uint32_t clock) {};
     virtual void SetCPOLCPHA(const uint8_t cpol, const uint8_t cpha) {};
+    virtual void SetCS(const bool state) {};
 };
 
 template<typename T>

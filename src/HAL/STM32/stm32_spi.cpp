@@ -1,4 +1,6 @@
 #include "stm32_spi.hpp"
+
+#include "at32wk_spi.hpp"
 #if defined(HAL_SPI_MODULE_ENABLED)
 
 #include "stm32_gpio.hpp"
@@ -95,6 +97,11 @@ void SPI::SetCPOLCPHA(const uint8_t cpol, const uint8_t cpha)
     else hspi->Init.CLKPolarity = SPI_POLARITY_LOW;
     if(cpha == 1) hspi->Init.CLKPhase = SPI_PHASE_2EDGE;
     else hspi->Init.CLKPhase = SPI_PHASE_1EDGE;
+}
+
+void SPI::SetCS(const bool state)
+{
+    cs = state;
 }
 
 #if defined(STM32G4)
