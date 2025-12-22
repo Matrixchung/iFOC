@@ -118,6 +118,28 @@ FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
     return FuncRetCode::REMOTE_TIMEOUT;
 }
 
+FuncRetCode CAN::SetHWFilter(uint8_t filter_idx, uint32_t id_u32, uint32_t mask_u32)
+{
+    id_u32 <<= 3;
+    mask_u32 <<= 3; // SEE DATASHEET MAPPING
+    // CAN_FiFB1[31:21] | CAN_FiFB1[20:3] | CAN_FiFB1[2:0]
+    // StandardID[10:0] |   ExtID[17:0]   | IDT   RTR   0
+    can_filter_init_type can_filter_init_struct
+    {
+        .filter_activate_enable = TRUE,
+        .filter_mode = CAN_FILTER_MODE_ID_MASK,
+        .filter_fifo = CAN_FILTER_FIFO0,
+        .filter_number = filter_idx,
+        .filter_bit = CAN_FILTER_32BIT,
+        .filter_id_high = (uint16_t)(id_u32 >> 16),
+        .filter_id_low = (uint16_t)(id_u32 & 0xFFFF),
+        .filter_mask_high = (uint16_t)(mask_u32 >> 16),
+        .filter_mask_low = (uint16_t)(mask_u32 & 0xFFFF)
+    };
+    can_filter_init(hcan, &can_filter_init_struct);
+    return FuncRetCode::OK;
+}
+
 void CAN::OnIRQ() const
 {
     // if(can_interrupt_flag_get(hcan, CAN_ETR_FLAG) != RESET) // error irq

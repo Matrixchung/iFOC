@@ -26,6 +26,10 @@ public:
 
     virtual FuncRetCode TransmitMessage(DataType::Comm::CANMessage& msg) = 0;
 
+    virtual FuncRetCode SetHWFilter(uint8_t filter_idx,
+                                    uint32_t id_u32,
+                                    uint32_t mask_u32) { return FuncRetCode::NOT_SUPPORTED; };
+
     void ProcessIncomingMsg(const DataType::Comm::CANMessage& msg) const;
 
     void RegisterRxHandler(EventCallback cb);
