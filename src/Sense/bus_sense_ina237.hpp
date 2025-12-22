@@ -12,8 +12,9 @@ private:
     using I2CBase = iFOC::HAL::I2CBase;
 public:
     BusSenseINA237() = delete;
-    BusSenseINA237(I2CBase *_i2c, uint8_t _addr, float _max, float _shunt);
+    BusSenseINA237(I2CBase *_i2c, uint8_t _addr, float _max, float _shunt, bool rev);
     explicit BusSenseINA237(I2CBase *_i2c);
+    BusSenseINA237(I2CBase *_i2c, uint8_t _addr, bool rev);
     FuncRetCode Init() final;
     void Update() final;
 private:
@@ -25,5 +26,6 @@ private:
     uint16_t current_cal_reg = 0;
     float current_lsb = 0.001f;
     // float power_lsb = 0.025f;
+    bool reversed = false;
 };
 }
