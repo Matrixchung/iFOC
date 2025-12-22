@@ -12,6 +12,7 @@ public:
     ProtocolBase() = default;
     virtual void Init() {};
 protected:
+    ~ProtocolBase() = default;
     template <uint8_t> friend class MotorBase;
     void* _motor = nullptr;
     template<class T>

@@ -5,6 +5,11 @@
 #include "Math/math_concepts.hpp"
 #include <array>
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 namespace iFOC::HAL
 {
 static void DelayUs(volatile uint32_t us)
@@ -200,9 +205,11 @@ static uint16_t get_crc16(const uint8_t* data, const size_t len)
     return get_crc16_accumulate(0xFFFF, data, len);
 }
 
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
 __fast_inline static float fast_inv_sqrt(const float x)
@@ -215,7 +222,9 @@ __fast_inline static float fast_inv_sqrt(const float x)
     y = y * (1.5f - (halfx * y * y));
     return y;
 }
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif
 
 /// Normalize radian to [0, 2PI]
 /// \param rad
@@ -349,3 +358,7 @@ static float quick_powf(unsigned int n)
 }
 
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif

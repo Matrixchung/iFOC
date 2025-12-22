@@ -140,10 +140,11 @@ using ReflectMap = std::map<
 >;
 }
 
+
 #define REFLECT(...) \
-    static iFOC::ReflectMap GetReflectMap() { \
+    static const iFOC::ReflectMap& GetReflectMap() { \
         static const iFOC::ReflectMap members{ __VA_ARGS__ }; \
-        return members;                                \
+        return members; \
     }
 
 #define MEMBER_SIZE_OFFSET(class, name) {#name, {iFOC::Reflection::GetFieldType< \

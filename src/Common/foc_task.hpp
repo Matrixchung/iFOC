@@ -94,7 +94,6 @@ protected:
     static inline void sleep(int time_ms) { vTaskDelay(pdMS_TO_TICKS(time_ms)); }
     TaskHandle_t xHandle = nullptr;
     TaskConfig config;
-    // std::optional<void*> motor;
     void* _motor;
     template<class T>
     T* GetMotor() { return reinterpret_cast<T*>(_motor); };

@@ -7,7 +7,7 @@
 
 namespace iFOC::Sense
 {
-#define config iFOC::BoardConfig.GetConfig()
+#define config iFOC::BoardConfig().GetConfig()
 class BusSenseINA226 final : public BusSenseBase
 {
 private:

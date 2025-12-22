@@ -3,8 +3,10 @@
 #include "task_timer.hpp"
 #include "hal_impl.hpp"
 
+#ifdef __GNUC__
 #pragma GCC push_options
-#pragma GCC optimize (2)
+#pragma GCC optimize (3)
+#endif
 
 namespace iFOC
 {
@@ -40,4 +42,6 @@ void TaskTimer::stop(uint32_t start_cycle)
 TaskTimerContext::TaskTimerContext(TaskTimer &t)  : timer(t), start_time(timer.start()) {}
 TaskTimerContext::~TaskTimerContext() { timer.stop(start_time); };
 }
+#ifdef __GNUC__
 #pragma GCC pop_options
+#endif
