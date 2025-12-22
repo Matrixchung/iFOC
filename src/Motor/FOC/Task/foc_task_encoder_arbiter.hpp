@@ -8,6 +8,6 @@ class EncoderArbiterTask final : public Task
 {
 public:
     EncoderArbiterTask();
-    void UpdateRT(float Ts) final;
+    void UpdateRT(float Ts) override;
 };
 }

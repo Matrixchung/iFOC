@@ -88,13 +88,13 @@ FuncRetCode TaskProcessor::InsertTaskAfterName(const char* prevTaskName, Task* t
     return FuncRetCode::PARAM_NOT_EXIST;
 }
 
-std::optional<Task*> TaskProcessor::GetTaskByName(const char *name)
+Task* TaskProcessor::GetTaskByName(const char *name)
 {
     for(auto* task : tasks)
     {
-        if(*task == name) return std::make_optional(task);
+        if(*task == name) return task;
     }
-    return std::nullopt;
+    return nullptr;
 }
 
 FuncRetCode TaskProcessor::RemoveTaskByName(const char *name)
@@ -130,6 +130,15 @@ FuncRetCode TaskProcessor::RemoveTaskByName(const char *name)
 //     return configs;
 // }
 
+bool TaskProcessor::HasTask(const Task *task) const
+{
+    for(const auto* t : tasks)
+    {
+        if(t && *t == *task) return true;
+    }
+    return false;
+}
+
 const List<Task*> &TaskProcessor::GetTaskList()
 {
     return tasks;
@@ -139,7 +148,7 @@ void TaskProcessor::_set_bypass_task_by_name(const char* name, bool bypass)
 {
     if(auto task = GetTaskByName(name))
     {
-        task.value()->SetBypass(bypass);
+        task->SetBypass(bypass);
     }
 }
 

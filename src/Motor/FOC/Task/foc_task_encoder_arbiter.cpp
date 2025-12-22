@@ -1,6 +1,6 @@
 #include "foc_task_encoder_arbiter.hpp"
 
-#define foc GetMotor<FOCMotor>()
+// #define foc GetMotor<FOCMotor>()
 
 namespace iFOC::FOC
 {
@@ -11,9 +11,10 @@ EncoderArbiterTask::EncoderArbiterTask() : Task("EncArbiter")
 
 void EncoderArbiterTask::UpdateRT(float Ts)
 {
-    if(auto enc = foc->GetPrimaryEncoder())
+    const auto foc = GetMotor<FOCMotor>();
+    if(const auto enc = foc->GetPrimaryEncoder())
     {
-        if(!enc.value()->IsResultValid())
+        if(!enc->IsResultValid())
         {
             if(foc->state_machine.GetState() == MotorState::SENSORED_CLOSED_LOOP_CONTROL)
             {
@@ -23,10 +24,10 @@ void EncoderArbiterTask::UpdateRT(float Ts)
             foc->elec_omega_rad_s = 0.0f;
             return;
         }
-        foc->elec_angle_rad = enc.value()->single_round_angle_rad;
-        foc->elec_omega_rad_s = enc.value()->angular_speed_rad_s;
-        // foc->mech_speed_rpm = RAD2RPM(enc.value()->angular_speed_rad_s, 1); // here the pole_pair = 1
-        if(enc.value()->GetEncoderType() != Encoder::Type::SENSORLESS_ENCODER &&
+        foc->elec_angle_rad = enc->single_round_angle_rad;
+        foc->elec_omega_rad_s = enc->angular_speed_rad_s;
+        // foc->mech_speed_rpm = RAD2RPM(enc->angular_speed_rad_s, 1); // here the pole_pair = 1
+        if(enc->GetEncoderType() != Encoder::Type::SENSORLESS_ENCODER &&
            foc->GetConfig().pole_pairs_valid())
         {
             if(foc->GetConfig().sensor_zero_offset_valid())
@@ -40,7 +41,7 @@ void EncoderArbiterTask::UpdateRT(float Ts)
     {
         if(foc->state_machine.GetState() == MotorState::SENSORED_CLOSED_LOOP_CONTROL)
         {
-            foc->DisarmWithError(MotorError::PRIMARY_SENSOR_NOT_FOUND);
+            foc->DisarmWithError(MotorError::PRIMARY_SENSOR_COMPONENT_MISSING);
         }
         foc->elec_angle_rad = 0.0f;
         foc->elec_omega_rad_s = 0.0f;

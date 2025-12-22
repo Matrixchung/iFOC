@@ -37,7 +37,7 @@ public:
     __fast_inline auto& GetConfig() { return config.GetConfig(); }
     void ResetDefaultConfig();
 
-    std::optional<DC::SpeedLoopPI*> GetSpeedLoop();
+    DC::SpeedLoopPI* GetSpeedLoop();
 
     DataType::ConfigNVMWrapper<DataType::Config::Motor::DCMotorConfig> config{(ProtoHeader)(to_underlying(ProtoHeader::DC_MOTOR_CONFIG_M1) + GetInternalID()),
                                                                                (uint8_t)(internal_id + _const::MOTOR_CONFIG_STORE_SECTOR_BEGIN)};

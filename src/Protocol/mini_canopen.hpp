@@ -123,7 +123,7 @@ public:
     FuncRetCode WriteODValue(uint16_t index, uint8_t subindex, uint8_t value_size, const void* value, bool bypass = true); // bypass: bypass R/W permission
     FuncRetCode ReadODValue(uint16_t index, uint8_t subindex, uint8_t& actual_size, void* dest, bool bypass = true);
     uint8_t GetODValueSize(uint16_t index, uint8_t subindex);
-    std::optional<ODEntry*> FindODEntry(uint16_t index);
+    ODEntry* FindODEntry(uint16_t index);
     [[nodiscard]] uint8_t GetNodeID() const;
     void SetNodeID(uint8_t node_id);
     void RegisterNMTCallback(NMTCallback cb);
@@ -323,8 +323,8 @@ private:
     void SendFailedSDO(uint8_t sdo_number, SDORole who_am_i, uint16_t target_index, uint8_t target_subindex, SDOAbortCode abort_code);
     void ResetSDOLine(SDOTransfer& transfer);
     void InitSDOLine(SDOTransfer& transfer, uint8_t sdo_number, uint16_t target_index, uint8_t target_subindex, SDOState state);
-    std::optional<SDOTransfer*> GetSDOLineOnUse(uint8_t sdo_number, SDORole who_am_i);
-    std::optional<SDOTransfer*> GetSDOLineFree(SDORole expected_who_am_i);
+    SDOTransfer* GetSDOLineOnUse(uint8_t sdo_number, SDORole who_am_i);
+    SDOTransfer* GetSDOLineFree(SDORole expected_who_am_i);
     FuncRetCode ParseSDOLineToOD(const SDOTransfer& transfer);
     FuncRetCode ParseODToSDOLine(SDOTransfer& transfer);
     void StartSDOTimer(SDOTransfer& transfer);

@@ -5,7 +5,6 @@
 #include "foc_task.hpp"
 #include "foc_types.hpp"
 #include "func_ret_code.h"
-#include <list>
 /*
  *  Task  ->     Real-Time Task (RTTask)    |    Scheduled Task (NormalTask)
  *  Host   |       RTTaskScheduler()        |       FreeRTOS Scheduler
@@ -68,7 +67,7 @@ public:
     ///
     /// \param name
     /// \return
-    [[nodiscard]] std::optional<Task*> GetTaskByName(const char* name);
+    [[nodiscard]] Task* GetTaskByName(const char* name);
 
     ///
     /// \param name
@@ -89,28 +88,19 @@ public:
 
     ~TaskProcessor();
 private:
-    List<Task*> tasks;
-    __fast_inline bool HasTask(const Task *task);
-    static __fast_inline bool IsTaskValid(const Task *task);
-    __fast_inline void InitializeTask(Task *task);
+    bool HasTask(const Task *task) const;
+    static bool IsTaskValid(const Task *task);
+    static void InitializeTask(Task *task);
     void _set_bypass_task_by_name(const char* name, bool bypass);
+    List<Task*> tasks{};
 };
 
-__fast_inline bool TaskProcessor::HasTask(const Task *task)
-{
-    for(const auto* t : tasks)
-    {
-        if(*t == *task) return true;
-    }
-    return false;
-}
-
-__fast_inline bool TaskProcessor::IsTaskValid(const Task *task)
+inline bool TaskProcessor::IsTaskValid(const Task *task)
 {
     return (task && strlen(task->config.name));
 }
 
-__fast_inline void TaskProcessor::InitializeTask(Task *task)
+inline void TaskProcessor::InitializeTask(Task *task)
 {
     if(task->IsTaskRegistered(Task::TaskType::RT_TASK)) task->InitRT();
     if(task->IsTaskRegistered(Task::TaskType::MID_TASK)) task->InitMid();

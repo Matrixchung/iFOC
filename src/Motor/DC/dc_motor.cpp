@@ -58,7 +58,7 @@ FuncRetCode DCMotor::Init(const bool initTIM)
 
 bool DCMotor::Arm()
 {
-    if(const auto curr = GetSpeedLoop()) curr.value()->ResetSpeedLoop();
+    if(const auto curr = GetSpeedLoop()) curr->ResetSpeedLoop();
     if(error == to_underlying(MotorError::NONE))
     {
         is_armed = true;
@@ -93,8 +93,8 @@ void DCMotor::GetCurrentMotion(Motion& dest, Motion::Ref ref_frame, Motion::Torq
             dest.torque = {Idc_measured, Motion::TorqueUnit::AMP};
             if(const auto& enc = GetPrimaryEncoder())
             {
-                dest.speed = {enc.value()->angular_speed_rad_s, Motion::SpeedUnit::RADS};
-                dest.pos = {enc.value()->multi_round_angle_rad, Motion::PosUnit::RAD};
+                dest.speed = {enc->angular_speed_rad_s, Motion::SpeedUnit::RADS};
+                dest.pos = {enc->multi_round_angle_rad, Motion::PosUnit::RAD};
             }
             break;
         }
@@ -104,8 +104,8 @@ void DCMotor::GetCurrentMotion(Motion& dest, Motion::Ref ref_frame, Motion::Torq
             if(const auto& enc = GetPrimaryEncoder())
             {
                 const real_t temp = 1.0f / GetConfig().deduction_ratio();
-                dest.speed = {enc.value()->angular_speed_rad_s * temp, Motion::SpeedUnit::RADS};
-                dest.pos = {enc.value()->multi_round_angle_rad * temp, Motion::PosUnit::RAD};
+                dest.speed = {enc->angular_speed_rad_s * temp, Motion::SpeedUnit::RADS};
+                dest.pos = {enc->multi_round_angle_rad * temp, Motion::PosUnit::RAD};
             }
         }
         default: break;
@@ -147,10 +147,10 @@ void DCMotor::SetTargetMotion(Motion& motion)
     current_target = motion;
 }
 
-std::optional<DC::SpeedLoopPI*> DCMotor::GetSpeedLoop()
+SpeedLoopPI* DCMotor::GetSpeedLoop()
 {
     auto speedloop = GetTaskByName("SpeedLoopPI");
-    if(speedloop) return std::make_optional(reinterpret_cast<SpeedLoopPI*>(speedloop.value()));
-    return std::nullopt;
+    if(speedloop) return reinterpret_cast<SpeedLoopPI*>(speedloop);
+    return nullptr;
 }
 }

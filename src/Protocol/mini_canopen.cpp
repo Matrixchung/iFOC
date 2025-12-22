@@ -242,43 +242,43 @@ FuncRetCode MiniCANOpen::SetSerialNumber(uint32_t serial_number)
 FuncRetCode MiniCANOpen::WriteODValue(uint16_t index, uint8_t subindex, uint8_t value_size, const void* value, bool bypass)
 {
     auto entry = FindODEntry(index);
-    if(!entry || subindex >= entry.value()->subIndexes.size()) return FuncRetCode::PARAM_NOT_EXIST;
-    auto& sub = entry.value()->subIndexes[subindex];
+    if(!entry || subindex >= entry->subIndexes.size()) return FuncRetCode::PARAM_NOT_EXIST;
+    auto& sub = entry->subIndexes[subindex];
     if(!bypass && sub.accessType == ODAccessType::RO) return FuncRetCode::ACCESS_VIOLATION; // Disable access check
     if(value_size > sub.size) return FuncRetCode::PARAM_OUT_BOUND;
     memcpy(sub.pObject, value, value_size);
-    if(entry.value()->rw_callback) entry.value()->rw_callback(ODRWType::WRITE, entry.value(), subindex);
+    if(entry->rw_callback) entry->rw_callback(ODRWType::WRITE, entry, subindex);
     return FuncRetCode::OK;
 }
 
 FuncRetCode MiniCANOpen::ReadODValue(uint16_t index, uint8_t subindex, uint8_t& actual_size, void* dest, bool bypass)
 {
     auto entry = FindODEntry(index);
-    if(!entry || subindex >= entry.value()->subIndexes.size())
+    if(!entry || subindex >= entry->subIndexes.size())
     {
         actual_size = 0;
         return FuncRetCode::PARAM_NOT_EXIST;
     }
-    auto& sub = entry.value()->subIndexes[subindex];
+    auto& sub = entry->subIndexes[subindex];
     if(!bypass && sub.accessType == ODAccessType::WO) return FuncRetCode::ACCESS_VIOLATION;
     actual_size = sub.size;
     memcpy(dest, sub.pObject, actual_size);
-    if(entry.value()->rw_callback) entry.value()->rw_callback(ODRWType::READ, entry.value(), subindex);
+    if(entry->rw_callback) entry->rw_callback(ODRWType::READ, entry, subindex);
     return FuncRetCode::OK;
 }
 
 uint8_t MiniCANOpen::GetODValueSize(uint16_t index, uint8_t subindex)
 {
     auto entry = FindODEntry(index);
-    if(!entry || subindex >= entry.value()->subIndexes.size()) return 0;
-    auto& sub = entry.value()->subIndexes[subindex];
+    if(!entry || subindex >= entry->subIndexes.size()) return 0;
+    auto& sub = entry->subIndexes[subindex];
     return sub.size;
 }
 
-std::optional<MiniCANOpen::ODEntry*> MiniCANOpen::FindODEntry(const uint16_t index)
+MiniCANOpen::ODEntry* MiniCANOpen::FindODEntry(const uint16_t index)
 {
     if(const auto& it = m_objectDict.find(index); it != m_objectDict.end()) return &it->second;
-    return std::nullopt;
+    return nullptr;
 }
 
 uint8_t MiniCANOpen::GetNodeID() const
@@ -573,8 +573,8 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
     /* Special cases for block transfer: in frames with segment data cs is not specified, and transfer line is already initiated. */
     if(on_use_line)
     {
-        if((who_am_i == SDORole::SDO_SERVER && on_use_line.value()->state == SDOState::STATE_BLOCK_DOWNLOAD_IN_PROGRESS) ||
-            (who_am_i == SDORole::SDO_CLIENT && on_use_line.value()->state == SDOState::STATE_BLOCK_UPLOAD_IN_PROGRESS))
+        if((who_am_i == SDORole::SDO_SERVER && on_use_line->state == SDOState::STATE_BLOCK_DOWNLOAD_IN_PROGRESS) ||
+            (who_am_i == SDORole::SDO_CLIENT && on_use_line->state == SDOState::STATE_BLOCK_UPLOAD_IN_PROGRESS))
         {
             cs = (msg.data[0] == 0x80) ? 4 : 6;
         }
@@ -591,19 +591,19 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
         {
             if(who_am_i == SDORole::SDO_SERVER)
             {
-                if(!on_use_line || on_use_line.value()->state != SDOState::STATE_DOWNLOAD_IN_PROGRESS)
+                if(!on_use_line || on_use_line->state != SDOState::STATE_DOWNLOAD_IN_PROGRESS)
                 {
                     /* Receiving a download segment data : an SDO transfer should have been yet initiated. */
                     DEBUG_PRINT("SDO error: Received download segment for unstarted trans: %d\n", sdo_number);
                     SendFailedSDO(sdo_number, who_am_i, 0, 0, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                     return;
                 }
-                ResetSDOTimer(*on_use_line.value()); // Reset watchdog
+                ResetSDOTimer(*on_use_line); // Reset watchdog
                 DEBUG_PRINT("Received SDO DL segment at %d\n", sdo_number);
-                auto index = on_use_line.value()->target_index;
-                auto subindex = on_use_line.value()->target_subindex;
+                auto index = on_use_line->target_index;
+                auto subindex = on_use_line->target_subindex;
                 /* Toggle test. */
-                if(on_use_line.value()->toggle != getSDOtoggle(msg.data[0]))
+                if(on_use_line->toggle != getSDOtoggle(msg.data[0]))
                 {
                     DEBUG_PRINT("SDO error: toggle error %d\n", getSDOtoggle(msg.data[0]));
                     SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_TOGGLE_NOT_ALTERNED);
@@ -612,7 +612,7 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                 /* Nb of data to be downloaded */
                 uint8_t nb_bytes = 7 - getSDOn3(msg.data[0]);
                 /* Store the data in the transfer structure. */
-                if(on_use_line.value()->push_back(&msg.data[1], nb_bytes) != FuncRetCode::OK)
+                if(on_use_line->push_back(&msg.data[1], nb_bytes) != FuncRetCode::OK)
                 {
                     DEBUG_PRINT("SDO error: cs=0 buffer full\n");
                     SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
@@ -620,21 +620,21 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                 }
                 /* Sending the SDO response, CS = 1 */
                 uint8_t data[8]{};
-                data[0] = (uint8_t)((1 << 5) | (on_use_line.value()->toggle << 4));
+                data[0] = (uint8_t)((1 << 5) | (on_use_line->toggle << 4));
                 SendSDO(sdo_number, who_am_i, data);
                 /* Inverting the toggle for the next segment. */
-                on_use_line.value()->toggle = !on_use_line.value()->toggle;
+                on_use_line->toggle = !on_use_line->toggle;
                 /* If it was the last segment, */
                 if(getSDOc(msg.data[0]))
                 {
                     /* Transfering line data to object dictionary. */
-                    if(ParseSDOLineToOD(*on_use_line.value()) != FuncRetCode::OK)
+                    if(ParseSDOLineToOD(*on_use_line) != FuncRetCode::OK)
                     {
                         DEBUG_PRINT("SDO error: cs=0 unable to copy data to od\n");
                         SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                         return;
                     }
-                    ResetSDOLine(*on_use_line.value());
+                    ResetSDOLine(*on_use_line);
                     DEBUG_PRINT("SDO end of download @ index %d\n", sdo_number);
                 }
             }
@@ -665,11 +665,11 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                     SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                     return;
                 }
-                InitSDOLine(*free_line.value(), sdo_number, index, subindex, SDOState::STATE_DOWNLOAD_IN_PROGRESS);
+                InitSDOLine(*free_line, sdo_number, index, subindex, SDOState::STATE_DOWNLOAD_IN_PROGRESS);
                 if(getSDOe(msg.data[0])) // if sdo expedited (fast sdo protocol)
                 {
                     uint8_t nbBytes = 4 - getSDOn2(msg.data[0]);
-                    if(free_line.value()->push_back(&msg.data[4], nbBytes) != FuncRetCode::OK)
+                    if(free_line->push_back(&msg.data[4], nbBytes) != FuncRetCode::OK)
                     {
                         DEBUG_PRINT("SDO cs 1 error: can't push_back %d element\n", nbBytes);
                         SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
@@ -678,20 +678,20 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                     /* SDO expedited -> transfer finished. Data can be stored in the dictionary. */
                     /* The line will be reseted when it is downloading in the dictionary. */
                     DEBUG_PRINT("SDO expedited transfer finished, len=%d\n", nbBytes);
-                    if(ParseSDOLineToOD(*free_line.value()) != FuncRetCode::OK)
+                    if(ParseSDOLineToOD(*free_line) != FuncRetCode::OK)
                     {
                         DEBUG_PRINT("SDO cs 1 error: can't copy data to od\n");
                         SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                         return;
                     }
-                    ResetSDOLine(*free_line.value());
+                    ResetSDOLine(*free_line);
                 }
                 else // Normal SDO protocol
                 {
                     if(getSDOs(msg.data[0]))
                     {
                         uint32_t nbBytes = (msg.data[4]) + ((uint32_t)(msg.data[5])<<8) + ((uint32_t)(msg.data[6])<<16) + ((uint32_t)(msg.data[7])<<24);
-                        free_line.value()->expected_count = nbBytes;
+                        free_line->expected_count = nbBytes;
                         DEBUG_PRINT("SDO cs 1: normal protocol nbBytes:%d\n", nbBytes);
                     }
                 }
@@ -730,16 +730,16 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                     SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                     return;
                 }
-                InitSDOLine(*free_line.value(), sdo_number, index, subindex, SDOState::STATE_UPLOAD_IN_PROGRESS);
+                InitSDOLine(*free_line, sdo_number, index, subindex, SDOState::STATE_UPLOAD_IN_PROGRESS);
                 /* Transfer data from dictionary to the line structure. */
-                if(ParseODToSDOLine(*free_line.value()) != FuncRetCode::OK)
+                if(ParseODToSDOLine(*free_line) != FuncRetCode::OK)
                 {
                     DEBUG_PRINT("SDO cs 2 error: can't copy data to od\n");
                     SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                     return;
                 }
                 /* Preparing the response.*/
-                auto nbBytes = free_line.value()->data.size();
+                auto nbBytes = free_line->data.size();
                 uint8_t data[8]{};
                 if(nbBytes > 4)
                 {
@@ -763,7 +763,7 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                     data[1] = (uint8_t)(index & 0xFF);        /* LSB */
                     data[2] = (uint8_t)((index >> 8) & 0xFF); /* MSB */
                     data[3] = subindex;
-                    if(free_line.value()->extract_from_head(data + 4, nbBytes) != FuncRetCode::OK)
+                    if(free_line->extract_from_head(data + 4, nbBytes) != FuncRetCode::OK)
                     {
                         DEBUG_PRINT("SDO cs 2 error: can't copy expedit data from line to buf\n");
                         SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
@@ -771,7 +771,7 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                     }
                     DEBUG_PRINT("SDO cs 2: send expedit ul init response @ %d\n", sdo_number);
                     SendSDO(sdo_number, who_am_i, data);
-                    ResetSDOLine(*free_line.value());
+                    ResetSDOLine(*free_line);
                 }
             }
             else
@@ -786,35 +786,35 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
             {
                 /* Receiving a upload segment. */
                 /* A SDO transfer should have been yet initiated. */
-                if(!on_use_line || on_use_line.value()->state != SDOState::STATE_UPLOAD_IN_PROGRESS)
+                if(!on_use_line || on_use_line->state != SDOState::STATE_UPLOAD_IN_PROGRESS)
                 {
                     DEBUG_PRINT("SDO cs 3 error: received upload segment for unstarted trans: %d\n", sdo_number);
                     SendFailedSDO(sdo_number, who_am_i, 0, 0, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                     return;
                 }
-                ResetSDOTimer(*on_use_line.value()); // Reset the watchdog
-                auto index = on_use_line.value()->target_index;
-                auto subindex = on_use_line.value()->target_subindex;
-                if(on_use_line.value()->toggle != getSDOtoggle(msg.data[0]))
+                ResetSDOTimer(*on_use_line); // Reset the watchdog
+                auto index = on_use_line->target_index;
+                auto subindex = on_use_line->target_subindex;
+                if(on_use_line->toggle != getSDOtoggle(msg.data[0]))
                 {
                     DEBUG_PRINT("SDO cs 3 error: toggle error: %d\n", getSDOtoggle(msg.data[0]));
                     SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_TOGGLE_NOT_ALTERNED);
                     return;
                 }
                 /* Uploading next segment. We need to know if it will be the last one. */
-                auto rest_bytes = on_use_line.value()->data.size();
+                auto rest_bytes = on_use_line->data.size();
                 uint8_t data[8]{};
                 if(rest_bytes > 7)
                 {
                     /* The segment to transfer is not the last one.*/
                     /* code to send the next segment. (cs = 0; c = 0) */
-                    data[0] = (uint8_t)(on_use_line.value()->toggle << 4);
-                    if(on_use_line.value()->extract_from_head(data + 1, 7) != FuncRetCode::OK)
+                    data[0] = (uint8_t)(on_use_line->toggle << 4);
+                    if(on_use_line->extract_from_head(data + 1, 7) != FuncRetCode::OK)
                     {
                         SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
                         return;
                     }
-                    on_use_line.value()->toggle = !on_use_line.value()->toggle;
+                    on_use_line->toggle = !on_use_line->toggle;
                     DEBUG_PRINT("SDO cs 3: Sending ul segment @ %d\n", sdo_number);
                     SendSDO(sdo_number, who_am_i, data);
                 }
@@ -822,15 +822,15 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                 {
                     /* Last segment. */
                     /* code to send the last segment. (cs = 0; c = 1) */
-                    data[0] = (uint8_t)((on_use_line.value()->toggle << 4) | ((7 - rest_bytes) << 1) | 1);
-                    if(on_use_line.value()->extract_from_head(data + 1, rest_bytes) != FuncRetCode::OK)
+                    data[0] = (uint8_t)((on_use_line->toggle << 4) | ((7 - rest_bytes) << 1) | 1);
+                    if(on_use_line->extract_from_head(data + 1, rest_bytes) != FuncRetCode::OK)
                     {
                         SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
                         return;
                     }
                     DEBUG_PRINT("SDO cs 3: Sending last ul segment @ %d\n", sdo_number);
                     SendSDO(sdo_number, who_am_i, data);
-                    ResetSDOLine(*on_use_line.value());
+                    ResetSDOLine(*on_use_line);
                 }
             }
             else
@@ -847,7 +847,7 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
             {
                 if(on_use_line)
                 {
-                    ResetSDOLine(*on_use_line.value());
+                    ResetSDOLine(*on_use_line);
                     DEBUG_PRINT("SDO: recv sdo abort, release line #%d, code:%d\n", sdo_number, abort_code);
                 }
                 else DEBUG_PRINT("SDO: recv sdo abort, no active line\n");
@@ -891,18 +891,18 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                         SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                         return;
                     }
-                    InitSDOLine(*free_line.value(), sdo_number, index, subindex, SDOState::STATE_BLOCK_UPLOAD_IN_PROGRESS);
-                    free_line.value()->peer_crc_support = (uint8_t)((msg.data[0] >> 2) & 1);
-                    free_line.value()->block_size = msg.data[4];
+                    InitSDOLine(*free_line, sdo_number, index, subindex, SDOState::STATE_BLOCK_UPLOAD_IN_PROGRESS);
+                    free_line->peer_crc_support = (uint8_t)((msg.data[0] >> 2) & 1);
+                    free_line->block_size = msg.data[4];
                     /* Transfer data from dictionary to the line structure. */
-                    if(ParseODToSDOLine(*free_line.value()) != FuncRetCode::OK)
+                    if(ParseODToSDOLine(*free_line) != FuncRetCode::OK)
                     {
                         DEBUG_PRINT("SDO cs 5 error: can't copy data to od\n");
                         SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                         return;
                     }
-                    auto nbBytes = free_line.value()->data.size();
-                    free_line.value()->obj_size = nbBytes;
+                    auto nbBytes = free_line->data.size();
+                    free_line->obj_size = nbBytes;
                     data[0] = (6 << 5) | (1 << 1) | SDO_BSS_INITIATE_UPLOAD_RESPONSE;
                     data[1] = (uint8_t)(index & 0xFF);
                     data[2] = (uint8_t)((index >> 8) & 0xFF);
@@ -917,49 +917,49 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                 else if(sub_command == SDO_BCS_END_UPLOAD_REQUEST)
                 {
                     DEBUG_PRINT("Recv SDO end block upload @ %d\n", sdo_number);
-                    if(!on_use_line || on_use_line.value()->state != SDOState::STATE_BLOCK_UPLOAD_IN_PROGRESS)
+                    if(!on_use_line || on_use_line->state != SDOState::STATE_BLOCK_UPLOAD_IN_PROGRESS)
                     {
                         DEBUG_PRINT("SDO cs 5 error: received block upload request for unstarted trans: %d\n", sdo_number);
                         SendFailedSDO(sdo_number, who_am_i, 0, 0, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                         return;
                     }
-                    ResetSDOLine(*on_use_line.value());
+                    ResetSDOLine(*on_use_line);
                 }
                 else if(sub_command == SDO_BCS_UPLOAD_RESPONSE || sub_command == SDO_BCS_START_UPLOAD)
                 {
-                    if(!on_use_line || on_use_line.value()->state != SDOState::STATE_BLOCK_UPLOAD_IN_PROGRESS)
+                    if(!on_use_line || on_use_line->state != SDOState::STATE_BLOCK_UPLOAD_IN_PROGRESS)
                     {
                         DEBUG_PRINT("SDO cs 5 error: received block upload response for unstarted trans: %d\n", sdo_number);
                         SendFailedSDO(sdo_number, who_am_i, 0, 0, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                         return;
                     }
-                    ResetSDOTimer(*on_use_line.value()); // Reset the watchdog
-                    uint16_t index = on_use_line.value()->target_index;
-                    uint8_t subindex = on_use_line.value()->target_subindex;
+                    ResetSDOTimer(*on_use_line); // Reset the watchdog
+                    uint16_t index = on_use_line->target_index;
+                    uint8_t subindex = on_use_line->target_subindex;
                     if(sub_command == SDO_BCS_UPLOAD_RESPONSE)
                     {
                         DEBUG_PRINT("SDO cs 5: received block upload response %d\n", sdo_number);
-                        on_use_line.value()->block_size = msg.data[2];
+                        on_use_line->block_size = msg.data[2];
                         uint8_t ack_seq = (msg.data[1]) & 0x7F;
-                        size_t nbBytes = on_use_line.value()->data.size();
+                        size_t nbBytes = on_use_line->data.size();
                         /* If everything has been sent and acknowledged, we send a block end upload */
-                        if(nbBytes == 0 && ack_seq == on_use_line.value()->sequence_number)
+                        if(nbBytes == 0 && ack_seq == on_use_line->sequence_number)
                         {
-                            data[0] = (uint8_t)((6 << 5) | (on_use_line.value()->end_field << 2) | SDO_BSS_END_UPLOAD_RESPONSE);
+                            data[0] = (uint8_t)((6 << 5) | (on_use_line->end_field << 2) | SDO_BSS_END_UPLOAD_RESPONSE);
                             DEBUG_PRINT("SDO cs 5: sending block END upload response @ &d\n", sdo_number);
                             SendSDO(sdo_number, who_am_i, data);
                             return;
                         }
                     }
                     else DEBUG_PRINT("SDO cs 5: recv block START upload @ %d\n", sdo_number);
-                    for(uint8_t seq_no = 1; seq_no <= on_use_line.value()->block_size; seq_no++)
+                    for(uint8_t seq_no = 1; seq_no <= on_use_line->block_size; seq_no++)
                     {
-                        on_use_line.value()->sequence_number = seq_no;
-                        size_t nbBytes = on_use_line.value()->data.size();
+                        on_use_line->sequence_number = seq_no;
+                        size_t nbBytes = on_use_line->data.size();
                         if(nbBytes > 7) /* The segment to transfer is not the last one.*/
                         {
                             data[0] = seq_no;
-                            if(on_use_line.value()->extract_from_head(data + 1, 7) != FuncRetCode::OK)
+                            if(on_use_line->extract_from_head(data + 1, 7) != FuncRetCode::OK)
                             {
                                 SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
                                 return;
@@ -970,14 +970,14 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                         else /* Last segment is in this block */
                         {
                             data[0] = 0x80 | seq_no;
-                            if(on_use_line.value()->extract_from_head(data + 1, nbBytes) != FuncRetCode::OK)
+                            if(on_use_line->extract_from_head(data + 1, nbBytes) != FuncRetCode::OK)
                             {
                                 SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
                                 return;
                             }
                             DEBUG_PRINT("SDO cs 5: sending last upload segment @ %d\n", sdo_number);
                             SendSDO(sdo_number, who_am_i, data);
-                            on_use_line.value()->end_field = (uint8_t)(7 - nbBytes);
+                            on_use_line->end_field = (uint8_t)(7 - nbBytes);
                             break;
                         }
                     }
@@ -1015,12 +1015,12 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                         SendFailedSDO(sdo_number, who_am_i, index, subindex, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
                         return;
                     }
-                    InitSDOLine(*free_line.value(), sdo_number, index, subindex, SDOState::STATE_BLOCK_DOWNLOAD_IN_PROGRESS);
-                    free_line.value()->rx_step = SDORXStep::RX_STEP_STARTED;
-                    free_line.value()->peer_crc_support = (uint8_t)((msg.data[0] >> 2) & 1);
+                    InitSDOLine(*free_line, sdo_number, index, subindex, SDOState::STATE_BLOCK_DOWNLOAD_IN_PROGRESS);
+                    free_line->rx_step = SDORXStep::RX_STEP_STARTED;
+                    free_line->peer_crc_support = (uint8_t)((msg.data[0] >> 2) & 1);
                     if(msg.data[0] & 2) /* if data set size is indicated */
                     {
-                        free_line.value()->obj_size = (uint32_t)msg.data[4] + (uint32_t)msg.data[5] * 256 + (uint32_t)msg.data[6] * 256 * 256 + (uint32_t)msg.data[7] * 256 * 256 * 256;
+                        free_line->obj_size = (uint32_t)msg.data[4] + (uint32_t)msg.data[5] * 256 + (uint32_t)msg.data[6] * 256 * 256 + (uint32_t)msg.data[7] * 256 * 256 * 256;
                     }
                     data[0] = (5 << 5) | SDO_BSS_INITIATE_DOWNLOAD_RESPONSE;
                     data[1] = (uint8_t)(index & 0xFF);
@@ -1030,51 +1030,51 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                     DEBUG_PRINT("SDO cs 6: sending block dl init response @ %d\n", sdo_number);
                     SendSDO(sdo_number, who_am_i, data);
                 }
-                else if(on_use_line.value()->rx_step == SDORXStep::RX_STEP_STARTED)
+                else if(on_use_line->rx_step == SDORXStep::RX_STEP_STARTED)
                 {
                     DEBUG_PRINT("SDO cs 6: rcv block download segment @ %d\n", sdo_number);
-                    ResetSDOTimer(*on_use_line.value());
+                    ResetSDOTimer(*on_use_line);
                     uint8_t seq_no = msg.data[0] & 0x7F;
                     if(msg.data[0] & 0x80) // last segment?
                     {
-                        if(seq_no == on_use_line.value()->sequence_number + 1)
+                        if(seq_no == on_use_line->sequence_number + 1)
                         {
-                            on_use_line.value()->rx_step = SDORXStep::RX_STEP_END;
-                            on_use_line.value()->sequence_number = seq_no;
+                            on_use_line->rx_step = SDORXStep::RX_STEP_END;
+                            on_use_line->sequence_number = seq_no;
                             /* Store the data temporary because we don't know yet how many bytes do not contain data */
-                            memcpy(on_use_line.value()->temp_data, msg.data, 8);
+                            memcpy(on_use_line->temp_data, msg.data, 8);
                         }
                         data[0] = (5 << 5) | SDO_BSS_DOWNLOAD_RESPONSE;
-                        data[1] = on_use_line.value()->sequence_number;
+                        data[1] = on_use_line->sequence_number;
                         data[2] = SDO_BLOCK_SIZE;
                         DEBUG_PRINT("SDO cs 6: sending block download response @ %d\n", sdo_number);
                         SendSDO(sdo_number, who_am_i, data);
-                        on_use_line.value()->sequence_number = 0;
+                        on_use_line->sequence_number = 0;
                     }
                     else
                     {
-                        if(seq_no == on_use_line.value()->sequence_number + 1)
+                        if(seq_no == on_use_line->sequence_number + 1)
                         {
-                            on_use_line.value()->sequence_number = seq_no;
+                            on_use_line->sequence_number = seq_no;
                             /* Store the data in the transfer structure. */
-                            if(on_use_line.value()->extract_from_head(data + 1, 7) != FuncRetCode::OK)
+                            if(on_use_line->extract_from_head(data + 1, 7) != FuncRetCode::OK)
                             {
-                                SendFailedSDO(sdo_number, who_am_i, on_use_line.value()->target_index, on_use_line.value()->target_subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
+                                SendFailedSDO(sdo_number, who_am_i, on_use_line->target_index, on_use_line->target_subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
                                 return;
                             }
                         }
                         if(seq_no == SDO_BLOCK_SIZE)
                         {
                             data[0] = (5 << 5) | SDO_BSS_DOWNLOAD_RESPONSE;
-                            data[1] = on_use_line.value()->sequence_number;
+                            data[1] = on_use_line->sequence_number;
                             data[2] = SDO_BLOCK_SIZE;
                             DEBUG_PRINT("SDO cs 6: sending block download response @ %d\n", sdo_number);
                             SendSDO(sdo_number, who_am_i, data);
-                            on_use_line.value()->sequence_number = 0;
+                            on_use_line->sequence_number = 0;
                         }
                     }
                 }
-                else if(on_use_line.value()->rx_step == SDORXStep::RX_STEP_END)
+                else if(on_use_line->rx_step == SDORXStep::RX_STEP_END)
                 {
                     DEBUG_PRINT("SDO cs 6: rcv SDO block dl END request @ %d\n", sdo_number);
                     if((msg.data[0] & 1) != SDO_BCS_END_DOWNLOAD_REQUEST)
@@ -1083,16 +1083,16 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                         SendFailedSDO(sdo_number, who_am_i, 0, 0, SDOAbortCode::SDOABT_GENERAL_ERROR);
                         return;
                     }
-                    ResetSDOTimer(*on_use_line.value());
+                    ResetSDOTimer(*on_use_line);
                     uint8_t nbBytesNoData = (uint8_t)((msg.data[0] >> 2) & 0x07);
-                    if(on_use_line.value()->extract_from_head(on_use_line.value()->temp_data + 1, 7 - nbBytesNoData) != FuncRetCode::OK)
+                    if(on_use_line->extract_from_head(on_use_line->temp_data + 1, 7 - nbBytesNoData) != FuncRetCode::OK)
                     {
-                        SendFailedSDO(sdo_number, who_am_i, on_use_line.value()->target_index, on_use_line.value()->target_subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
+                        SendFailedSDO(sdo_number, who_am_i, on_use_line->target_index, on_use_line->target_subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
                         return;
                     }
-                    if(on_use_line.value()->obj_size) /* If size was indicated in the initiate request */
+                    if(on_use_line->obj_size) /* If size was indicated in the initiate request */
                     {
-                        if(on_use_line.value()->obj_size != on_use_line.value()->data.size())
+                        if(on_use_line->obj_size != on_use_line->data.size())
                         {
                             DEBUG_PRINT("SDO cs 6: error block dl, sizes not match\n");
                             SendFailedSDO(sdo_number, who_am_i, 0, 0, SDOAbortCode::SDOABT_LOCAL_CTRL_ERROR);
@@ -1103,13 +1103,13 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
                     DEBUG_PRINT("SDO cs 6: sending blk dl END response @ %d\n", sdo_number);
                     SendSDO(sdo_number, who_am_i, data);
                     /* Transfering line data to object dictionary. */
-                    if(ParseSDOLineToOD(*on_use_line.value()) != FuncRetCode::OK)
+                    if(ParseSDOLineToOD(*on_use_line) != FuncRetCode::OK)
                     {
                         DEBUG_PRINT("SDO cs 6: unable to copy data to OD\n");
-                        SendFailedSDO(sdo_number, who_am_i, on_use_line.value()->target_index, on_use_line.value()->target_subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
+                        SendFailedSDO(sdo_number, who_am_i, on_use_line->target_index, on_use_line->target_subindex, SDOAbortCode::SDOABT_GENERAL_ERROR);
                         return;
                     }
-                    ResetSDOLine(*on_use_line.value());
+                    ResetSDOLine(*on_use_line);
                     DEBUG_PRINT("SDO cs 6: End of block @ %d\n", sdo_number);
                 }
             }
@@ -1121,7 +1121,7 @@ void MiniCANOpen::ProcessSDOMessage(const DataType::Comm::CANMessage& msg)
         }
         default:
         {
-            if(on_use_line) SendFailedSDO(sdo_number, who_am_i, on_use_line.value()->target_index, on_use_line.value()->target_subindex, SDOAbortCode::SDOABT_CS_NOT_VALID);
+            if(on_use_line) SendFailedSDO(sdo_number, who_am_i, on_use_line->target_index, on_use_line->target_subindex, SDOAbortCode::SDOABT_CS_NOT_VALID);
             else SendFailedSDO(sdo_number, who_am_i, 0, 0, SDOAbortCode::SDOABT_CS_NOT_VALID);
             DEBUG_PRINT("SDO: recv unknown cs: %d\n", cs);
             break;
@@ -1607,12 +1607,12 @@ void MiniCANOpen::SendFailedSDO(uint8_t sdo_number, SDORole who_am_i, uint16_t t
 {
     if(auto line = GetSDOLineOnUse(sdo_number, who_am_i); line)
     {
-        if(who_am_i == SDORole::SDO_SERVER) ResetSDOLine(*line.value());
+        if(who_am_i == SDORole::SDO_SERVER) ResetSDOLine(*line);
         else if(who_am_i == SDORole::SDO_CLIENT)
         {
-            StopSDOTimer(*line.value());
-            line.value()->state = SDOState::STATE_ABORTED_INTERNAL;
-            line.value()->abort_code = abort_code;
+            StopSDOTimer(*line);
+            line->state = SDOState::STATE_ABORTED_INTERNAL;
+            line->abort_code = abort_code;
         }
     }
     SendAbortSDO(sdo_number, who_am_i, target_index, target_subindex, abort_code);
@@ -1643,17 +1643,17 @@ void MiniCANOpen::InitSDOLine(SDOTransfer& transfer, uint8_t sdo_number, uint16_
     }
 }
 
-std::optional<MiniCANOpen::SDOTransfer*> MiniCANOpen::GetSDOLineOnUse(const uint8_t sdo_number, const SDORole who_am_i)
+MiniCANOpen::SDOTransfer* MiniCANOpen::GetSDOLineOnUse(const uint8_t sdo_number, const SDORole who_am_i)
 {
     auto it = std::find_if(sdo_transfers.begin(), sdo_transfers.end(), [=](const SDOTransfer& t)
     {
        return (t.state != SDOState::STATE_RESET && t.state != SDOState::STATE_ABORTED_INTERNAL && t.sdo_number == sdo_number && t.role == who_am_i);
     });
-    if(it == sdo_transfers.end()) return std::nullopt;
+    if(it == sdo_transfers.end()) return nullptr;
     return &(*it);
 }
 
-std::optional<MiniCANOpen::SDOTransfer*> MiniCANOpen::GetSDOLineFree(SDORole expected_who_am_i)
+MiniCANOpen::SDOTransfer* MiniCANOpen::GetSDOLineFree(SDORole expected_who_am_i)
 {
     auto it = std::find_if(sdo_transfers.begin(), sdo_transfers.end(), [=](const SDOTransfer& t)
     {
@@ -1665,7 +1665,7 @@ std::optional<MiniCANOpen::SDOTransfer*> MiniCANOpen::GetSDOLineFree(SDORole exp
         return &(*it);
     }
     // No free line existed, create new one
-    if(sdo_transfers.size() >= SDO_MAX_SIMULTANEOUS_TRANSFERS) return std::nullopt; // cannot create new lines due to limitation
+    if(sdo_transfers.size() >= SDO_MAX_SIMULTANEOUS_TRANSFERS) return nullptr; // cannot create new lines due to limitation
     sdo_transfers.emplace_back();
     sdo_transfers.back().role = expected_who_am_i;
     return &sdo_transfers.back();

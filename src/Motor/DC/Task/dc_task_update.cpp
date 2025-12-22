@@ -29,9 +29,9 @@ void UpdateTask::UpdateNormal()
     if(const auto core = dc->GetCoreTempSense())
         core->Update();
     if(const auto mosfet = dc->GetMosfetTempSense())
-        mosfet.value()->Update();
+        mosfet->Update();
     if(const auto motor = dc->GetMotorTempSense())
-        motor.value()->Update();
+        motor->Update();
     sleep(10);
 }
 }
