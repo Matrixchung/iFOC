@@ -16,14 +16,14 @@ EncoderMT6835::~EncoderMT6835()
 
 FuncRetCode EncoderMT6835::Init()
 {
-    result_valid = false;
+    // result_valid = false;
     spi->SetCPOLCPHA(1, 1);
     spi->SetDataWidth(SPIBase::DataWidth::BYTE);
     spi->SetClock(24000000); // using 24 MHz MAX, decrease if communication error persists
-    if(const auto r = spi->Init(); r != FuncRetCode::OK) return r;
-    uint8_t temp = 0;
+    volatile uint8_t temp = 0;
+    if(const auto r = spi->Init(); r != FuncRetCode::OK) return FuncRetCode::HARDWARE_ERROR;
     // Step #1: Read System Bandwidth Register (0x011), as chip detection
-    if(const auto r = ReadReg(0x011, &temp); r != FuncRetCode::OK) return r;
+    if(const auto r = ReadReg(0x011, (uint8_t*)&temp); r != FuncRetCode::OK) return r;
     if(temp != 0x5) return FuncRetCode::HARDWARE_ERROR; // Communication Error
     // Step #2: Turn off ABZ output at Register 0x008
     temp = (1 << 1);
@@ -34,7 +34,7 @@ FuncRetCode EncoderMT6835::Init()
     // Step #4: Switch PWM_FQ to lower freq (497Hz), and set PWM_SEL to "speed data" at Register 0x00C
     //          to minimize pin crosstalk noise.
     temp = 0x00;
-    if(const auto r = ReadReg(0x00C, &temp); r != FuncRetCode::OK) return r;
+    if(const auto r = ReadReg(0x00C, (uint8_t*)&temp); r != FuncRetCode::OK) return r;
     temp |= (1 << 4); // Set PWM_FQ to 0x1 (497Hz)
     temp &= 0xF8;     // Clear [2:0] to 0x0
     temp |= (1 << 1); // Set PWM_SEL[2:0] to 0x2
@@ -90,6 +90,7 @@ FuncRetCode EncoderMT6835::ReadAbsAngleRad()
     // {
     //     if(auto r = ReadReg(0x003 + i, &ret[i + 2]); r != FuncRetCode::OK) return r;
     // }
+    uint8_t rx_buf[6]{};
     ReadAngleRegBurst(rx_buf);
     uint8_t _get_crc = get_crc8(rx_buf + 2, 3);
     if(_get_crc == rx_buf[5])
@@ -101,6 +102,7 @@ FuncRetCode EncoderMT6835::ReadAbsAngleRad()
         // single_round_angle_rad *= PI2;
         single_round_angle_rad = (float)now_angle_cnt * PI2divCPR_f;
         device_error = (device_error & 0xF8) | (rx_buf[4] & 0x07);
+        result_valid = true;
         return FuncRetCode::OK;
     }
     device_error |= to_underlying(DeviceError::CRC_ERROR);
@@ -109,7 +111,7 @@ FuncRetCode EncoderMT6835::ReadAbsAngleRad()
 
 FuncRetCode EncoderMT6835::WriteReg(uint16_t reg, uint8_t data)
 {
-    // uint8_t tx_buf[3];
+    uint8_t tx_buf[3]{};
     tx_buf[0] = (0x06 << 4) | (uint8_t)(reg >> 12);
     tx_buf[1] = (uint8_t)reg;
     tx_buf[2] = data;
@@ -118,8 +120,8 @@ FuncRetCode EncoderMT6835::WriteReg(uint16_t reg, uint8_t data)
 
 FuncRetCode EncoderMT6835::ReadReg(uint16_t reg, uint8_t* data)
 {
-    // uint8_t tx_buf[3];
-    // uint8_t rx_buf[3] = {0x00};
+    uint8_t tx_buf[3]{};
+    uint8_t rx_buf[3]{};
     tx_buf[0] = (0x03 << 4) | (uint8_t)(reg >> 12);
     tx_buf[1] = (uint8_t)reg;
     tx_buf[2] = 0x00;
@@ -131,7 +133,7 @@ FuncRetCode EncoderMT6835::ReadReg(uint16_t reg, uint8_t* data)
 
 __fast_inline FuncRetCode EncoderMT6835::ReadAngleRegBurst(uint8_t *ret)
 {
-    // uint8_t tx_buf[6] = {0x00};
+    uint8_t tx_buf[6]{};
     tx_buf[0] = (0x0A << 4); // Burst read angle register
     tx_buf[1] = 0x03;
     return spi->WriteReadBytes(tx_buf, ret, 6);
@@ -139,8 +141,8 @@ __fast_inline FuncRetCode EncoderMT6835::ReadAngleRegBurst(uint8_t *ret)
 
 FuncRetCode EncoderMT6835::BurnEEPROM()
 {
-    // uint8_t tx_buf[3];
-    // uint8_t rx_buf[3] = {0x00};
+    uint8_t tx_buf[3]{};
+    uint8_t rx_buf[3]{};
     tx_buf[0] = (0x0C << 4);
     tx_buf[1] = 0;
     tx_buf[2] = 0;

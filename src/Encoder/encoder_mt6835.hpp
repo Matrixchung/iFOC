@@ -49,11 +49,11 @@ public:
     static constexpr real_t CPR_f = (real_t)CPR;
     static constexpr real_t PI2divCPR_f = PI2 / CPR_f;
     SPIBase *spi = nullptr;
-    std::optional<GPIOBase*> cal_gpio;
+    GPIOBase* cal_gpio = nullptr;
     uint32_t now_angle_cnt = 0;
     uint32_t last_angle_cnt = 0;
-    uint8_t tx_buf[6] = {0x00};
-    uint8_t rx_buf[6] = {0x00};
+    // uint8_t tx_buf[6] = {0x00};
+    // uint8_t rx_buf[6] = {0x00};
     uint8_t startup_timer = 0;
 };
 
