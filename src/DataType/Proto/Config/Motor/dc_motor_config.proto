@@ -1,0 +1,20 @@
+syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
+package iFOC.DataType.Config.Motor;
+
+message DCMotorConfig {
+  uint32 node_id = 1;          // unset: 255
+
+  float max_voltage = 9;       // [V]
+  float max_current = 10;      // [A]
+
+  float deduction_ratio = 29;       // [RBase / ROutput], strictly > 0.0, (0.0, 1.0) means overspeed transmission, (1.0, +inf) means deduction
+  float max_output_speed_rpm = 30;  // [RPM], represents base speed
+
+  float pos_kp = 31;                // Position loop output (rad/s) = pos_kp * pos_error (rad), [(rad/s) / rad]
+  float vel_kp = 32;                // Velocity loop output (A) = vel_kp * vel_error(rad/s) + vel_ki * vel_error_integral, [A / (rad/s)]
+  float vel_ki = 33;                // [(A/s) / (rad/s)]
+
+  float watchdog_timeout_sec = 34;             // [seconds], set 0 to disable watchdog
+}
