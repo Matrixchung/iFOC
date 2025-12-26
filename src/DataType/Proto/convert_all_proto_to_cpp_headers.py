@@ -37,6 +37,10 @@ def process_proto_files(src_dir, output_dir):
     if platform.system() != "Windows":
         plugin_str = "--plugin=protoc-gen-eams=../../ThirdParty/EmbeddedProto/protoc-gen-eams"
 
+    generator_str = "-I..\\..\\ThirdParty\\EmbeddedProto\\generator"
+    if platform.system() != "Windows":
+        generator_str = "-I../../ThirdParty/EmbeddedProto/generator"
+
     all_proto_path = []
 
     for root, _, _ in os.walk(src_dir):
@@ -59,6 +63,7 @@ def process_proto_files(src_dir, output_dir):
                 # f"--proto_path={os.path.abspath(root)}",
                 # f"--proto_path={os.path.abspath(src_dir)}",
                 *all_proto_path,
+                generator_str,
                 f"--eams_out={output_dir}",
                 src_path
             ]
