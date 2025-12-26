@@ -4,13 +4,8 @@ option optimize_for = LITE_RUNTIME;
 package iFOC.DataType.Config.Motor;
 
 message FOCMotorConfig {
-//    enum ControlLaw {
-//      C_V_P = 0;   // Current - Velocity - Position, three loops sensored control
-//      C_V = 1;     // Current - Velocity, two loops control, can be sensorless
-//    }
-//    ControlLaw control_law = 1;
+    uint32 node_id = 1;                      // unset: 255
     float current_loop_bandwidth = 2;        // [Hz]
-
 
     /// MOTOR CALIBRATION SETPOINTS (7 - 8)
     float calibration_voltage = 7;           // [V]
@@ -67,4 +62,7 @@ message FOCMotorConfig {
     bool startup_extend_param_calibration = 41;
     bool startup_sensored_closed_loop = 42;
     bool startup_sensorless_closed_loop = 43;
+
+    // COMMUNICATION CONFIGURATION
+    uint32 can_heartbeat_interval_ms = 54;
 }

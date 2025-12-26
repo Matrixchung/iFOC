@@ -31,6 +31,7 @@ class FOCMotorConfig final: public ::EmbeddedProto::MessageInterface
 {
   public:
         REFLECT(
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, node_id_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, current_loop_bandwidth_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, calibration_voltage_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, calibration_current_),
@@ -66,11 +67,13 @@ class FOCMotorConfig final: public ::EmbeddedProto::MessageInterface
         MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_encoder_calibration_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_extend_param_calibration_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensored_closed_loop_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensorless_closed_loop_)
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensorless_closed_loop_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, can_heartbeat_interval_ms_)
     )
 FOCMotorConfig() = default;
     FOCMotorConfig(const FOCMotorConfig& rhs )
     {
+      set_node_id(rhs.get_node_id());
       set_current_loop_bandwidth(rhs.get_current_loop_bandwidth());
       set_calibration_voltage(rhs.get_calibration_voltage());
       set_calibration_current(rhs.get_calibration_current());
@@ -107,10 +110,12 @@ FOCMotorConfig() = default;
       set_startup_extend_param_calibration(rhs.get_startup_extend_param_calibration());
       set_startup_sensored_closed_loop(rhs.get_startup_sensored_closed_loop());
       set_startup_sensorless_closed_loop(rhs.get_startup_sensorless_closed_loop());
+      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
     }
 
     FOCMotorConfig(const FOCMotorConfig&& rhs ) noexcept
     {
+      set_node_id(rhs.get_node_id());
       set_current_loop_bandwidth(rhs.get_current_loop_bandwidth());
       set_calibration_voltage(rhs.get_calibration_voltage());
       set_calibration_current(rhs.get_calibration_current());
@@ -147,6 +152,7 @@ FOCMotorConfig() = default;
       set_startup_extend_param_calibration(rhs.get_startup_extend_param_calibration());
       set_startup_sensored_closed_loop(rhs.get_startup_sensored_closed_loop());
       set_startup_sensorless_closed_loop(rhs.get_startup_sensorless_closed_loop());
+      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
     }
 
     ~FOCMotorConfig() override = default;
@@ -154,6 +160,7 @@ FOCMotorConfig() = default;
     enum class FieldNumber : uint32_t
     {
       NOT_SET = 0,
+      NODE_ID = 1,
       CURRENT_LOOP_BANDWIDTH = 2,
       CALIBRATION_VOLTAGE = 7,
       CALIBRATION_CURRENT = 8,
@@ -189,11 +196,13 @@ FOCMotorConfig() = default;
       STARTUP_ENCODER_CALIBRATION = 40,
       STARTUP_EXTEND_PARAM_CALIBRATION = 41,
       STARTUP_SENSORED_CLOSED_LOOP = 42,
-      STARTUP_SENSORLESS_CLOSED_LOOP = 43
+      STARTUP_SENSORLESS_CLOSED_LOOP = 43,
+      CAN_HEARTBEAT_INTERVAL_MS = 54
     };
 
     FOCMotorConfig& operator=(const FOCMotorConfig& rhs)
     {
+      set_node_id(rhs.get_node_id());
       set_current_loop_bandwidth(rhs.get_current_loop_bandwidth());
       set_calibration_voltage(rhs.get_calibration_voltage());
       set_calibration_current(rhs.get_calibration_current());
@@ -230,11 +239,13 @@ FOCMotorConfig() = default;
       set_startup_extend_param_calibration(rhs.get_startup_extend_param_calibration());
       set_startup_sensored_closed_loop(rhs.get_startup_sensored_closed_loop());
       set_startup_sensorless_closed_loop(rhs.get_startup_sensorless_closed_loop());
+      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       return *this;
     }
 
     FOCMotorConfig& operator=(const FOCMotorConfig&& rhs) noexcept
     {
+      set_node_id(rhs.get_node_id());
       set_current_loop_bandwidth(rhs.get_current_loop_bandwidth());
       set_calibration_voltage(rhs.get_calibration_voltage());
       set_calibration_current(rhs.get_calibration_current());
@@ -271,8 +282,17 @@ FOCMotorConfig() = default;
       set_startup_extend_param_calibration(rhs.get_startup_extend_param_calibration());
       set_startup_sensored_closed_loop(rhs.get_startup_sensored_closed_loop());
       set_startup_sensorless_closed_loop(rhs.get_startup_sensorless_closed_loop());
+      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       return *this;
     }
+
+    static constexpr char const* NODE_ID_NAME = "node_id";
+    inline void clear_node_id() { node_id_.clear(); }
+    inline void set_node_id(const uint32_t& value) { node_id_ = value; }
+    inline void set_node_id(const uint32_t&& value) { node_id_ = value; }
+    inline uint32_t& mutable_node_id() { return node_id_.get(); }
+    inline const uint32_t& get_node_id() const { return node_id_.get(); }
+    inline uint32_t node_id() const { return node_id_.get(); }
 
     static constexpr char const* CURRENT_LOOP_BANDWIDTH_NAME = "current_loop_bandwidth";
     inline void clear_current_loop_bandwidth() { current_loop_bandwidth_.clear(); }
@@ -562,10 +582,23 @@ FOCMotorConfig() = default;
     inline const bool& get_startup_sensorless_closed_loop() const { return startup_sensorless_closed_loop_.get(); }
     inline bool startup_sensorless_closed_loop() const { return startup_sensorless_closed_loop_.get(); }
 
+    static constexpr char const* CAN_HEARTBEAT_INTERVAL_MS_NAME = "can_heartbeat_interval_ms";
+    inline void clear_can_heartbeat_interval_ms() { can_heartbeat_interval_ms_.clear(); }
+    inline void set_can_heartbeat_interval_ms(const uint32_t& value) { can_heartbeat_interval_ms_ = value; }
+    inline void set_can_heartbeat_interval_ms(const uint32_t&& value) { can_heartbeat_interval_ms_ = value; }
+    inline uint32_t& mutable_can_heartbeat_interval_ms() { return can_heartbeat_interval_ms_.get(); }
+    inline const uint32_t& get_can_heartbeat_interval_ms() const { return can_heartbeat_interval_ms_.get(); }
+    inline uint32_t can_heartbeat_interval_ms() const { return can_heartbeat_interval_ms_.get(); }
+
 
     ::EmbeddedProto::Error serialize(::EmbeddedProto::WriteBufferInterface& buffer) const override
     {
       ::EmbeddedProto::Error return_value = ::EmbeddedProto::Error::NO_ERRORS;
+
+      if((0U != node_id_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = node_id_.serialize_with_id(static_cast<uint32_t>(FieldNumber::NODE_ID), buffer, false);
+      }
 
       if((0.0 != current_loop_bandwidth_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
@@ -747,6 +780,11 @@ FOCMotorConfig() = default;
         return_value = startup_sensorless_closed_loop_.serialize_with_id(static_cast<uint32_t>(FieldNumber::STARTUP_SENSORLESS_CLOSED_LOOP), buffer, false);
       }
 
+      if((0U != can_heartbeat_interval_ms_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = can_heartbeat_interval_ms_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CAN_HEARTBEAT_INTERVAL_MS), buffer, false);
+      }
+
       return return_value;
     };
 
@@ -763,6 +801,10 @@ FOCMotorConfig() = default;
         id_tag = static_cast<FieldNumber>(id_number);
         switch(id_tag)
         {
+          case FieldNumber::NODE_ID:
+            return_value = node_id_.deserialize_check_type(buffer, wire_type);
+            break;
+
           case FieldNumber::CURRENT_LOOP_BANDWIDTH:
             return_value = current_loop_bandwidth_.deserialize_check_type(buffer, wire_type);
             break;
@@ -907,6 +949,10 @@ FOCMotorConfig() = default;
             return_value = startup_sensorless_closed_loop_.deserialize_check_type(buffer, wire_type);
             break;
 
+          case FieldNumber::CAN_HEARTBEAT_INTERVAL_MS:
+            return_value = can_heartbeat_interval_ms_.deserialize_check_type(buffer, wire_type);
+            break;
+
           case FieldNumber::NOT_SET:
             return_value = ::EmbeddedProto::Error::INVALID_FIELD_ID;
             break;
@@ -936,6 +982,7 @@ FOCMotorConfig() = default;
 
     void clear() override
     {
+      clear_node_id();
       clear_current_loop_bandwidth();
       clear_calibration_voltage();
       clear_calibration_current();
@@ -972,6 +1019,7 @@ FOCMotorConfig() = default;
       clear_startup_extend_param_calibration();
       clear_startup_sensored_closed_loop();
       clear_startup_sensorless_closed_loop();
+      clear_can_heartbeat_interval_ms();
 
     }
 
@@ -980,6 +1028,9 @@ FOCMotorConfig() = default;
       char const* name = nullptr;
       switch(fieldNumber)
       {
+        case FieldNumber::NODE_ID:
+          name = NODE_ID_NAME;
+          break;
         case FieldNumber::CURRENT_LOOP_BANDWIDTH:
           name = CURRENT_LOOP_BANDWIDTH_NAME;
           break;
@@ -1088,6 +1139,9 @@ FOCMotorConfig() = default;
         case FieldNumber::STARTUP_SENSORLESS_CLOSED_LOOP:
           name = STARTUP_SENSORLESS_CLOSED_LOOP_NAME;
           break;
+        case FieldNumber::CAN_HEARTBEAT_INTERVAL_MS:
+          name = CAN_HEARTBEAT_INTERVAL_MS_NAME;
+          break;
         default:
           name = "Invalid FieldNumber";
           break;
@@ -1148,7 +1202,8 @@ FOCMotorConfig() = default;
         left_chars.size -= n_chars_used;
       }
 
-      left_chars = current_loop_bandwidth_.to_string(left_chars, indent_level + 2, CURRENT_LOOP_BANDWIDTH_NAME, true);
+      left_chars = node_id_.to_string(left_chars, indent_level + 2, NODE_ID_NAME, true);
+      left_chars = current_loop_bandwidth_.to_string(left_chars, indent_level + 2, CURRENT_LOOP_BANDWIDTH_NAME, false);
       left_chars = calibration_voltage_.to_string(left_chars, indent_level + 2, CALIBRATION_VOLTAGE_NAME, false);
       left_chars = calibration_current_.to_string(left_chars, indent_level + 2, CALIBRATION_CURRENT_NAME, false);
       left_chars = max_voltage_.to_string(left_chars, indent_level + 2, MAX_VOLTAGE_NAME, false);
@@ -1184,6 +1239,7 @@ FOCMotorConfig() = default;
       left_chars = startup_extend_param_calibration_.to_string(left_chars, indent_level + 2, STARTUP_EXTEND_PARAM_CALIBRATION_NAME, false);
       left_chars = startup_sensored_closed_loop_.to_string(left_chars, indent_level + 2, STARTUP_SENSORED_CLOSED_LOOP_NAME, false);
       left_chars = startup_sensorless_closed_loop_.to_string(left_chars, indent_level + 2, STARTUP_SENSORLESS_CLOSED_LOOP_NAME, false);
+      left_chars = can_heartbeat_interval_ms_.to_string(left_chars, indent_level + 2, CAN_HEARTBEAT_INTERVAL_MS_NAME, false);
   
       if( 0 == indent_level) 
       {
@@ -1208,6 +1264,7 @@ FOCMotorConfig() = default;
   private:
 
 
+      EmbeddedProto::uint32 node_id_ = 0U;
       EmbeddedProto::floatfixed current_loop_bandwidth_ = 0.0;
       EmbeddedProto::floatfixed calibration_voltage_ = 0.0;
       EmbeddedProto::floatfixed calibration_current_ = 0.0;
@@ -1244,6 +1301,7 @@ FOCMotorConfig() = default;
       EmbeddedProto::boolean startup_extend_param_calibration_ = false;
       EmbeddedProto::boolean startup_sensored_closed_loop_ = false;
       EmbeddedProto::boolean startup_sensorless_closed_loop_ = false;
+      EmbeddedProto::uint32 can_heartbeat_interval_ms_ = 0U;
 
 };
 
