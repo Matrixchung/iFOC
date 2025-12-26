@@ -8,7 +8,6 @@ namespace iFOC::FOC
 class WaveGenSVPWM final : public WaveGenBase
 {
 public:
-    std::array<real_t, 3> Tabc;
-    void UpdateWave(float Ts) final;
+    void UpdateRT(float Ts) override;
 };
 }

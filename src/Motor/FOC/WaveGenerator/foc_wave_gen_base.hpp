@@ -11,7 +11,5 @@ class WaveGenBase : public Task
 public:
     WaveGenBase();
     void InitRT() final;
-    void UpdateRT(float Ts) final;
-    virtual void UpdateWave(float Ts) = 0;
 };
 }
