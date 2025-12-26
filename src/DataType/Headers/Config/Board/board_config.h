@@ -39,11 +39,9 @@ class BoardConfig final: public ::EmbeddedProto::MessageInterface
         MEMBER_SIZE_OFFSET(BoardConfig, bus_max_positive_current_),
         MEMBER_SIZE_OFFSET(BoardConfig, bus_max_negative_current_),
         MEMBER_SIZE_OFFSET(BoardConfig, bus_sense_shunt_ohm_),
-        MEMBER_SIZE_OFFSET(BoardConfig, bus_sense_dir_reversed_),
         MEMBER_SIZE_OFFSET(BoardConfig, max_regen_current_),
         MEMBER_SIZE_OFFSET(BoardConfig, current_sense_gain_),
         MEMBER_SIZE_OFFSET(BoardConfig, current_sense_shunt_ohm_),
-        MEMBER_SIZE_OFFSET(BoardConfig, current_sense_dir_reversed_),
         MEMBER_SIZE_OFFSET(BoardConfig, current_sense_f_lp_),
         MEMBER_SIZE_OFFSET(BoardConfig, play_startup_tone_)
     )
@@ -59,11 +57,9 @@ BoardConfig() = default;
       set_bus_max_positive_current(rhs.get_bus_max_positive_current());
       set_bus_max_negative_current(rhs.get_bus_max_negative_current());
       set_bus_sense_shunt_ohm(rhs.get_bus_sense_shunt_ohm());
-      set_bus_sense_dir_reversed(rhs.get_bus_sense_dir_reversed());
       set_max_regen_current(rhs.get_max_regen_current());
       set_current_sense_gain(rhs.get_current_sense_gain());
       set_current_sense_shunt_ohm(rhs.get_current_sense_shunt_ohm());
-      set_current_sense_dir_reversed(rhs.get_current_sense_dir_reversed());
       set_current_sense_f_lp(rhs.get_current_sense_f_lp());
       set_play_startup_tone(rhs.get_play_startup_tone());
     }
@@ -79,11 +75,9 @@ BoardConfig() = default;
       set_bus_max_positive_current(rhs.get_bus_max_positive_current());
       set_bus_max_negative_current(rhs.get_bus_max_negative_current());
       set_bus_sense_shunt_ohm(rhs.get_bus_sense_shunt_ohm());
-      set_bus_sense_dir_reversed(rhs.get_bus_sense_dir_reversed());
       set_max_regen_current(rhs.get_max_regen_current());
       set_current_sense_gain(rhs.get_current_sense_gain());
       set_current_sense_shunt_ohm(rhs.get_current_sense_shunt_ohm());
-      set_current_sense_dir_reversed(rhs.get_current_sense_dir_reversed());
       set_current_sense_f_lp(rhs.get_current_sense_f_lp());
       set_play_startup_tone(rhs.get_play_startup_tone());
     }
@@ -102,11 +96,9 @@ BoardConfig() = default;
       BUS_MAX_POSITIVE_CURRENT = 13,
       BUS_MAX_NEGATIVE_CURRENT = 14,
       BUS_SENSE_SHUNT_OHM = 15,
-      BUS_SENSE_DIR_REVERSED = 16,
       MAX_REGEN_CURRENT = 19,
       CURRENT_SENSE_GAIN = 21,
       CURRENT_SENSE_SHUNT_OHM = 22,
-      CURRENT_SENSE_DIR_REVERSED = 23,
       CURRENT_SENSE_F_LP = 24,
       PLAY_STARTUP_TONE = 31
     };
@@ -122,11 +114,9 @@ BoardConfig() = default;
       set_bus_max_positive_current(rhs.get_bus_max_positive_current());
       set_bus_max_negative_current(rhs.get_bus_max_negative_current());
       set_bus_sense_shunt_ohm(rhs.get_bus_sense_shunt_ohm());
-      set_bus_sense_dir_reversed(rhs.get_bus_sense_dir_reversed());
       set_max_regen_current(rhs.get_max_regen_current());
       set_current_sense_gain(rhs.get_current_sense_gain());
       set_current_sense_shunt_ohm(rhs.get_current_sense_shunt_ohm());
-      set_current_sense_dir_reversed(rhs.get_current_sense_dir_reversed());
       set_current_sense_f_lp(rhs.get_current_sense_f_lp());
       set_play_startup_tone(rhs.get_play_startup_tone());
       return *this;
@@ -143,11 +133,9 @@ BoardConfig() = default;
       set_bus_max_positive_current(rhs.get_bus_max_positive_current());
       set_bus_max_negative_current(rhs.get_bus_max_negative_current());
       set_bus_sense_shunt_ohm(rhs.get_bus_sense_shunt_ohm());
-      set_bus_sense_dir_reversed(rhs.get_bus_sense_dir_reversed());
       set_max_regen_current(rhs.get_max_regen_current());
       set_current_sense_gain(rhs.get_current_sense_gain());
       set_current_sense_shunt_ohm(rhs.get_current_sense_shunt_ohm());
-      set_current_sense_dir_reversed(rhs.get_current_sense_dir_reversed());
       set_current_sense_f_lp(rhs.get_current_sense_f_lp());
       set_play_startup_tone(rhs.get_play_startup_tone());
       return *this;
@@ -223,14 +211,6 @@ BoardConfig() = default;
     inline const float& get_bus_sense_shunt_ohm() const { return bus_sense_shunt_ohm_.get(); }
     inline float bus_sense_shunt_ohm() const { return bus_sense_shunt_ohm_.get(); }
 
-    static constexpr char const* BUS_SENSE_DIR_REVERSED_NAME = "bus_sense_dir_reversed";
-    inline void clear_bus_sense_dir_reversed() { bus_sense_dir_reversed_.clear(); }
-    inline void set_bus_sense_dir_reversed(const bool& value) { bus_sense_dir_reversed_ = value; }
-    inline void set_bus_sense_dir_reversed(const bool&& value) { bus_sense_dir_reversed_ = value; }
-    inline bool& mutable_bus_sense_dir_reversed() { return bus_sense_dir_reversed_.get(); }
-    inline const bool& get_bus_sense_dir_reversed() const { return bus_sense_dir_reversed_.get(); }
-    inline bool bus_sense_dir_reversed() const { return bus_sense_dir_reversed_.get(); }
-
     static constexpr char const* MAX_REGEN_CURRENT_NAME = "max_regen_current";
     inline void clear_max_regen_current() { max_regen_current_.clear(); }
     inline void set_max_regen_current(const float& value) { max_regen_current_ = value; }
@@ -254,14 +234,6 @@ BoardConfig() = default;
     inline float& mutable_current_sense_shunt_ohm() { return current_sense_shunt_ohm_.get(); }
     inline const float& get_current_sense_shunt_ohm() const { return current_sense_shunt_ohm_.get(); }
     inline float current_sense_shunt_ohm() const { return current_sense_shunt_ohm_.get(); }
-
-    static constexpr char const* CURRENT_SENSE_DIR_REVERSED_NAME = "current_sense_dir_reversed";
-    inline void clear_current_sense_dir_reversed() { current_sense_dir_reversed_.clear(); }
-    inline void set_current_sense_dir_reversed(const bool& value) { current_sense_dir_reversed_ = value; }
-    inline void set_current_sense_dir_reversed(const bool&& value) { current_sense_dir_reversed_ = value; }
-    inline bool& mutable_current_sense_dir_reversed() { return current_sense_dir_reversed_.get(); }
-    inline const bool& get_current_sense_dir_reversed() const { return current_sense_dir_reversed_.get(); }
-    inline bool current_sense_dir_reversed() const { return current_sense_dir_reversed_.get(); }
 
     static constexpr char const* CURRENT_SENSE_F_LP_NAME = "current_sense_f_lp";
     inline void clear_current_sense_f_lp() { current_sense_f_lp_.clear(); }
@@ -329,11 +301,6 @@ BoardConfig() = default;
         return_value = bus_sense_shunt_ohm_.serialize_with_id(static_cast<uint32_t>(FieldNumber::BUS_SENSE_SHUNT_OHM), buffer, false);
       }
 
-      if((false != bus_sense_dir_reversed_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
-      {
-        return_value = bus_sense_dir_reversed_.serialize_with_id(static_cast<uint32_t>(FieldNumber::BUS_SENSE_DIR_REVERSED), buffer, false);
-      }
-
       if((0.0 != max_regen_current_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = max_regen_current_.serialize_with_id(static_cast<uint32_t>(FieldNumber::MAX_REGEN_CURRENT), buffer, false);
@@ -347,11 +314,6 @@ BoardConfig() = default;
       if((0.0 != current_sense_shunt_ohm_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = current_sense_shunt_ohm_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CURRENT_SENSE_SHUNT_OHM), buffer, false);
-      }
-
-      if((false != current_sense_dir_reversed_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
-      {
-        return_value = current_sense_dir_reversed_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CURRENT_SENSE_DIR_REVERSED), buffer, false);
       }
 
       if((0U != current_sense_f_lp_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
@@ -416,10 +378,6 @@ BoardConfig() = default;
             return_value = bus_sense_shunt_ohm_.deserialize_check_type(buffer, wire_type);
             break;
 
-          case FieldNumber::BUS_SENSE_DIR_REVERSED:
-            return_value = bus_sense_dir_reversed_.deserialize_check_type(buffer, wire_type);
-            break;
-
           case FieldNumber::MAX_REGEN_CURRENT:
             return_value = max_regen_current_.deserialize_check_type(buffer, wire_type);
             break;
@@ -430,10 +388,6 @@ BoardConfig() = default;
 
           case FieldNumber::CURRENT_SENSE_SHUNT_OHM:
             return_value = current_sense_shunt_ohm_.deserialize_check_type(buffer, wire_type);
-            break;
-
-          case FieldNumber::CURRENT_SENSE_DIR_REVERSED:
-            return_value = current_sense_dir_reversed_.deserialize_check_type(buffer, wire_type);
             break;
 
           case FieldNumber::CURRENT_SENSE_F_LP:
@@ -482,11 +436,9 @@ BoardConfig() = default;
       clear_bus_max_positive_current();
       clear_bus_max_negative_current();
       clear_bus_sense_shunt_ohm();
-      clear_bus_sense_dir_reversed();
       clear_max_regen_current();
       clear_current_sense_gain();
       clear_current_sense_shunt_ohm();
-      clear_current_sense_dir_reversed();
       clear_current_sense_f_lp();
       clear_play_startup_tone();
 
@@ -524,9 +476,6 @@ BoardConfig() = default;
         case FieldNumber::BUS_SENSE_SHUNT_OHM:
           name = BUS_SENSE_SHUNT_OHM_NAME;
           break;
-        case FieldNumber::BUS_SENSE_DIR_REVERSED:
-          name = BUS_SENSE_DIR_REVERSED_NAME;
-          break;
         case FieldNumber::MAX_REGEN_CURRENT:
           name = MAX_REGEN_CURRENT_NAME;
           break;
@@ -535,9 +484,6 @@ BoardConfig() = default;
           break;
         case FieldNumber::CURRENT_SENSE_SHUNT_OHM:
           name = CURRENT_SENSE_SHUNT_OHM_NAME;
-          break;
-        case FieldNumber::CURRENT_SENSE_DIR_REVERSED:
-          name = CURRENT_SENSE_DIR_REVERSED_NAME;
           break;
         case FieldNumber::CURRENT_SENSE_F_LP:
           name = CURRENT_SENSE_F_LP_NAME;
@@ -614,11 +560,9 @@ BoardConfig() = default;
       left_chars = bus_max_positive_current_.to_string(left_chars, indent_level + 2, BUS_MAX_POSITIVE_CURRENT_NAME, false);
       left_chars = bus_max_negative_current_.to_string(left_chars, indent_level + 2, BUS_MAX_NEGATIVE_CURRENT_NAME, false);
       left_chars = bus_sense_shunt_ohm_.to_string(left_chars, indent_level + 2, BUS_SENSE_SHUNT_OHM_NAME, false);
-      left_chars = bus_sense_dir_reversed_.to_string(left_chars, indent_level + 2, BUS_SENSE_DIR_REVERSED_NAME, false);
       left_chars = max_regen_current_.to_string(left_chars, indent_level + 2, MAX_REGEN_CURRENT_NAME, false);
       left_chars = current_sense_gain_.to_string(left_chars, indent_level + 2, CURRENT_SENSE_GAIN_NAME, false);
       left_chars = current_sense_shunt_ohm_.to_string(left_chars, indent_level + 2, CURRENT_SENSE_SHUNT_OHM_NAME, false);
-      left_chars = current_sense_dir_reversed_.to_string(left_chars, indent_level + 2, CURRENT_SENSE_DIR_REVERSED_NAME, false);
       left_chars = current_sense_f_lp_.to_string(left_chars, indent_level + 2, CURRENT_SENSE_F_LP_NAME, false);
       left_chars = play_startup_tone_.to_string(left_chars, indent_level + 2, PLAY_STARTUP_TONE_NAME, false);
   
@@ -654,11 +598,9 @@ BoardConfig() = default;
       EmbeddedProto::floatfixed bus_max_positive_current_ = 0.0;
       EmbeddedProto::floatfixed bus_max_negative_current_ = 0.0;
       EmbeddedProto::floatfixed bus_sense_shunt_ohm_ = 0.0;
-      EmbeddedProto::boolean bus_sense_dir_reversed_ = false;
       EmbeddedProto::floatfixed max_regen_current_ = 0.0;
       EmbeddedProto::floatfixed current_sense_gain_ = 0.0;
       EmbeddedProto::floatfixed current_sense_shunt_ohm_ = 0.0;
-      EmbeddedProto::boolean current_sense_dir_reversed_ = false;
       EmbeddedProto::uint32 current_sense_f_lp_ = 0U;
       EmbeddedProto::boolean play_startup_tone_ = false;
 

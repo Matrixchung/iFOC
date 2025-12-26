@@ -18,12 +18,12 @@ message BoardConfig {
     float bus_max_positive_current = 13;
     float bus_max_negative_current = 14;
     float bus_sense_shunt_ohm = 15;
-    bool bus_sense_dir_reversed = 16;
+//    bool bus_sense_dir_reversed = 16;
     float max_regen_current = 19;
 
     float current_sense_gain = 21;
     float current_sense_shunt_ohm = 22;
-    bool current_sense_dir_reversed = 23;
+//    bool current_sense_dir_reversed = 23;
     uint32 current_sense_f_lp = 24;
 
     bool play_startup_tone = 31;
