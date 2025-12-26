@@ -58,6 +58,11 @@ void UAVCANProtocol::Init()
     const CanardMemoryResource memory = {nullptr, canard_mem_free, canard_mem_alloc};
     canard = canardInit(memory);
     canard.node_id = motor->GetConfig().node_id();
+    if(canard.node_id <= CANARD_NODE_ID_MAX) // set HW filter
+    {
+        CanardFilter filter = canardMakeFilterForServices(canard.node_id);
+        can->SetHWFilter(motor->GetInternalID(), filter.extended_can_id, filter.extended_mask);
+    }
     tx_queue = canardTxInit(128, CANARD_MTU_CAN_CLASSIC, memory); // TODO: For CAN FD, the MTU is 64.
     polling_task.Start();
     // ### Subscribe Cyphal topics below ###
@@ -129,10 +134,15 @@ void UAVCANProtocol::ProcessTransfer(const CanardRxTransfer& transfer)
 
 void UAVCANProtocol::SendHeartbeat()
 {
-    uavcan_node_Heartbeat_1_0 heartbeat{};
-    heartbeat.uptime = HAL::GetUptimeSeconds();
-    heartbeat.health.value = uavcan_node_Health_1_0_NOMINAL;
-    heartbeat.mode.value = uavcan_node_Mode_1_0_OPERATIONAL;
+    const auto motor = GetMotor<FOCMotor>();
+    const auto error = motor->GetError();
+    uavcan_node_Heartbeat_1_0 heartbeat
+    {
+        .uptime = HAL::GetUptimeSeconds(),
+        .health = {.value = (error == 0 ? (uint8_t)uavcan_node_Health_1_0_NOMINAL : (uint8_t)uavcan_node_Health_1_0_ADVISORY)},
+        .mode = {.value = uavcan_node_Mode_1_0_OPERATIONAL},
+        .vendor_specific_status_code = (uint8_t)motor->GetCurrentState()
+    };
 
     CanardPayload payload{};
     constexpr size_t original_max_size = uavcan_node_Heartbeat_1_0_SERIALIZATION_BUFFER_SIZE_BYTES_;
@@ -741,7 +751,16 @@ UAVCANProtocol::PollingTask::PollingTask(UAVCANProtocol* p) : Task("UAVCANPoll")
 void UAVCANProtocol::PollingTask::UpdateNormal()
 {
     const auto motor = parent->GetMotor<FOCMotor>();
-    parent->canard.node_id = motor->GetConfig().node_id();
+    const auto new_node_id = motor->GetConfig().node_id();
+    if(new_node_id != parent->canard.node_id)
+    {
+        parent->canard.node_id = new_node_id;
+        if(new_node_id <= CANARD_NODE_ID_MAX)
+        {
+            CanardFilter filter = canardMakeFilterForServices(new_node_id);
+            parent->can->SetHWFilter(motor->GetInternalID(), filter.extended_can_id, filter.extended_mask);
+        }
+    }
     // #1: Response received transfer first
     DataType::Comm::CANMessage message{};
     if(xQueueReceive(parent->isr_msg_queue, &message, 1) == pdTRUE)
@@ -766,6 +785,7 @@ void UAVCANProtocol::PollingTask::UpdateNormal()
         }
         else if(result == 1)
         {
+            parent->rx_frame_received++;
             parent->ProcessTransfer(transfer);
             parent->canard.memory.deallocate(parent->canard.memory.user_reference,
                                              transfer.payload.allocated_size,
