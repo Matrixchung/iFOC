@@ -12,8 +12,8 @@
 #ifndef _FDB_CFG_H_
 #define _FDB_CFG_H_
 
-#include "hal_const.h"
-#include "fal_cfg.h"
+#include "../../../HAL/hal_const.h"
+#include "../port/fal/port/fal_cfg.h"
 
 /* using KVDB feature */
 #define FDB_USING_KVDB

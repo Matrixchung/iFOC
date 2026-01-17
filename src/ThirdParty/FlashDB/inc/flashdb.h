@@ -23,7 +23,7 @@
 
 
 #ifdef FDB_USING_FAL_MODE
-#include <fal.h>
+#include "../port/fal/inc/fal_def.h"
 #endif
 
 #include "fdb_def.h"

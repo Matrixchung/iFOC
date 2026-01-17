@@ -11,8 +11,8 @@
 #ifndef _FAL_CFG_H_
 #define _FAL_CFG_H_
 
-#include "fal_def.h"
-#include "hal_const.h"
+#include "../inc/fal_def.h"
+#include "../../../../../HAL/hal_const.h"
 
 #ifdef __cplusplus
 extern "C" {

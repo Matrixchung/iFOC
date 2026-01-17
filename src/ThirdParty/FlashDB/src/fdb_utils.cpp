@@ -13,8 +13,9 @@
 
 #include <cstdio>
 #include <cstring>
-#include <flashdb.h>
-#include <fdb_low_lvl.h>
+#include "../inc/flashdb.h"
+#include "../inc/fdb_low_lvl.h"
+#include "../port/fal/inc/fal.h"
 
 #ifdef FDB_REUSE_CRC16
 #include "foc_math.hpp"

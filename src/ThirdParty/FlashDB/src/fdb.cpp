@@ -11,8 +11,9 @@
  * Some initialize interface for this library.
  */
 
-#include <flashdb.h>
-#include <fdb_low_lvl.h>
+#include "../inc/flashdb.h"
+#include "../inc/fdb_low_lvl.h"
+#include "../port/fal/inc/fal.h"
 #include <cinttypes>
 
 #ifdef USE_FLASHDB

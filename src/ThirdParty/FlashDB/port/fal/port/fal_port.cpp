@@ -1,9 +1,9 @@
-#include "hal_const.h"
+#include "../../../../../HAL/hal_const.h"
 
 #ifdef USE_FLASHDB
 
-#include "fal.h"
-#include "hal_impl.hpp"
+#include "../inc/fal.h"
+#include "../../../../../HAL/hal_impl.hpp"
 
 static int read(long offset, uint8_t *buf, size_t size);
 static int write(long offset, const uint8_t *buf, size_t size);

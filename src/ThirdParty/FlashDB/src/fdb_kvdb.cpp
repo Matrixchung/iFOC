@@ -13,8 +13,9 @@
 
 #include <cinttypes>
 #include <cstring>
-#include <flashdb.h>
-#include <fdb_low_lvl.h>
+#include "../inc/flashdb.h"
+#include "../inc/fdb_low_lvl.h"
+#include "../port/fal/inc/fal.h"
 
 #ifdef USE_FLASHDB
 
