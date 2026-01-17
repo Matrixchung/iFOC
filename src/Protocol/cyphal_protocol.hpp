@@ -9,13 +9,13 @@
 
 namespace iFOC::Protocol
 {
-class UAVCANProtocol final : public ProtocolBase
+class CyphalProtocol final : public ProtocolBase
 {
     OVERRIDE_NEW();
-    DELETE_COPY_CONSTRUCTOR(UAVCANProtocol);
+    DELETE_COPY_CONSTRUCTOR(CyphalProtocol);
 public:
-    explicit UAVCANProtocol(HAL::CANBase* base);
-    ~UAVCANProtocol();
+    explicit CyphalProtocol(HAL::CANBase* base);
+    ~CyphalProtocol();
     void Init() override;
 private:
     class PollingTask final : public Task
@@ -23,7 +23,7 @@ private:
         OVERRIDE_NEW();
         DELETE_COPY_CONSTRUCTOR(PollingTask);
     private:
-        UAVCANProtocol* parent = nullptr;
+        CyphalProtocol* parent = nullptr;
         // TickType_t last_heartbeat_tick = 0;
         struct
         {
@@ -31,7 +31,7 @@ private:
             TickType_t port_list = 0;
         } last_send_tick;
     public:
-        explicit PollingTask(UAVCANProtocol* p);
+        explicit PollingTask(CyphalProtocol* p);
         void UpdateNormal() override;
     };
     friend class PollingTask;

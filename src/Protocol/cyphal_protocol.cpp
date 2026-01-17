@@ -1,17 +1,16 @@
-#include "uavcan_protocol.hpp"
+#include "cyphal_protocol.hpp"
 
 #include "foc_motor.hpp"
 
 // DSDL definitions import
 // Cyphal(UAVCAN v1) definitions below
-#include "Access_1_0.h"
 #include "../ThirdParty/libcanard/dsdl/nunavut/support/serialization.h"
 #include "../ThirdParty/libcanard/dsdl/uavcan/node/Heartbeat_1_0.h"
 #include "../ThirdParty/libcanard/dsdl/uavcan/node/GetInfo_1_0.h"
 #include "../ThirdParty/libcanard/dsdl/uavcan/node/GetTransportStatistics_0_1.h"
 #include "../ThirdParty/libcanard/dsdl/uavcan/node/port/List_1_0.h"
 #include "../ThirdParty/libcanard/dsdl/uavcan/_register/List_1_0.h"
-// UAVCAN v0(Legacy) definitions below
+#include "../ThirdParty/libcanard/dsdl/uavcan/_register/Access_1_0.h"
 
 
 #define KILO 1000L
@@ -42,17 +41,17 @@ static void _fill_subscriptions_to_svc_list(const CanardTreeNode* const tree, ua
 
 namespace iFOC::Protocol
 {
-UAVCANProtocol::UAVCANProtocol(HAL::CANBase* base) : polling_task(this), can(base)
+CyphalProtocol::CyphalProtocol(HAL::CANBase* base) : polling_task(this), can(base)
 {
     isr_msg_queue = xQueueCreate(16, sizeof(DataType::Comm::CANMessage));
 }
 
-UAVCANProtocol::~UAVCANProtocol()
+CyphalProtocol::~CyphalProtocol()
 {
     vQueueDelete(isr_msg_queue);
 }
 
-void UAVCANProtocol::Init()
+void CyphalProtocol::Init()
 {
     const auto motor = GetMotor<FOCMotor>();
     const CanardMemoryResource memory = {nullptr, canard_mem_free, canard_mem_alloc};
@@ -87,14 +86,15 @@ void UAVCANProtocol::Init()
                       uavcan_register_Access_Request_1_0_EXTENT_BYTES_,
                       CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC);
     // Finally, attach the interrupt handler.
-    can->RegisterRxHandler(std::bind(&UAVCANProtocol::OnRxEvent, this, std::placeholders::_1));
+    can->RegisterRxHandler(std::bind(&CyphalProtocol::OnRxEvent, this, std::placeholders::_1));
 }
 
-void UAVCANProtocol::ProcessTransfer(const CanardRxTransfer& transfer)
+void CyphalProtocol::ProcessTransfer(const CanardRxTransfer& transfer)
 {
     // real process
     if(transfer.metadata.transfer_kind == CanardTransferKindMessage) // Message
     {
+        // Many of the motion commands from here...
 
     }
     else if(transfer.metadata.transfer_kind == CanardTransferKindRequest) // Request
@@ -132,7 +132,7 @@ void UAVCANProtocol::ProcessTransfer(const CanardRxTransfer& transfer)
     }
 }
 
-void UAVCANProtocol::SendHeartbeat()
+void CyphalProtocol::SendHeartbeat()
 {
     const auto motor = GetMotor<FOCMotor>();
     const auto error = motor->GetError();
@@ -172,7 +172,7 @@ void UAVCANProtocol::SendHeartbeat()
     canard.memory.deallocate(nullptr, original_max_size, (void*)payload.data);
 }
 
-void UAVCANProtocol::SendPortList()
+void CyphalProtocol::SendPortList()
 {
     uavcan_node_port_List_1_0 m{};
     uavcan_node_port_SubjectIDList_1_0_select_sparse_list_(&m.publishers);
@@ -217,7 +217,7 @@ void UAVCANProtocol::SendPortList()
     canard.memory.deallocate(nullptr, original_max_size, (void*)payload.data);
 }
 
-void UAVCANProtocol::SendGetInfoResponse(const CanardRxTransfer& transfer)
+void CyphalProtocol::SendGetInfoResponse(const CanardRxTransfer& transfer)
 {
     uavcan_node_GetInfo_Response_1_0 response
     {
@@ -258,7 +258,7 @@ void UAVCANProtocol::SendGetInfoResponse(const CanardRxTransfer& transfer)
     canard.memory.deallocate(nullptr, original_max_size, (void*)payload.data);
 }
 
-void UAVCANProtocol::SendGetTransportStatsResponse(const CanardRxTransfer& transfer)
+void CyphalProtocol::SendGetTransportStatsResponse(const CanardRxTransfer& transfer)
 {
     uavcan_node_GetTransportStatistics_Response_0_1 response{};
     // fill transfer statistics
@@ -289,7 +289,7 @@ void UAVCANProtocol::SendGetTransportStatsResponse(const CanardRxTransfer& trans
     canard.memory.deallocate(nullptr, original_max_size, (void*)payload.data);
 }
 
-void UAVCANProtocol::SendRegisterListResponse(const CanardRxTransfer& transfer)
+void CyphalProtocol::SendRegisterListResponse(const CanardRxTransfer& transfer)
 {
     uavcan_register_List_Request_1_0 request{};
     auto size = transfer.payload.size;
@@ -327,7 +327,7 @@ void UAVCANProtocol::SendRegisterListResponse(const CanardRxTransfer& transfer)
     }
 }
 
-void UAVCANProtocol::SendRegisterAccessResponse(const CanardRxTransfer& transfer)
+void CyphalProtocol::SendRegisterAccessResponse(const CanardRxTransfer& transfer)
 {
     /*
      *   READ/WRITE BEHAVIORS
@@ -396,7 +396,7 @@ void UAVCANProtocol::SendRegisterAccessResponse(const CanardRxTransfer& transfer
     }
 }
 
-void UAVCANProtocol::GetRegisterNameByGlobalIndex(char* dst, uint16_t max_size, uint16_t index)
+void CyphalProtocol::GetRegisterNameByGlobalIndex(char* dst, uint16_t max_size, uint16_t index)
 {
     // This service allows the caller to discover the names of all registers available on the server
     // by iterating the index field from zero until an empty name is returned. -- Cyphal Specs v1.0
@@ -438,7 +438,7 @@ void UAVCANProtocol::GetRegisterNameByGlobalIndex(char* dst, uint16_t max_size, 
     return;
 }
 
-bool UAVCANProtocol::ReadRegisterByName(const uavcan_register_Name_1_0& name, uavcan_register_Value_1_0& dst_value)
+bool CyphalProtocol::ReadRegisterByName(const uavcan_register_Name_1_0& name, uavcan_register_Value_1_0& dst_value)
 {
     /*
      *  Protobuf Field Type  |      Cyphal Report Type
@@ -546,7 +546,7 @@ bool UAVCANProtocol::ReadRegisterByName(const uavcan_register_Name_1_0& name, ua
     return false;
 }
 
-bool UAVCANProtocol::CheckRegisterByName(const uavcan_register_Name_1_0& name)
+bool CyphalProtocol::CheckRegisterByName(const uavcan_register_Name_1_0& name)
 {
     char buffer[uavcan_register_Name_1_0_name_ARRAY_CAPACITY_ + 2]{};
     if(name.name.count >= sizeof(buffer)) return false;
@@ -583,7 +583,7 @@ bool UAVCANProtocol::CheckRegisterByName(const uavcan_register_Name_1_0& name)
     return false;
 }
 
-bool UAVCANProtocol::WriteRegisterByName(const uavcan_register_Name_1_0& name, const uavcan_register_Value_1_0& value)
+bool CyphalProtocol::WriteRegisterByName(const uavcan_register_Name_1_0& name, const uavcan_register_Value_1_0& value)
 {
     if(uavcan_register_Value_1_0_is_empty_(&value)) return false; // an empty value can't be written
     // currently unsupported data types:
@@ -741,14 +741,14 @@ bool UAVCANProtocol::WriteRegisterByName(const uavcan_register_Name_1_0& name, c
     return false;
 }
 
-UAVCANProtocol::PollingTask::PollingTask(UAVCANProtocol* p) : Task("UAVCANPoll"), parent(p)
+CyphalProtocol::PollingTask::PollingTask(CyphalProtocol* p) : Task("UAVCANPoll"), parent(p)
 {
     RegisterTask(TaskType::NORMAL_TASK);
     config.rtos_priority = configMAX_PRIORITIES - 4;
     config.stack_depth = 1024;
 }
 
-void UAVCANProtocol::PollingTask::UpdateNormal()
+void CyphalProtocol::PollingTask::UpdateNormal()
 {
     const auto motor = parent->GetMotor<FOCMotor>();
     const auto new_node_id = motor->GetConfig().node_id();
@@ -830,7 +830,7 @@ void UAVCANProtocol::PollingTask::UpdateNormal()
                                        [](auto* const ref, const auto ddl, auto* frame)
                                        {
                                            (void)ddl;
-                                            auto* const parent = static_cast<UAVCANProtocol*>(ref);
+                                            auto* const parent = static_cast<CyphalProtocol*>(ref);
                                             return parent->TransmitFrame(frame);
                                        },
                                        &parent->tx_frame_expired,
@@ -840,7 +840,7 @@ void UAVCANProtocol::PollingTask::UpdateNormal()
     // sleep(1);
 }
 
-void UAVCANProtocol::OnRxEvent(const DataType::Comm::CANMessage& message)
+void CyphalProtocol::OnRxEvent(const DataType::Comm::CANMessage& message)
 {
     if(!message.is_ext || message.is_rtr) return;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -859,7 +859,7 @@ void UAVCANProtocol::OnRxEvent(const DataType::Comm::CANMessage& message)
 //     return lhs.port_id == rhs.port_id && lhs.extent == rhs.extent;
 // }
 
-FuncRetCode UAVCANProtocol::SubscribeTransfer(CanardTransferKind kind, CanardPortID port, size_t max_size,
+FuncRetCode CyphalProtocol::SubscribeTransfer(CanardTransferKind kind, CanardPortID port, size_t max_size,
     CanardMicrosecond timeout_us)
 {
     /*
@@ -901,12 +901,12 @@ FuncRetCode UAVCANProtocol::SubscribeTransfer(CanardTransferKind kind, CanardPor
     return FuncRetCode::OK;
 }
 
-FuncRetCode UAVCANProtocol::UnsubscribeTransfer(CanardTransferKind kind, CanardPortID port)
+FuncRetCode CyphalProtocol::UnsubscribeTransfer(CanardTransferKind kind, CanardPortID port)
 {
-
+    return FuncRetCode::NOT_SUPPORTED;
 }
 
-int8_t UAVCANProtocol::TransmitFrame(CanardMutableFrame* frame) const
+int8_t CyphalProtocol::TransmitFrame(CanardMutableFrame* frame) const
 {
     DataType::Comm::CANMessage message
     {
@@ -921,13 +921,13 @@ int8_t UAVCANProtocol::TransmitFrame(CanardMutableFrame* frame) const
     return 0;
 }
 
-void* UAVCANProtocol::canard_mem_alloc(void* ref, size_t size)
+void* CyphalProtocol::canard_mem_alloc(void* ref, size_t size)
 {
     (void)ref;
     return pvPortMalloc(size);
 }
 
-void UAVCANProtocol::canard_mem_free(void* ref, size_t size, void* ptr)
+void CyphalProtocol::canard_mem_free(void* ref, size_t size, void* ptr)
 {
     (void)ref;
     (void)size;
