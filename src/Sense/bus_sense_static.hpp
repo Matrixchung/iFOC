@@ -9,7 +9,7 @@ class BusSenseStatic final : public BusSenseBase
 public:
     BusSenseStatic() = delete;
     explicit BusSenseStatic(real_t Vbus);
-    void Update() override {}
+    FuncRetCode Update() override { return FuncRetCode::OK; }
 };
 
 inline BusSenseStatic::BusSenseStatic(real_t Vbus)

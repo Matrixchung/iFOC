@@ -18,7 +18,7 @@ class BusSenseSeries final : public BusSenseBase
 public:
     BusSenseSeries(BusSenseBase* _pIn, BusSenseBase* _pOut);
     FuncRetCode Init() override;
-    void Update() override;
+    FuncRetCode Update() override;
 // private:
     BusSenseBase* pIn;
     BusSenseBase* pOut;

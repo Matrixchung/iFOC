@@ -18,7 +18,7 @@ public:
     real_t current = 0.0f; // [A], positive value means current flow from supply to driver
     [[nodiscard]] BusSenseType GetBusSenseType() const { return type; }
     virtual FuncRetCode Init() { return FuncRetCode::OK; };
-    virtual void Update() = 0;
+    virtual FuncRetCode Update() = 0;
 protected:
     BusSenseType type = BusSenseType::SINGLE_ENDED;
 };

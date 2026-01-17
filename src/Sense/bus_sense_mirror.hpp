@@ -9,7 +9,7 @@ class BusSenseMirror final : public BusSenseBase
 public:
     BusSenseMirror() = delete;
     explicit BusSenseMirror(BusSenseBase* _other);
-    void Update() override;
+    FuncRetCode Update() override;
 private:
     BusSenseBase* other = nullptr;
 };

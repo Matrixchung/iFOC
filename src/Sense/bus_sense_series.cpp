@@ -20,10 +20,22 @@ FuncRetCode BusSenseSeries::Init()
     return FuncRetCode::OK;
 }
 
-void BusSenseSeries::Update()
+FuncRetCode BusSenseSeries::Update()
 {
-    pIn->Update();
-    pOut->Update();
+    auto ret = pIn->Update();
+    if(ret != FuncRetCode::OK)
+    {
+        voltage = 0.0f;
+        current = 0.0f;
+        return ret;
+    }
+    ret = pOut->Update();
+    if(ret != FuncRetCode::OK)
+    {
+        voltage = 0.0f;
+        current = 0.0f;
+        return ret;
+    }
     real_t v = pIn->voltage;
     const real_t voltage_out = pOut->voltage;
     if(voltage_out >= config.bus_undervoltage_limit())
@@ -33,6 +45,7 @@ void BusSenseSeries::Update()
     }
     voltage = v;
     current = pIn->current + pOut->current;
+    return FuncRetCode::OK;
 }
 }
 

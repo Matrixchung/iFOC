@@ -4,9 +4,10 @@ namespace iFOC::Sense
 {
 BusSenseMirror::BusSenseMirror(BusSenseBase* _other) : other(_other) {};
 
-void BusSenseMirror::Update()
+FuncRetCode BusSenseMirror::Update()
 {
     voltage = other->voltage;
     current = other->current;
+    return FuncRetCode::OK;
 }
 }
