@@ -23,6 +23,15 @@ FOCDriverDRV830x::FOCDriverDRV830x(FOCDriverBase* _pwm, SPIBase* _spi) : pwm_bas
 
 FOCDriverDRV830x::FOCDriverDRV830x(FOCDriverBase* _pwm, SPIBase* _spi, GPIOBase *_en) : pwm_base(_pwm), spi_base(_spi), en_gate(_en) {}
 
+void FOCDriverDRV830x::OnFaultIRQ()
+{
+    SPIInit(); // there might be other SPI devices with different CPOL/CPHA
+    status_1 st1{};
+    status_2 st2{};
+    ReadReg(0x00, &st1.reg);
+    ReadReg(0x01, &st2.reg);
+}
+
 FuncRetCode FOCDriverDRV830x::Init(bool initCNT)
 {
     if(en_gate)
@@ -35,19 +44,15 @@ FuncRetCode FOCDriverDRV830x::Init(bool initCNT)
         // HAL::DelayMs(1);
         // en_gate->Clear();
     }
-    // HAL::DelayMs(10);
+    HAL::DelayMs(5);
     // init spi first
-    spi_base->SetClock(800000);
-    spi_base->SetDataWidth(SPIBase::DataWidth::BYTE);
-    spi_base->SetCPOLCPHA(0, 1);
-    spi_base->SetCS(true);
-    if(const auto r = spi_base->Init(); r != FuncRetCode::OK) return r;
+    if(const auto r = SPIInit(); r != FuncRetCode::OK) return r;
     HAL::DelayMs(1);
 
     if(en_gate)
     {
         en_gate->Set();
-        HAL::DelayMs(1);
+        HAL::DelayMs(5);
     }
     else
     {
@@ -55,69 +60,82 @@ FuncRetCode FOCDriverDRV830x::Init(bool initCNT)
         WriteReg(0x02, 0x04);
         HAL::DelayMs(1);
     }
+    status_1 st1{};
+    status_2 st2{};
+    cr_1 cr1{};
+    cr_2 cr2{};
+    cr_1 cr1_test{};
+    cr1_test.bit.gate_current = 0x02;
 
     // read status (self-test)
-    if(const auto r = ReadReg(0x00, &status_1); r != FuncRetCode::OK) return r;
-    if(const auto r = ReadReg(0x01, &status_2); r != FuncRetCode::OK) return r;
-    WriteReg(0x02, 0x02);
-    if(const auto r = ReadReg(0x02, &cr_1); r != FuncRetCode::OK) return r;
-    if(const auto r = ReadReg(0x03, &cr_2); r != FuncRetCode::OK) return r;
+    if(const auto r = ReadReg(0x00, &st1.reg); r != FuncRetCode::OK) return r;
+    if(const auto r = ReadReg(0x01, &st2.reg); r != FuncRetCode::OK) return r;
+
+    WriteReg(0x02, cr1_test.reg);
+    if(const auto r = ReadReg(0x02, &cr1.reg); r != FuncRetCode::OK) return r;
+    if(const auto r = ReadReg(0x03, &cr2.reg); r != FuncRetCode::OK) return r;
 
     // validate SPI R/W accessibility
-    if(cr_1 != 0x02)
+    if(cr1.reg != cr1_test.reg)
     {
         return FuncRetCode::HARDWARE_ERROR;
     }
     // validate device id
-    if(status_2_bit.device_id != 0x01)
+    if(st2.bit.device_id != 0x01)
     {
         return FuncRetCode::CRC_MISMATCH;
     }
     // validate device state
-    if(status_1 != 0) // fault
+    if(st1.reg != 0) // fault
     {
         return FuncRetCode::BUSY;
     }
 
-    WriteReg(0x02, 0x00);
-    if(const auto r = ReadReg(0x02, &cr_1); r != FuncRetCode::OK) return r;
+    cr1.reg = 0x00;
+    WriteReg(0x02, cr1.reg);
+    if(const auto r = ReadReg(0x02, &cr1.reg); r != FuncRetCode::OK) return r;
 
     // shunt amplifiers
     // #1: performing DC calibration (optional)
-    cr_2 = 0;
-    cr_2_bit.dc_cal_ch1 = 1;
-    cr_2_bit.dc_cal_ch2 = 1;
-    WriteReg(0x03, cr_2);
+    cr2.reg = 0;
+    cr2.bit.dc_cal_ch1 = 1;
+    cr2.bit.dc_cal_ch2 = 1;
+    WriteReg(0x03, cr2.reg);
     HAL::DelayMs(1);
 
     // #2: Deciding the GAIN value
-    cr_2 = 0;
+    cr2.reg = 0;
     auto target_gain = (int)BoardConfig().GetConfig().current_sense_gain();
     switch(target_gain)
     {
         case 10:
         {
-            cr_2_bit.sense_gain = 0;
+            cr2.bit.sense_gain = 0;
             break;
         }
         case 20:
         {
-            cr_2_bit.sense_gain = 1;
+            cr2.bit.sense_gain = 1;
             break;
         }
         case 40:
         {
-            cr_2_bit.sense_gain = 2;
+            cr2.bit.sense_gain = 2;
             break;
         }
         case 80:
         {
-            cr_2_bit.sense_gain = 3;
+            cr2.bit.sense_gain = 3;
             break;
         }
-        default: return FuncRetCode::PARAM_OUT_BOUND;
+        default: return FuncRetCode::PARAM_OUT_BOUND; // if GAIN out of bound, cr_2 will keep dc_1/2 shorted, as we want.
     }
-    WriteReg(0x03, cr_2);
+    WriteReg(0x03, cr2.reg);
+
+    cr1.reg = 0;
+    cr1.bit.ocp_mode = 1; // OCP_MODE: OC latch shut down
+    cr1.bit.oc_adj_set = 21; // Vds approximately 0.730V?
+    WriteReg(0x02, cr1.reg);
 
     // last stage: init counter
     if(const auto r = pwm_base->Init(initCNT); r != FuncRetCode::OK) return r;
@@ -159,5 +177,14 @@ uint16_t FOCDriverDRV830x::SPITransfer(uint16_t tx)
     spi_base->SetCS(true);
     HAL::DelayUs(5);
     return (rx_data << 8) | (rx_data >> 8);
+}
+
+FuncRetCode FOCDriverDRV830x::SPIInit()
+{
+    spi_base->SetClock(800000);
+    spi_base->SetDataWidth(SPIBase::DataWidth::BYTE);
+    spi_base->SetCPOLCPHA(0, 1);
+    spi_base->SetCS(true);
+    return spi_base->Init();
 }
 }
