@@ -13,8 +13,8 @@
 #include "../DataType/Headers/Base/motor_control_mode.h"
 #include "../DataType/board_config.hpp"
 #include "../Protocol/protocol_base.hpp"
-#include "motion.hpp"
-#include "config_nvm_wrapper.hpp"
+#include "../DataType/Headers/Base/motion.hpp"
+#include "../DataType/config_nvm_wrapper.hpp"
 
 namespace iFOC
 {
@@ -76,8 +76,12 @@ public:
     /// \param motion target Motion struct, with reference frame and units stored in std::pair.second
     virtual void SetTargetMotion(Motion& motion) = 0;
 
+    void SetRampedTargetMotion(Motion& motion, float target_Ts);
+
     [[nodiscard]] Motion GetCurrentMotionStruct(Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit);
+    [[nodiscard]] Motion GetCurrentMotionStruct(const Motion& ref);
     [[nodiscard]] Motion GetTargetMotionStruct(Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit);
+    [[nodiscard]] Motion GetTargetMotionStruct(const Motion& ref);
 
     __fast_inline void DispatchRTTasks(float Ts);
     __fast_inline void DispatchMidTasks(float Ts);
@@ -109,7 +113,7 @@ public:
     void ClearError(std::underlying_type_t<MotorError> e);
     [[nodiscard]] __fast_inline std::underlying_type_t<MotorError> GetError() const;
     [[nodiscard]] __fast_inline bool CheckError(MotorError e) const;
-    FuncRetCode AppendEncoder(Encoder::EncoderBase* encoder);
+    virtual FuncRetCode AppendEncoder(Encoder::EncoderBase* encoder);
     FuncRetCode RemoveEncoderByName(const char* name);
     FuncRetCode RemoveEncoderByIndex(uint8_t index);
     [[nodiscard]] Encoder::EncoderBase* GetEncoderByName(const char* name) const;
@@ -124,6 +128,10 @@ public:
     __fast_inline void SetControlMode(MotorControlMode mode);
     __fast_inline TaskProcessor& GetTaskProcessor();
     __fast_inline void UpdateWatchdog();
+
+    bool IsRampingMotion() const;
+    Motion GetRampedStartMotion() const;
+    Motion GetRampedDiffMotion() const;
 protected:
     TaskProcessor tasks;
     /// \brief used to store all associated encoders (primary encoder, auxiliary encoder, sensorless...)
@@ -140,23 +148,73 @@ protected:
     Sense::TempSenseBase* motor_temp{};
     HAL::IndicatorBase* indicator{};
 
-    /// \brief Watchdog feature: if enabled, watchdog_cnt should be periodically updated by any of the user input (set to 0),
+    /// \brief Watchdog feature: if enabled, watchdog_cnt should be periodically updated by any of the user input (set cnt to 0),
     /// otherwise, when the counter (added up in Mid task) exceeds preset limit, a motor shutdown will be immediately triggered.
     uint32_t watchdog_cnt = 0;
 
     /// If set to > 0, watchdog is enabled.
     uint32_t watchdog_timeout_cnt = 0;
 
+    void ProcessRampedTargetMotion(float Ts); // called in DispatchMidTask
+    Motion _ramped_start_target_motion{};
+    Motion _ramped_diff_motion{};
+    float _ramped_target_timer = 0.0f;
+    float _ramped_target_Ts = 0.0f;
+
     /// \brief used to determine internal index in case of a CPU handling multiple motor instances \n
     ///        used in following areas: NVM config R/W, updating BusSense, handling bus communication...
     uint8_t internal_id = 0;
     bool is_armed = false;
+    bool _is_ramping_motion = false;
     /// \brief Primary Encoder index which has been selected as data source
     uint8_t primary_encoder_idx = 0;
     std::underlying_type_t<MotorError> error = to_underlying(MotorError::NONE);
     MotorState current_state = MotorState::IDLE;
     MotorControlMode control_mode = MotorControlMode::CTRL_MODE_POSITION;
 };
+
+template <uint8_t shunt_count>
+void MotorBase<shunt_count>::SetRampedTargetMotion(Motion& motion, float target_Ts)
+{
+    if(target_Ts <= 0.0f) return;
+    _is_ramping_motion = false;
+    _ramped_start_target_motion = GetTargetMotionStruct(motion);
+    _ramped_diff_motion = _ramped_start_target_motion;
+    _ramped_diff_motion.torque.value = motion.torque.value - _ramped_start_target_motion.torque.value;
+    _ramped_diff_motion.speed.value = motion.speed.value - _ramped_start_target_motion.speed.value;
+    _ramped_diff_motion.pos.value = motion.pos.value - _ramped_start_target_motion.pos.value;
+    _ramped_target_Ts = target_Ts;
+    _ramped_target_timer = 0.0f;
+    _is_ramping_motion = true;
+}
+
+template <uint8_t shunt_count>
+void MotorBase<shunt_count>::ProcessRampedTargetMotion(float Ts)
+{
+    if(_is_ramping_motion)
+    {
+        if(_ramped_target_Ts <= 0.0f)
+        {
+            _is_ramping_motion = false;
+            return;
+        }
+        if(_ramped_target_timer >= _ramped_target_Ts)
+        {
+            _is_ramping_motion = false;
+            return;
+        }
+        float pct = _ramped_target_timer / _ramped_target_Ts;
+        pct = _constrain(pct, 0.0f, 1.0f);
+        // calculate target
+        Motion target_motion{_ramped_start_target_motion};
+        target_motion.torque.value += _ramped_diff_motion.torque.value * pct;
+        target_motion.speed.value += _ramped_diff_motion.speed.value * pct;
+        target_motion.pos.value += _ramped_diff_motion.pos.value * pct;
+        SetTargetMotion(target_motion);
+        _is_ramping_motion = true;
+        _ramped_target_timer += Ts;
+    }
+}
 
 template<uint8_t shunt_count>
 Motion MotorBase<shunt_count>::GetCurrentMotionStruct(Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit)
@@ -166,12 +224,24 @@ Motion MotorBase<shunt_count>::GetCurrentMotionStruct(Motion::Ref ref_frame, Mot
     return ret;
 }
 
+template <uint8_t shunt_count>
+Motion MotorBase<shunt_count>::GetCurrentMotionStruct(const Motion& ref)
+{
+    return GetCurrentMotionStruct(ref.ref, ref.torque.unit, ref.speed.unit, ref.pos.unit);
+}
+
 template<uint8_t shunt_count>
 Motion MotorBase<shunt_count>::GetTargetMotionStruct(Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit)
 {
     Motion ret{};
     GetTargetMotion(ret, ref_frame, torque_unit, speed_unit, pos_unit);
     return ret;
+}
+
+template <uint8_t shunt_count>
+Motion MotorBase<shunt_count>::GetTargetMotionStruct(const Motion& ref)
+{
+    return GetTargetMotionStruct(ref.ref, ref.torque.unit, ref.speed.unit, ref.pos.unit);
 }
 
 template<uint8_t shunt_count>
@@ -191,6 +261,7 @@ __fast_inline void MotorBase<shunt_count>::DispatchMidTasks(float Ts)
         }
         else watchdog_cnt++;
     }
+    if(IsArmed()) ProcessRampedTargetMotion(Ts);
     tasks.MidTaskScheduler(Ts);
 }
 
@@ -384,6 +455,8 @@ FuncRetCode MotorBase<shunt_count>::RemoveEncoderByName(const char *name)
             {
                 delete encoders[i]; // call destructor
                 encoders.erase(encoders.begin() + i);
+                // set primary encoder index
+                primary_encoder_idx = 0;
                 return FuncRetCode::OK;
             }
         }
@@ -401,6 +474,8 @@ FuncRetCode MotorBase<shunt_count>::RemoveEncoderByIndex(uint8_t index)
     {
         delete encoders[index];
         encoders.erase(encoders.begin() + index);
+        // set primary encoder index
+        primary_encoder_idx = 0;
         return FuncRetCode::OK;
     }
     return ret;
@@ -485,4 +560,21 @@ __fast_inline void MotorBase<shunt_count>::UpdateWatchdog()
     watchdog_cnt = 0;
 }
 
+template <uint8_t shunt_count>
+bool MotorBase<shunt_count>::IsRampingMotion() const
+{
+    return _is_ramping_motion;
+}
+
+template <uint8_t shunt_count>
+Motion MotorBase<shunt_count>::GetRampedStartMotion() const
+{
+    return _ramped_start_target_motion;
+}
+
+template <uint8_t shunt_count>
+Motion MotorBase<shunt_count>::GetRampedDiffMotion() const
+{
+    return _ramped_diff_motion;
+}
 }
