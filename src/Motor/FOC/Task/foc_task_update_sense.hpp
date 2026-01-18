@@ -8,9 +8,10 @@ class UpdateSenseTask final : public Task
 {
 public:
     UpdateSenseTask();
-    void UpdateRT(float Ts) final;
-    void UpdateNormal() final;
+    void UpdateRT(float Ts) override;
+    void UpdateNormal() override;
 private:
     uint8_t overcurrent_tick = 0;
+    uint8_t calibration_timeout_ms = 0;
 };
 }
