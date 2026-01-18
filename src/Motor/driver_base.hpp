@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Common/foc_types.hpp"
+#include "../Common/foc_types.hpp"
 
 namespace iFOC::Driver
 {

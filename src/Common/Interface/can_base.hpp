@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <functional>
-#include "foc_types.hpp"
+#include "../foc_types.hpp"
 #include "../../DataType/Headers/Comm/can_baudrate.h"
 #include "../../DataType/Headers/Comm/can_message.h"
 

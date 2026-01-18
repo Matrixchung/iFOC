@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "foc_math.hpp"
+#include "../foc_math.hpp"
 
 namespace iFOC::Filter
 {

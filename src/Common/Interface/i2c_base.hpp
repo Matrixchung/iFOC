@@ -3,8 +3,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <cstddef>
-#include "func_ret_code.h"
-#include "foc_types.hpp"
+#include "../foc_types.hpp"
 
 namespace iFOC::HAL
 {

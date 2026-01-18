@@ -14,10 +14,10 @@
 #endif
 
 #ifdef USE_HAL_DRIVER // STM32 Environment
-#include "stm32_nvm_address.h"
+#include "STM32/stm32_nvm_address.h"
 
 #elif defined(AT32F403Axx) || defined(AT32F407xx) // AT32F40x Environment
-#include "at32wk_nvm_address.h"
+#include "AT32WK/at32wk_nvm_address.h"
 #endif
 
 /* Checking const validity */

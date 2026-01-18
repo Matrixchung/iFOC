@@ -1,14 +1,12 @@
 #pragma once
 
 #include "proto_wrapper.hpp"
-#include "hal_impl.hpp"
-#include "func_ret_code.h"
-#include "foc_types.hpp"
+#include "../HAL/hal_impl.hpp"
 
 #if defined (USE_EASYFLASH)
-#include "easyflash.h"
+#include "../ThirdParty/EasyFlash/inc/easyflash.h"
 #elif defined (USE_FLASHDB)
-#include "flashdb.h"
+#include "../ThirdParty/FlashDB/inc/flashdb.h"
 #endif
 
 namespace iFOC::DataType

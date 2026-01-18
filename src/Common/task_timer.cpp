@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task_timer.hpp"
-#include "hal_impl.hpp"
+#include "../HAL/hal_impl.hpp"
 
 #ifdef __GNUC__
 #pragma GCC push_options

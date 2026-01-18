@@ -1,6 +1,6 @@
 #include "indicator_rgb_base.hpp"
 
-#include "foc_math.hpp"
+#include "../foc_math.hpp"
 
 namespace iFOC::HAL
 {

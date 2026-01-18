@@ -2,9 +2,8 @@
 
 #include <cstring>
 #include <cstdint>
-#include "foc_types.hpp"
-#include "func_ret_code.h"
-#include "foc_math.hpp"
+#include "../../Common/foc_types.hpp"
+#include "../../Common/foc_math.hpp"
 
 namespace iFOC::DataType::Ringbuf
 {

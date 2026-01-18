@@ -1,7 +1,7 @@
 #pragma once
 
-#include "foc_types.hpp"
-#include "math_concepts.hpp"
+#include "../Common/foc_types.hpp"
+#include "../Common/Math/math_concepts.hpp"
 #include <cstring>
 #include <map>
 

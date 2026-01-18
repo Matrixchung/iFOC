@@ -1,7 +1,7 @@
 #pragma once
 
 #include "foc_types.hpp"
-#include "hal_impl.hpp"
+#include "../HAL/hal_impl.hpp"
 #include "Math/math_concepts.hpp"
 #include <array>
 

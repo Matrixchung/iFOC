@@ -1,5 +1,4 @@
 #include "mini_canopen.hpp"
-#include "cpp_classes.hpp"
 #include <algorithm>
 
 #include "foc_math.hpp"

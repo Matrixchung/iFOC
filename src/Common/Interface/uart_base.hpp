@@ -2,8 +2,8 @@
 
 #include <cstdint>
 #include <functional>
-#include "func_ret_code.h"
-#include "foc_types.hpp"
+#include "../../DataType/Headers/Base/func_ret_code.h"
+#include "../foc_types.hpp"
 #include "../../DataType/Headers/Comm/uart_baudrate.h"
 #include "../../DataType/Ringbuf/kfifo.hpp"
 #include "../foc_task.hpp"

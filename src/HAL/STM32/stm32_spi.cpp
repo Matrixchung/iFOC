@@ -1,6 +1,5 @@
 #include "stm32_spi.hpp"
 
-#include "at32wk_spi.hpp"
 #if defined(HAL_SPI_MODULE_ENABLED)
 
 #include "stm32_gpio.hpp"

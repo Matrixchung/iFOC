@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "foc_types.hpp"
+#include "../foc_types.hpp"
 
 namespace iFOC::HAL
 {

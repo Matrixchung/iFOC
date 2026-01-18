@@ -4,7 +4,6 @@
 
 #include "foc_task.hpp"
 #include "foc_types.hpp"
-#include "func_ret_code.h"
 /*
  *  Task  ->     Real-Time Task (RTTask)    |    Scheduled Task (NormalTask)
  *  Host   |       RTTaskScheduler()        |       FreeRTOS Scheduler

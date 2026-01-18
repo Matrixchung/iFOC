@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <type_traits>
-#include "foc_types.hpp"
+#include "../foc_types.hpp"
 
 namespace iFOC::HAL
 {

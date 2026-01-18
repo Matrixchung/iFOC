@@ -1,5 +1,5 @@
 #include "i2c_sw.hpp"
-#include "foc_math.hpp"
+#include "../foc_math.hpp"
 
 namespace iFOC::HAL
 {
@@ -98,7 +98,7 @@ FuncRetCode I2CSW::Init()
     return FuncRetCode::OK;
 }
 
-void I2CSW::I2CStart()
+void I2CSW::I2CStart() const
 {
     sda = 1;
     scl = 1;
@@ -109,7 +109,7 @@ void I2CSW::I2CStart()
     _delay();
 }
 
-void I2CSW::I2CStop()
+void I2CSW::I2CStop() const
 {
     scl = 0;
     sda = 0;
@@ -120,7 +120,7 @@ void I2CSW::I2CStop()
     _delay();
 }
 
-bool I2CSW::WaitAck()
+bool I2CSW::WaitAck() const
 {
     uint8_t timeout = 5;
     sda.ModeInput();
@@ -142,7 +142,7 @@ bool I2CSW::WaitAck()
     return true;
 }
 
-void I2CSW::SendAck()
+void I2CSW::SendAck() const
 {
     sda = 0;
     _delay();
@@ -152,7 +152,7 @@ void I2CSW::SendAck()
     _delay();
 }
 
-void I2CSW::SendNAck()
+void I2CSW::SendNAck() const
 {
     sda = 1;
     _delay();
@@ -162,7 +162,7 @@ void I2CSW::SendNAck()
     _delay();
 }
 
-void I2CSW::SendByte(uint8_t data)
+void I2CSW::SendByte(uint8_t data) const
 {
     uint8_t i = 8;
     while(i--)
@@ -178,7 +178,7 @@ void I2CSW::SendByte(uint8_t data)
     _delay();
 }
 
-uint8_t I2CSW::ReceiveByte()
+uint8_t I2CSW::ReceiveByte() const
 {
     uint8_t i = 8, ret = 0;
     sda.ModeInput();
