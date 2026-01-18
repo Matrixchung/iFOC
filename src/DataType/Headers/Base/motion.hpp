@@ -1,7 +1,7 @@
 #pragma once
 
-#include "foc_types.hpp"
-#include "foc_math.hpp"
+#include "../../../Common/foc_types.hpp"
+#include "../../../Common/foc_math.hpp"
 #include "triple.hpp"
 
 /*
@@ -35,6 +35,10 @@ public:
     triple<real_t, TorqueUnit> torque{0.0f, 0.0f, TorqueUnit::AMP};
     triple<real_t, SpeedUnit> speed{0.0f, 0.0f, SpeedUnit::RADS};
     triple<real_t, PosUnit> pos{0.0f, 0.0f,PosUnit::RAD};
+    bool IsZero()
+    {
+        return (ABS(torque.value) <= 0.0001f && ABS(speed.value) <= 0.0001f && ABS(pos.value) <= 0.0001f);
+    }
     void Reset()
     {
         ref = Ref::ELEC;
