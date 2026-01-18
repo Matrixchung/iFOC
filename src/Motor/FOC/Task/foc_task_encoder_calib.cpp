@@ -5,7 +5,7 @@
 #include "encoder_mt6835.hpp"
 #include "trajectory_controller.hpp"
 
-#define foc GetMotor<FOCMotor>()
+// #define foc GetMotor<FOCMotor>()
 
 namespace iFOC::FOC
 {
@@ -20,14 +20,15 @@ static constexpr float MIN_ANGLE_DETECT_MOVEMENT = PI2 / 101.0f;
 
 void EncoderCalibTask::InitNormal()
 {
+    const auto foc = GetMotor<FOCMotor>();
     const auto& enc = foc->GetPrimaryEncoder();
-    if(!enc.has_value())
+    if(!enc)
     {
-        foc->DisarmWithError(MotorError::PRIMARY_SENSOR_NOT_FOUND);
+        foc->DisarmWithError(MotorError::PRIMARY_SENSOR_COMPONENT_MISSING);
         foc->RemoveTaskByName(GetName());
         return;
     }
-    if(!enc.value()->IsResultValid())
+    if(!enc->IsResultValid())
     {
         foc->DisarmWithError(MotorError::PRIMARY_SENSOR_RESULT_INVALID);
         foc->RemoveTaskByName(GetName());
@@ -54,6 +55,7 @@ void EncoderCalibTask::InitNormal()
 
 void EncoderCalibTask::UpdateNormal()
 {
+    const auto foc = GetMotor<FOCMotor>();
     switch(stage)
     {
         case EstStage::NONE:
@@ -92,13 +94,14 @@ void EncoderCalibTask::UpdateNormal()
         }
         case EstStage::SENSOR_DIRECTION_TESTING:
         {
-            const auto encoder = foc->GetPrimaryEncoder().value();
+            const auto encoder = foc->GetPrimaryEncoder();
             if(!encoder)
             {
-                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_NOT_FOUND);
+                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_COMPONENT_MISSING);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
+            encoder->SetSign(1); // first: positive sign
             for(int i = 0; i < 500; i++)
             {
                 float angle_rad = PI2 * (float)i / 500.0f;
@@ -143,10 +146,10 @@ void EncoderCalibTask::UpdateNormal()
         }
         case EstStage::POLE_PAIRS_TESTING:
         {
-            const auto encoder = foc->GetPrimaryEncoder().value();
+            const auto encoder = foc->GetPrimaryEncoder();
             if(!encoder)
             {
-                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_NOT_FOUND);
+                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_COMPONENT_MISSING);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
@@ -182,7 +185,7 @@ void EncoderCalibTask::UpdateNormal()
             int pole_pairs = (int)std::round((pp_search_angle_rad) / moved);
             if(pole_pairs <= 0 || pole_pairs >= 32)
             {
-                foc->DisarmWithError(MotorError::POLE_PAIR_NUMBER_OUT_OF_RANGE);
+                foc->DisarmWithError(MotorError::MOTOR_POLE_PAIR_NUMBER_OUT_OF_RANGE);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
@@ -209,83 +212,91 @@ void EncoderCalibTask::UpdateNormal()
         }
         case EstStage::SENSOR_ZERO_OFFSET_TESTING:
         {
-            const auto encoder = foc->GetPrimaryEncoder().value();
+            const auto encoder = foc->GetPrimaryEncoder();
             if(!encoder)
             {
-                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_NOT_FOUND);
+                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_COMPONENT_MISSING);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
+            foc->GetConfig().set_sensor_zero_offset_rad(0.0f);
             foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
             foc->elec_angle_rad = 0.0f;
             sleep(1000); // move motor to elec angle 0
+
+            float sensor_zero_offset_rad = normalize_rad(encoder->single_round_angle_rad * foc->GetConfig().pole_pairs());
+
+            foc->GetConfig().set_sensor_zero_offset_rad(sensor_zero_offset_rad);
+            foc->GetConfig().set_sensor_zero_offset_valid(true);
+
             // calculate error between given elec_angle_rad
             // with calculated encoder elec_angle_rad
-            float total_offset = 0.0f;
-            int sample_count = 0;
-            // omega: 4pi rad/s, forward: 16pi rad, backward: 16pi rad, average: encoder_rad when: elec_angle_rad = 8PI
-            // maybe spin for a whole round?
-            // const float total_distance = PI2 * 8;
-            const float total_distance = PI2 * foc->GetConfig().pole_pairs();
-            const int total_ms = 1000 * (float)(total_distance / (2 * PI2));
-            for(int i = 0; i <= total_ms; i++)
-            {
-                float angle_rad = total_distance * (float)i / (float)total_ms;
-                foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
-                foc->elec_angle_rad = normalize_rad(angle_rad);
-                // measured elec angle
-                float meas_elec_angle = normalize_rad(encoder->single_round_angle_rad * foc->GetConfig().pole_pairs());
+            // float total_offset = 0.0f;
+            // int sample_count = 0;
+            // // omega: 4pi rad/s, forward: 16pi rad, backward: 16pi rad, average: encoder_rad when: elec_angle_rad = 8PI
+            // // maybe spin for a whole round?
+            // // const float total_distance = PI2 * 8;
+            // const float total_distance = PI2 * foc->GetConfig().pole_pairs();
+            // const int total_ms = 1000 * (float)(total_distance / (2 * PI2));
+            // for(int i = 0; i <= total_ms; i++)
+            // {
+            //     float angle_rad = total_distance * (float)i / (float)total_ms;
+            //     foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
+            //     foc->elec_angle_rad = normalize_rad(angle_rad);
+            //     // measured elec angle
+            //     float meas_elec_angle = normalize_rad(encoder->single_round_angle_rad * foc->GetConfig().pole_pairs());
+            //
+            //     // #1
+            //     float offset = meas_elec_angle - foc->elec_angle_rad;
+            //     if(offset >= PI2) offset -= PI2;
+            //     else if(offset <= -PI2) offset += PI2;
+            //     total_offset += offset;
+            //
+            //     // #2
+            //     // total_offset += normalize_rad(meas_elec_angle - foc->elec_angle_rad);
+            //
+            //     // #3
+            //     // total_offset += meas_elec_angle;
+            //
+            //     sample_count++;
+            //     sleep(1);
+            // }
+            // sleep(500);
+            // for(int i = total_ms; i >= 0; i--)
+            // {
+            //     float angle_rad = total_distance * (float)i / (float)total_ms;
+            //     foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
+            //     foc->elec_angle_rad = normalize_rad(angle_rad);
+            //     float meas_elec_angle = normalize_rad(encoder->single_round_angle_rad * foc->GetConfig().pole_pairs());
+            //
+            //     float offset = meas_elec_angle - foc->elec_angle_rad;
+            //     if(offset >= PI2) offset -= PI2;
+            //     else if(offset <= -PI2) offset += PI2;
+            //     total_offset += offset;
+            //
+            //     // total_offset += normalize_rad(meas_elec_angle - foc->elec_angle_rad);
+            //
+            //     // total_offset += meas_elec_angle;
+            //
+            //     sample_count++;
+            //     sleep(1);
+            // }
+            // foc->Iqd_target = {0.0f, 0.0f}; // stop the motor
+            // total_offset /= (float)sample_count;
+            // total_offset = normalize_rad(total_offset);
+            // foc->GetConfig().set_sensor_zero_offset_rad(total_offset);
+            // foc->GetConfig().set_sensor_zero_offset_valid(true);
 
-                // #1
-                float offset = meas_elec_angle - foc->elec_angle_rad;
-                if(offset >= PI2) offset -= PI2;
-                else if(offset <= -PI2) offset += PI2;
-                total_offset += offset;
-
-                // #2
-                // total_offset += normalize_rad(meas_elec_angle - foc->elec_angle_rad);
-
-                // #3
-                // total_offset += meas_elec_angle;
-
-                sample_count++;
-                sleep(1);
-            }
-            sleep(500);
-            for(int i = total_ms; i >= 0; i--)
-            {
-                float angle_rad = total_distance * (float)i / (float)total_ms;
-                foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
-                foc->elec_angle_rad = normalize_rad(angle_rad);
-                float meas_elec_angle = normalize_rad(encoder->single_round_angle_rad * foc->GetConfig().pole_pairs());
-
-                float offset = meas_elec_angle - foc->elec_angle_rad;
-                if(offset >= PI2) offset -= PI2;
-                else if(offset <= -PI2) offset += PI2;
-                total_offset += offset;
-
-                // total_offset += normalize_rad(meas_elec_angle - foc->elec_angle_rad);
-
-                // total_offset += meas_elec_angle;
-
-                sample_count++;
-                sleep(1);
-            }
-            foc->Iqd_target = {0.0f, 0.0f}; // stop the motor
-            total_offset /= (float)sample_count;
-            total_offset = normalize_rad(total_offset);
-            foc->GetConfig().set_sensor_zero_offset_rad(total_offset);
-            foc->GetConfig().set_sensor_zero_offset_valid(true);
             stage = EstStage::NONE;
             stage_passed++;
             break;
         }
         case EstStage::SENSOR_CUSTOM_CALIBRATING:
         {
-            const auto encoder = foc->GetPrimaryEncoder().value();
+            const auto encoder = foc->GetPrimaryEncoder();
             if(!encoder)
             {
-                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_NOT_FOUND);
+                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_COMPONENT_MISSING);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
@@ -296,7 +307,7 @@ void EncoderCalibTask::UpdateNormal()
                 {
                     // cast the pointer to mt6835 instance
                     const auto mt6835 = reinterpret_cast<Encoder::EncoderMT6835*>(encoder);
-                    if(mt6835->cal_gpio.has_value()) // we have a CAL_EN gpio pin set
+                    if(mt6835->cal_gpio) // we have a CAL_EN gpio pin set
                     {
                         if(Encoder::EncoderMT6835::SelfCalibState state{}; mt6835->GetSelfCalibrationState(state) == FuncRetCode::OK)
                         {
@@ -309,7 +320,7 @@ void EncoderCalibTask::UpdateNormal()
                                 // Step #1, Write AUTOCAL_FREQ
                                 if(const auto ret = mt6835->SetSelfCalibrationRPM(calib_speed_rpm); ret != FuncRetCode::OK)
                                 {
-                                    foc->DisarmWithError(MotorError::PRIMARY_SENSOR_CUSTOM_CALIBRATION_FAILED);
+                                    foc->DisarmWithError(MotorError::PRIMARY_SENSOR_CALIBRATION_FAILED);
                                     foc->RemoveTaskByName(GetName());
                                     break;
                                 }
@@ -345,7 +356,7 @@ void EncoderCalibTask::UpdateNormal()
                                             if(!is_set_pin_high)
                                             {
                                                 // Set CAL_EN pin High
-                                                mt6835->cal_gpio.value()->Set();
+                                                mt6835->cal_gpio->Set();
                                                 is_set_pin_high = true;
                                             }
                                             else // continue to check the calibration state, if success, we can decelerate in advance.
@@ -365,10 +376,10 @@ void EncoderCalibTask::UpdateNormal()
                                 }
                                 if(state != Encoder::EncoderMT6835::SelfCalibState::CALIB_SUCCESS) mt6835->GetSelfCalibrationState(state);
                                 sleep(10);
-                                mt6835->cal_gpio.value()->Clear();
+                                mt6835->cal_gpio->Clear();
                                 if(state != Encoder::EncoderMT6835::SelfCalibState::CALIB_SUCCESS)
                                 {
-                                    foc->DisarmWithError(MotorError::PRIMARY_SENSOR_CUSTOM_CALIBRATION_FAILED);
+                                    foc->DisarmWithError(MotorError::PRIMARY_SENSOR_CALIBRATION_FAILED);
                                     foc->RemoveTaskByName(GetName());
                                     break;
                                 }
