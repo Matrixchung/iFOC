@@ -2,14 +2,15 @@
 #include "./Controller/foc_curr_loop_base.hpp"
 #include "./Controller/foc_speed_loop_base.hpp"
 
+#define DEFAULT_NODE_ID (255UL)
+#define DEFAULT_CAN_HEARTBEAT_INTERVAL_MS (1000)
 #define DEFAULT_CURRENT_LOOP_BANDWIDTH (1000.0f)
 #define DEFAULT_CALIBRATION_VOLTAGE (1.0f)
 #define DEFAULT_CALIBRATION_CURRENT (1.0f)
 #define DEFAULT_PARAM_MOTOR_MAX_VOLTAGE (12.0f)
 #define DEFAULT_PARAM_MOTOR_MAX_CURRENT (10.0f)
 #define DEFAULT_PARAM_MOTOR_MAX_OUTPUT_SPEED_RPM (1000.0f)
-
-#define foc GetMotor<FOCMotor>()
+#define DEFAULT_PARAM_MOTOR_SENSOR_SPEED_F_LP (200.0f)
 
 using namespace iFOC::FOC;
 
@@ -17,26 +18,42 @@ namespace iFOC
 {
 FuncRetCode FOCMotor::Init(const bool initTIM)
 {
-    if(!driver || !curr_sense || !bus_sense)
+    FuncRetCode result = FuncRetCode::HARDWARE_ERROR;
+    /// WARN Static global variable must be externed in header, instead of directly defined in header
+    const auto& board = BoardConfig().GetConfig();
+    if(!driver)
     {
-        misconfigured_area |= to_underlying(MisconfiguredArea::MOTOR_INIT_COMPONENTS_MISSING);
-        return FuncRetCode::INVALID_INPUT;
+        ThrowError(MotorError::DRIVER_COMPONENT_MISSING);
+        result = FuncRetCode::INVALID_INPUT;
+        goto error;
+    }
+    if(!curr_sense)
+    {
+        ThrowError(MotorError::CURR_SENSE_COMPONENT_MISSING);
+        result = FuncRetCode::INVALID_INPUT;
+        goto error;
+    }
+    if(!bus_sense)
+    {
+        ThrowError(MotorError::BUS_SENSE_COMPONENT_MISSING);
+        result = FuncRetCode::INVALID_INPUT;
+        goto error;
     }
     // Config safety check, board config
-    // BoardConfig.LinkNVMInterface(nvm); // the BoardConfig instance should be called earlier in the app_main(), but the fact is no.
-    // BoardConfig.ReadNVMConfig();       // why?
-    /// WARN Static global variable must be externed in header, instead of directly defined in header
-    const auto& board = BoardConfig.GetConfig();
     if (board.get_bus_overvoltage_limit() <= 1.0f ||
         board.get_bus_undervoltage_limit() >= board.get_bus_overvoltage_limit() ||
         board.get_bus_max_positive_current() <= 0.01f ||
         board.get_bus_max_negative_current() >= -0.01f)
     {
-        misconfigured_area |= to_underlying(MisconfiguredArea::MOTOR_INIT_BOARD_CONFIGS_INVALID);
-        return FuncRetCode::PARAM_OUT_BOUND;
+        ThrowError(MotorError::CONFIG_BOARD_CONFIG_INVALID);
+        result = FuncRetCode::PARAM_OUT_BOUND;
+        goto error;
     }
     // Config safety check, motor config
-    config.ReadNVMConfig();
+    if(config.ReadNVMConfig() != FuncRetCode::OK)
+    {
+        ThrowError(MotorError::SYSTEM_MOTOR_CONFIG_READ_ERROR);
+    }
     if (GetConfig().phase_inductance() <= 0.0f ||
         GetConfig().q_axis_inductance() <= 0.0f ||
         GetConfig().d_axis_inductance() <= 0.0f)
@@ -53,12 +70,19 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
         float temp = GetConfig().watchdog_timeout_sec() / iFOC::MID_LOOP_TS;
         if(temp >= 1.0f) watchdog_timeout_cnt = (uint32_t)temp;
     }
-    auto result = bus_sense->Init();
-    bus_sense->Update();
+    result = bus_sense->Init();
     if(result != FuncRetCode::OK)
     {
-        misconfigured_area |= to_underlying(MisconfiguredArea::MOTOR_INIT_COMPONENTS_INIT_FAILED);
-        return result;
+        if(result == FuncRetCode::PARAM_OUT_BOUND) ThrowError(MotorError::CONFIG_BUS_SENSE_CONFIG_INVALID);
+        else if(result == FuncRetCode::CRC_MISMATCH) ThrowError(MotorError::BUS_SENSE_DEV_ID_MISMATCH);
+        else if(result == FuncRetCode::HARDWARE_ERROR) ThrowError(MotorError::BUS_SENSE_RESULT_INVALID);
+        ThrowError(MotorError::BUS_SENSE_INIT_FAILED);
+        goto error;
+    }
+    result = bus_sense->Update();
+    if(result != FuncRetCode::OK)
+    {
+        ThrowError(MotorError::BUS_SENSE_RESULT_INVALID);
     }
     if(GetConfig().current_loop_bandwidth() <= 0.0f ||
         GetConfig().calibration_voltage() <= 0.0f ||
@@ -73,25 +97,34 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
     result = driver->Init(initTIM);
     if(result != FuncRetCode::OK)
     {
+        if(result == FuncRetCode::HARDWARE_ERROR) ThrowError(MotorError::DRIVER_COMMUNICATION_ERROR);
+        else if(result == FuncRetCode::CRC_MISMATCH) ThrowError(MotorError::DRIVER_DEV_ID_MISMATCH);
+        else if(result == FuncRetCode::PARAM_OUT_BOUND) ThrowError(MotorError::CONFIG_CURR_SENSE_CONFIG_INVALID);
         driver->DisableAllOutputs();
-        misconfigured_area |= to_underlying(MisconfiguredArea::MOTOR_INIT_DRIVER_INIT_FAILED);
-        return result;
+        ThrowError(MotorError::DRIVER_INIT_FAILED);
+        goto error;
     }
-    if(GetConfig().sensor_direction_valid())
-    {
-        if(GetConfig().sensor_direction_clockwise() == false)
-            // we need clockwise, so reverse primary encoder sign.
-            if(auto enc = GetPrimaryEncoder()) enc.value()->SetSign(-1 * enc.value()->GetSign());
-    }
+    if(const auto ind = GetIndicator()) ind->Init();
     AppendTask(&this->state_machine);
     return FuncRetCode::OK;
+error:
+    if(const auto ind = GetIndicator())
+    {
+        ind->Init();
+        ind->SetRGB(255, 0, 0);
+        // HAL::DelayMs(50);
+        // ind->SetRGB(255, 0, 0);
+        // HAL::DelayMs(50);
+        // ind->SetRGB(255, 0, 0);
+    }
+    return result;
 }
 
-FOCMotor::MotorBase::MotorError FOCMotor::Arm()
+bool FOCMotor::Arm()
 {
-    if(const auto& curr = GetCurrLoop()) curr.value()->ResetCurrLoop();
-    if(const auto& speed = GetSpeedLoop()) speed.value()->ResetSpeedLoop();
-    if(error == MotorError::NONE)
+    if(const auto& curr = GetCurrLoop()) curr->ResetCurrLoop();
+    if(const auto& speed = GetSpeedLoop()) speed->ResetSpeedLoop();
+    if(error == to_underlying(MotorError::NONE))
     {
         is_armed = true;
         GetDriver()->SetOutput3CHPu(0.0f, 0.0f, 0.0f);
@@ -103,12 +136,13 @@ FOCMotor::MotorBase::MotorError FOCMotor::Arm()
                                    Driver::FOCDriverBase::Bridge::LB_W);
     }
     else Disarm();
-    return error;
+    return error == to_underlying(MotorError::NONE);
 }
 
 void FOCMotor::Disarm()
 {
     is_armed = false;
+    _is_ramping_motion = false; // reset ramping
     GetDriver()->SetOutput3CHPu(0.0f, 0.0f, 0.0f);
     GetDriver()->DisableBridges(Driver::FOCDriverBase::Bridge::HB_U,
                                 Driver::FOCDriverBase::Bridge::LB_U,
@@ -118,11 +152,11 @@ void FOCMotor::Disarm()
                                 Driver::FOCDriverBase::Bridge::LB_W);
 }
 
-void FOCMotor::DisarmWithError(MotorBase::MotorError e)
+void FOCMotor::DisarmWithError(MotorError e)
 {
     Disarm();
     state_machine.RequestState(MotorState::IDLE);
-    error = e;
+    ThrowError(e);
 }
 
 void FOCMotor::GetCurrentMotion(Motion& ret, Motion::Ref r, Motion::TorqueUnit t, Motion::SpeedUnit s, Motion::PosUnit p)
@@ -155,8 +189,8 @@ void FOCMotor::GetCurrentMotion(Motion& ret, Motion::Ref r, Motion::TorqueUnit t
             else ret.torque = {Iqd_measured.q, curr_torque_limit_base_amp, Motion::TorqueUnit::AMP};
             if(const auto& enc = GetPrimaryEncoder())
             {
-                ret.speed = {enc.value()->angular_speed_rad_s, curr_speed_limit_base_rad_s, Motion::SpeedUnit::RADS};
-                ret.pos = {enc.value()->multi_round_angle_rad, Motion::PosUnit::RAD};
+                ret.speed = {enc->angular_speed_rad_s, curr_speed_limit_base_rad_s, Motion::SpeedUnit::RADS};
+                ret.pos = {enc->multi_round_angle_rad, Motion::PosUnit::RAD};
             }
             break;
         }
@@ -171,8 +205,8 @@ void FOCMotor::GetCurrentMotion(Motion& ret, Motion::Ref r, Motion::TorqueUnit t
             if(const auto& enc = GetPrimaryEncoder())
             {
                 const real_t temp = 1.0f / GetConfig().deduction_ratio();
-                ret.speed = {enc.value()->angular_speed_rad_s * temp, curr_speed_limit_base_rad_s * temp, Motion::SpeedUnit::RADS};
-                ret.pos = {enc.value()->multi_round_angle_rad * temp, Motion::PosUnit::RAD};
+                ret.speed = {enc->angular_speed_rad_s * temp, curr_speed_limit_base_rad_s * temp, Motion::SpeedUnit::RADS};
+                ret.pos = {enc->multi_round_angle_rad * temp, Motion::PosUnit::RAD};
             }
         }
         default: break;
@@ -237,38 +271,68 @@ void FOCMotor::SetTargetMotion(Motion& motion)
         real_t temp = 1.0f / GetConfig().torque_constant(); // [A/Nm]
         motion.torque = {motion.torque.value * temp, motion.torque.limit * temp, Motion::TorqueUnit::AMP}; // Nm -> A
     }
+    // constrain speed & current
+    motion.speed.value = _constrain(motion.speed.value, -config_max_base_speed_rad_s, config_max_base_speed_rad_s);
+    motion.speed.limit = _constrain(motion.speed.limit, 0.0f, config_max_base_speed_rad_s);
+    motion.torque.value = _constrain(motion.torque.value, -config_max_current, config_max_current);
+    motion.torque.limit = _constrain(motion.torque.limit, 0.0f, config_max_current);
     motion.ref = Motion::Ref::BASE;
     current_target = motion;
+    _is_ramping_motion = false; // If ramping, will be overrided by SetRampedMotion() later.
+}
+
+FuncRetCode FOCMotor::AppendEncoder(Encoder::EncoderBase* encoder)
+{
+    const auto ret = MotorBase::AppendEncoder(encoder);
+    if(ret == FuncRetCode::OK)
+    {
+        if(GetConfig().sensor_direction_valid())
+        {
+            if(GetConfig().sensor_direction_clockwise() == false) // we need clockwise, so reverse primary encoder sign.
+            {
+                if(auto enc = GetPrimaryEncoder(); enc && enc == encoder) enc->SetSign(-1 * enc->GetSign());
+            }
+        }
+    }
+    return ret;
 }
 
 void FOCMotor::ResetDefaultConfig()
 {
     auto& cfg = GetConfig();
     cfg.clear();
+    cfg.set_node_id(DEFAULT_NODE_ID);
+    cfg.set_can_heartbeat_interval_ms(DEFAULT_CAN_HEARTBEAT_INTERVAL_MS);
     cfg.set_current_loop_bandwidth(DEFAULT_CURRENT_LOOP_BANDWIDTH);
     cfg.set_calibration_voltage(DEFAULT_CALIBRATION_VOLTAGE);
     cfg.set_calibration_current(DEFAULT_CALIBRATION_CURRENT);
     cfg.set_max_voltage(DEFAULT_PARAM_MOTOR_MAX_VOLTAGE);
     cfg.set_max_current(DEFAULT_PARAM_MOTOR_MAX_CURRENT);
     cfg.set_max_output_speed_rpm(DEFAULT_PARAM_MOTOR_MAX_OUTPUT_SPEED_RPM);
+    cfg.set_sensor_speed_f_lp(DEFAULT_PARAM_MOTOR_SENSOR_SPEED_F_LP);
+    cfg.set_enable_harmonic_suppression(false);
     cfg.set_deduction_ratio(1.0f);
     cfg.set_startup_basic_param_calibration(true);
 }
 
-std::optional<FOC::CurrLoopBase*> FOCMotor::GetCurrLoop()
+CurrLoopBase* FOCMotor::GetCurrLoop()
 {
     auto currloop = GetTaskByName("CurrLoop");
-    if(currloop) curr_loop = std::make_optional(reinterpret_cast<FOC::CurrLoopBase*>(currloop.value()));
-    else curr_loop = std::nullopt;
-    return curr_loop;
+    // if(currloop) curr_loop = std::make_optional(reinterpret_cast<FOC::CurrLoopBase*>(currloop));
+    // else curr_loop = std::nullopt;
+    // return curr_loop;
+    if(currloop) return reinterpret_cast<CurrLoopBase*>(currloop);
+    return nullptr;
 }
 
-std::optional<FOC::SpeedLoopBase*> FOCMotor::GetSpeedLoop()
+SpeedLoopBase* FOCMotor::GetSpeedLoop()
 {
     auto speedloop = GetTaskByName("SpeedLoop");
-    if(speedloop) speed_loop = std::make_optional(reinterpret_cast<FOC::SpeedLoopBase*>(speedloop.value()));
-    else speed_loop = std::nullopt;
-    return speed_loop;
+    // if(speedloop) speed_loop = std::make_optional(reinterpret_cast<FOC::SpeedLoopBase*>(speedloop));
+    // else speed_loop = std::nullopt;
+    // return speed_loop;
+    if(speedloop) return reinterpret_cast<FOC::SpeedLoopBase*>(speedloop);
+    return nullptr;
 }
 
 }
