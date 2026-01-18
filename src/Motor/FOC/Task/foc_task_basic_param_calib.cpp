@@ -2,7 +2,7 @@
 #include "foc_curr_loop_pi.hpp"
 #include <cfloat>
 
-#define foc GetMotor<FOCMotor>()
+// #define foc GetMotor<FOCMotor>()
 
 static constexpr float G9 = 2.0f;
 static constexpr size_t AVG_WINDOW_SIZE = 10000;
@@ -21,6 +21,7 @@ public:
     {
         if(parent.stage == BasicParamCalibTask::EstStage::FLUX_LINKAGE_TESTING)
         {
+            const auto foc = GetMotor<FOCMotor>();
             foc->Uqd_target.q += parent.data.flux_est.harmonic_reg_9_output;
         }
     }
@@ -36,6 +37,7 @@ BasicParamCalibTask::BasicParamCalibTask() : Task("BasicParam")
 
 void BasicParamCalibTask::InitNormal()
 {
+    const auto foc = GetMotor<FOCMotor>();
     while(foc->GetTaskByName("TonePlayer")) sleep(500);
     sleep(500);
     foc->BypassTaskByName("WaveGen");
@@ -44,6 +46,7 @@ void BasicParamCalibTask::InitNormal()
 
 void BasicParamCalibTask::UpdateNormal()
 {
+    const auto foc = GetMotor<FOCMotor>();
     switch(stage)
     {
         case EstStage::NONE:
@@ -80,7 +83,7 @@ void BasicParamCalibTask::UpdateNormal()
         {
             foc->BypassTaskByName("WaveGen", "CurrLoop");
             foc->Arm();
-            data.Rs_est.TARGET_LOOP_COUNT = BoardConfig.GetConfig().pwm_wave_freq() * 2; // 2s
+            data.Rs_est.TARGET_LOOP_COUNT = BoardConfig().GetConfig().pwm_wave_freq() * 2; // 2s
             data.Rs_est.target_current = foc->GetConfig().calibration_current();
             foc->GetDriver()->DisableBridges(Bridge::HB_V, Bridge::LB_V);
             sleep(10);
@@ -121,7 +124,7 @@ void BasicParamCalibTask::UpdateNormal()
             }
             if(ABS(rs_max_result - rs_min_result) >= 0.5f)
             {
-                foc->DisarmWithError(MotorError::PHASE_IMBALANCE);
+                foc->DisarmWithError(MotorError::MOTOR_PHASE_IMBALANCE);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
@@ -130,7 +133,7 @@ void BasicParamCalibTask::UpdateNormal()
                 rs_result *= 0.3333333333f;
                 if(rs_result <= 0.001f || rs_result >= 50.0f)
                 {
-                    foc->DisarmWithError(MotorError::PHASE_RESISTANCE_OUT_OF_RANGE);
+                    foc->DisarmWithError(MotorError::MOTOR_PHASE_RESISTANCE_OUT_OF_RANGE);
                     foc->RemoveTaskByName(GetName());
                     break;
                 }
@@ -147,15 +150,16 @@ void BasicParamCalibTask::UpdateNormal()
         // https://blog.csdn.net/linzhe_deep/article/details/118067983
         case EstStage::PHASE_INDUCTANCE_START:
         {
-            data.Ls_est.TARGET_LOOP_COUNT = iFOC::BoardConfig.GetConfig().pwm_wave_freq(); // 1s
+            data.Ls_est.TARGET_LOOP_COUNT = iFOC::BoardConfig().GetConfig().pwm_wave_freq(); // 1s
             data.Ls_est.test_voltage = 1.0f;
-            data.Ls_est.pwm_freq_div_1k = iFOC::BoardConfig.GetConfig().pwm_wave_freq() / 1000;
+            data.Ls_est.pwm_freq_div_1k = iFOC::BoardConfig().GetConfig().pwm_wave_freq() / 1000;
             if(data.Ls_est.pwm_freq_div_1k <= 1)
             {
-                foc->DisarmWithError(MotorError::PWM_WAVE_FREQUENCY_OUT_OF_RANGE);
+                foc->DisarmWithError(MotorError::CONFIG_BOARD_CONFIG_INVALID);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
+            foc->Arm();
             // Disable Phase V and test phase U
             foc->GetDriver()->DisableBridges(Bridge::HB_V, Bridge::LB_V);
             sleep(10);
@@ -202,7 +206,7 @@ void BasicParamCalibTask::UpdateNormal()
             ls_result *= 0.3333333333f;
             if(ls_result >= 1.0f)
             {
-                foc->DisarmWithError(MotorError::PHASE_INDUCTANCE_OUT_OF_RANGE);
+                foc->DisarmWithError(MotorError::MOTOR_PHASE_INDUCTANCE_OUT_OF_RANGE);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
@@ -244,11 +248,11 @@ void BasicParamCalibTask::UpdateNormal()
             // data.flux_est.wave = WaveInjector(WaveInjector::WaveType::SINUSOIDAL);
             // data.flux_est.wave.SetFrequency(data.flux_est.cruise_we * 9.0f);
             float w0_9 = 9.0f * data.flux_est.cruise_we; // Inject frequency: 9*we
-            float phase_comp_9 = w0_9 * G9 * iFOC::RT_LOOP_TS;
+            float phase_comp_9 = w0_9 * G9 * RT_LOOP_TS;
             float wc = 0.015f * data.flux_est.cruise_we;
             wc = _constrain(wc, 2.0f, 20.0f);
             // 9-Harmonic
-            float w0_9_Ts = w0_9 * iFOC::RT_LOOP_TS;
+            float w0_9_Ts = w0_9 * RT_LOOP_TS;
             HAL::sinf_cosf_impl(w0_9_Ts, data.flux_est.sin_w0_9_Ts, data.flux_est.cos_w0_9_Ts);
             HAL::sinf_cosf_impl(phase_comp_9, data.flux_est.sin_comp_9, data.flux_est.cos_comp_9);
             data.flux_est.harmonic_reg.Reset();
@@ -257,7 +261,7 @@ void BasicParamCalibTask::UpdateNormal()
             data.flux_est.harmonic_reg.output_limit = MIN(foc->GetConfig().max_voltage(), foc->GetBusSense()->voltage) * divSQRT_3;
             data.flux_est.harmonic_reg_9_output = 0.0f;
             wave.SetFrequency(w0_9 / PI2); // NOTE: rad/s to Hz!!
-            wave.PrepareTable(iFOC::RT_LOOP_TS);
+            wave.PrepareTable(RT_LOOP_TS);
             stage = EstStage::FLUX_LINKAGE_TESTING;
             break;
         }
@@ -276,6 +280,7 @@ void BasicParamCalibTask::UpdateNormal()
 
 void BasicParamCalibTask::UpdateRT(float Ts)
 {
+    const auto foc = GetMotor<FOCMotor>();
     switch(stage)
     {
         case EstStage::PHASE_RESISTANCE_TESTING_U:
@@ -286,7 +291,7 @@ void BasicParamCalibTask::UpdateRT(float Ts)
                 stage = EstStage::PHASE_RESISTANCE_TESTED_U;
                 break;
             }
-            data.Rs_est.voltage_diff[0] += data.Rs_est.Ki * Ts * (data.Rs_est.target_current -
+            data.Rs_est.voltage_diff[0] += Rs_est_t::Ki * Ts * (data.Rs_est.target_current -
                                                                   foc->GetCurrSense()->shunt_values[0]);
             foc->GetDriver()->SetOutput3CHPu(0.5f + data.Rs_est.voltage_diff[0], 0.0f, 0.5f);
             data.Rs_est.loop_count++;
@@ -300,7 +305,7 @@ void BasicParamCalibTask::UpdateRT(float Ts)
                 stage = EstStage::PHASE_RESISTANCE_TESTED_V;
                 break;
             }
-            data.Rs_est.voltage_diff[1] += data.Rs_est.Ki * Ts * (data.Rs_est.target_current -
+            data.Rs_est.voltage_diff[1] += Rs_est_t::Ki * Ts * (data.Rs_est.target_current -
                                                                   foc->GetCurrSense()->shunt_values[1]);
             foc->GetDriver()->SetOutput3CHPu(0.0f, 0.5f + data.Rs_est.voltage_diff[1], 0.5f);
             data.Rs_est.loop_count++;
@@ -314,7 +319,7 @@ void BasicParamCalibTask::UpdateRT(float Ts)
                 stage = EstStage::PHASE_RESISTANCE_TESTED_W;
                 break;
             }
-            data.Rs_est.voltage_diff[2] += data.Rs_est.Ki * Ts * (data.Rs_est.target_current -
+            data.Rs_est.voltage_diff[2] += Rs_est_t::Ki * Ts * (data.Rs_est.target_current -
                                                                   foc->GetCurrSense()->shunt_values[2]);
             foc->GetDriver()->SetOutput3CHPu(0.0f, 0.5f, 0.5f + data.Rs_est.voltage_diff[2]);
             data.Rs_est.loop_count++;
