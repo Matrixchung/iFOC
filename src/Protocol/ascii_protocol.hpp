@@ -35,6 +35,7 @@ private:
     void CmdPosition(uint8_t *data, uint16_t len, bool use_checksum);
     void CmdPositionWithFF(uint8_t *data, uint16_t len, bool use_checksum);
     void CmdVelocity(uint8_t *data, uint16_t len, bool use_checksum);
+    void CmdVelocityOpenloop(uint8_t *data, uint16_t len, bool use_checksum);
     void CmdTorque(uint8_t *data, uint16_t len, bool use_checksum);
     void CmdFeedback(uint8_t *data, uint16_t len, bool use_checksum);
     void CmdUpdateWatchdog(uint8_t *data, uint16_t len, bool use_checksum);
@@ -93,6 +94,7 @@ inline const char* to_string(MotorState s)
         case MotorState::EXTEND_PARAM_CALIBRATION: return "EXTEND_PARAM_CALIBRATION";
         case MotorState::SENSORED_CLOSED_LOOP_CONTROL: return "SENSORED_CLOSED_LOOP_CONTROL";
         case MotorState::SENSORLESS_CLOSED_LOOP_CONTROL: return "SENSORLESS_CLOSED_LOOP_CONTROL";
+        case MotorState::OPEN_LOOP_VELOCITY_CONTROL: return "OPEN_LOOP_VELOCITY_CONTROL";
         default: return "UNKNOWN";
     }
 }
@@ -107,6 +109,7 @@ inline bool from_string(const char* str, MotorState& out)
     if(streq(str, "EXTEND_PARAM_CALIBRATION")) { out = MotorState::EXTEND_PARAM_CALIBRATION; return true; }
     if(streq(str, "SENSORED_CLOSED_LOOP_CONTROL")) { out = MotorState::SENSORED_CLOSED_LOOP_CONTROL; return true; }
     if(streq(str, "SENSORLESS_CLOSED_LOOP_CONTROL")) { out = MotorState::SENSORLESS_CLOSED_LOOP_CONTROL; return true; }
+    if(streq(str, "OPEN_LOOP_VELOCITY_CONTROL")) { out = MotorState::OPEN_LOOP_VELOCITY_CONTROL; return true; }
     return false;
 }
 
@@ -403,6 +406,7 @@ void ASCIIProtocol<Motor>::ProcessEachValidLine(uint8_t* data, uint16_t len)
         case 'q': CmdPosition(data, len, use_checksum); break;
         case 'p': CmdPositionWithFF(data, len, use_checksum); break;
         case 'v': CmdVelocity(data, len, use_checksum); break;
+        case 'o': CmdVelocityOpenloop(data, len, use_checksum); break;
         case 'c': CmdTorque(data, len, use_checksum); break;
         case 'f': CmdFeedback(data, len, use_checksum); break;
         case 'u': CmdUpdateWatchdog(data, len, use_checksum); break;
@@ -590,6 +594,34 @@ void ASCIIProtocol<Motor>::CmdVelocity(uint8_t* data, uint16_t len, bool use_che
         motor->UpdateWatchdog();
         motor->SetControlMode(MotorControlMode::CTRL_MODE_VELOCITY);
         motor->SetTargetMotion(target_motion);
+        GenerateResponse(use_checksum, false, "ok");
+    }
+}
+
+template <class Motor>
+void ASCIIProtocol<Motor>::CmdVelocityOpenloop(uint8_t* data, uint16_t len, bool use_checksum)
+{
+    const auto motor = GetInst();
+    uint8_t id = 0;
+    if(CheckAndGetID(data, len, use_checksum, 5, id) && id == motor->GetInternalID())
+    {
+        uint8_t target_count = 0;
+        float target[4]{};
+        splitData_f((char*)(data + 4), len - 4, target, &target_count, 4, ' ');
+        if(target_count != 3 || target[2] <= 0.0f)
+        {
+            GenerateResponse(use_checksum, false, "invalid argument input");
+            return;
+        }
+        Motion target_motion{
+            .ref = io_ref,
+            .torque = {target[1], 0.0f, io_torque_unit},
+            .speed = {target[0], 0.0f, io_speed_unit},
+            .pos = {0.0f, 0.0f, io_pos_unit}
+        };
+        motor->UpdateWatchdog();
+        motor->SetControlMode(MotorControlMode::CTRL_MODE_VELOCITY);
+        motor->SetRampedTargetMotion(target_motion, target[2]);
         GenerateResponse(use_checksum, false, "ok");
     }
 }
@@ -1068,6 +1100,7 @@ void ASCIIProtocol<Motor>::CmdHelp(uint8_t* data, uint16_t len, bool use_checksu
         GenerateResponse(use_checksum, true,  " - Position: q motor_id pos <vel-lim> <curr-lim>");
         GenerateResponse(use_checksum, true,  " - Position: p motor_id pos <vel-ff> <curr-ff>");
         GenerateResponse(use_checksum, true,  " - Velocity: v motor_id vel <curr-ff>");
+        GenerateResponse(use_checksum, true,  " - Velocity (Open loop): o motor_id vel torque time_sec");
         GenerateResponse(use_checksum, true,  " - Torque: c motor_id set_torque");
         GenerateResponse(use_checksum, true,  " - Feedback: f motor_id");
         GenerateResponse(use_checksum, true,  " - Update Watchdog: u motor_id");
