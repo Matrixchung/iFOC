@@ -26,6 +26,7 @@ public:
     };
     explicit WaveInjector(WaveType type) : wave_type(type) {};
     WaveInjector() : WaveInjector(WaveType::SQUARE) {};
+    void SetWaveType(WaveType type);
     void SetFrequency(float f);
     void SetPeriod(float t);
     float GetWaveform(float Ts);

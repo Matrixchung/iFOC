@@ -1,5 +1,5 @@
 #include "wave_injector.hpp"
-#include "hal_impl.hpp"
+#include "../HAL/hal_impl.hpp"
 
 #ifdef ENABLE_WAVE_INJ_PRE_CALC_TABLE
 static constexpr size_t MAX_TABLE_LENGTH = 256; // Max memory size: 256 * sizeof(float) = 1024 Bytes
@@ -7,6 +7,11 @@ static constexpr size_t MAX_TABLE_LENGTH = 256; // Max memory size: 256 * sizeof
 
 namespace iFOC
 {
+void WaveInjector::SetWaveType(WaveType type)
+{
+    wave_type = type;
+}
+
 void WaveInjector::SetFrequency(float f)
 {
     period_time = 1.0f / f;
