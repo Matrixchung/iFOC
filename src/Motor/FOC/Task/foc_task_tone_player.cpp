@@ -1,6 +1,5 @@
 #include "foc_task_tone_player.hpp"
 
-#define foc GetMotor<FOCMotor>()
 static constexpr float GLOBAL_MAX_INJECT_VOLTAGE = 5.0f;
 
 namespace iFOC
@@ -8,13 +7,14 @@ namespace iFOC
 TonePlayerTask::TonePlayerTask() : Task("TonePlayer"), iter_begin(note_period_list.cbegin())
 {
     RegisterTask(TaskType::RT_TASK, TaskType::NORMAL_TASK);
-    config.rtos_priority = 1;
+    config.rtos_priority = tskIDLE_PRIORITY + 1;
     note_period_list.reserve(8);
 }
 
 FuncRetCode TonePlayerTask::PlaySound(const Vector<real_t>& freq_list, float Tbeat, float voltage, bool is_bypass)
 {
     if(!play_complete) return FuncRetCode::BUSY;
+    const auto foc = GetMotor<FOCMotor>();
     is_encoder_bypassed = is_bypass;
     if(is_encoder_bypassed)
     {
@@ -24,18 +24,21 @@ FuncRetCode TonePlayerTask::PlaySound(const Vector<real_t>& freq_list, float Tbe
     std::for_each(freq_list.begin(), freq_list.end(), [this](real_t freq){
         this->note_period_list.emplace_back(1.0f / freq);
     });
+    wave.SetWaveType(BoardConfig().GetConfig().use_square_wave_tone() ? WaveInjector::WaveType::SQUARE : WaveInjector::WaveType::SINUSOIDAL);
     beat_timer = 0.0f;
     // note_timer = 0.0f;
     beat_time = Tbeat;
     iter_begin = note_period_list.cbegin();
     wave.SetPeriod(*iter_begin);
     inject_voltage = voltage;
+    foc->Arm();
     play_complete = false;
     return FuncRetCode::OK;
 }
 
 FuncRetCode TonePlayerTask::PlaySound(const Vector<real_t>& freq_list, float Tbeat, bool is_bypass)
 {
+    const auto foc = GetMotor<FOCMotor>();
     float Uinject = MAX(foc->GetBusSense()->voltage, foc->GetConfig().max_voltage()) * 0.5f;
     if(Uinject >= GLOBAL_MAX_INJECT_VOLTAGE) Uinject = GLOBAL_MAX_INJECT_VOLTAGE;
     return PlaySound(freq_list, Tbeat, Uinject, is_bypass);
@@ -45,6 +48,7 @@ void TonePlayerTask::UpdateRT(float Ts)
 {
     if(!play_complete)
     {
+        const auto foc = GetMotor<FOCMotor>();
         if(beat_timer <= beat_time)
         {
             beat_timer += Ts;
@@ -73,6 +77,7 @@ void TonePlayerTask::UpdateNormal()
 {
     if(play_complete && !note_period_list.empty())
     {
+        const auto foc = GetMotor<FOCMotor>();
         note_period_list.clear();
         if(is_encoder_bypassed)
         {
