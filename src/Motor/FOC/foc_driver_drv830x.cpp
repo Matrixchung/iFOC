@@ -91,9 +91,9 @@ FuncRetCode FOCDriverDRV830x::Init(bool initCNT)
         return FuncRetCode::BUSY;
     }
 
-    cr1.reg = 0x00;
-    WriteReg(0x02, cr1.reg);
-    if(const auto r = ReadReg(0x02, &cr1.reg); r != FuncRetCode::OK) return r;
+    // cr1.reg = 0x00;
+    // WriteReg(0x02, cr1.reg);
+    // if(const auto r = ReadReg(0x02, &cr1.reg); r != FuncRetCode::OK) return r;
 
     // shunt amplifiers
     // #1: performing DC calibration (optional)
@@ -133,8 +133,9 @@ FuncRetCode FOCDriverDRV830x::Init(bool initCNT)
     WriteReg(0x03, cr2.reg);
 
     cr1.reg = 0;
-    cr1.bit.ocp_mode = 1; // OCP_MODE: OC latch shut down
-    cr1.bit.oc_adj_set = 21; // Vds approximately 0.730V?
+    // cr1.bit.ocp_mode = 1; // OCP_MODE: OC latch shut down
+    // cr1.bit.oc_adj_set = 21; // Vds approximately 0.730V?
+    cr1.bit.oc_adj_set = 26; // Vds = 1.324V
     WriteReg(0x02, cr1.reg);
 
     // last stage: init counter
