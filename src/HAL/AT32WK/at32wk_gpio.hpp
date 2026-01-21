@@ -64,6 +64,7 @@ inline void GPIO::SetMode(GPIOMode mode)
         {
             gpio_init_struct.gpio_out_type = GPIO_OUTPUT_PUSH_PULL;
             gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
+            gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
             gpio_init(port, &gpio_init_struct);
             break;
         }
@@ -71,6 +72,7 @@ inline void GPIO::SetMode(GPIOMode mode)
         {
             gpio_init_struct.gpio_out_type = GPIO_OUTPUT_OPEN_DRAIN;
             gpio_init_struct.gpio_mode = GPIO_MODE_OUTPUT;
+            gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
             gpio_init(port, &gpio_init_struct);
             break;
         }
