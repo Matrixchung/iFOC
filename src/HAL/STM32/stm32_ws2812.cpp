@@ -32,7 +32,9 @@ WS2812::WS2812(TIM_TypeDef* _htim, uint32_t _ch, DMA_TypeDef* _hdma, uint32_t _d
             TMR_DMA_req_msk = TIM_DIER_CC3DE; break;
         }
         case LL_TIM_CHANNEL_CH4:
+#ifdef LL_TIM_CHANNEL_CH4N
         case LL_TIM_CHANNEL_CH4N:
+#endif
         {
             CCR_address = (uint32_t)(&htim->CCR4);
             TMR_DMA_req_msk = TIM_DIER_CC4DE; break;
@@ -63,14 +65,22 @@ FuncRetCode WS2812::Init()
     return FuncRetCode::OK;
 }
 
+#if defined(STM32G4)
+#define _LL_DMA_DISABLE_CH(x, y) LL_DMA_DisableChannel(x, y)
+#define _LL_DMA_ENABLE_CH(x, y) LL_DMA_EnableChannel(x, y)
+#else
+#define _LL_DMA_DISABLE_CH(x, y) LL_DMA_DisableStream(x, y)
+#define _LL_DMA_ENABLE_CH(x, y) LL_DMA_EnableStream(x, y)
+#endif
+
 void WS2812::Update()
 {
     for(uint8_t i = 0; i < light_count; i++) SetDMABuf32(i);
-    LL_DMA_DisableChannel(hdma, dma_channel);
+    _LL_DMA_DISABLE_CH(hdma, dma_channel);
     LL_DMA_SetMemoryAddress(hdma, dma_channel, (uint32_t)((uint32_t*)dma_buffer.data()));
     LL_DMA_SetPeriphAddress(hdma, dma_channel, (uint32_t)CCR_address);
     LL_DMA_SetDataLength(hdma, dma_channel, DMA_BUF_LEN(light_count));
-    LL_DMA_EnableChannel(hdma, dma_channel);
+    _LL_DMA_ENABLE_CH(hdma, dma_channel);
     SET_BIT(htim->DIER, TMR_DMA_req_msk);
     LL_TIM_CC_EnableChannel(htim, channel);
     LL_TIM_EnableAllOutputs(htim);

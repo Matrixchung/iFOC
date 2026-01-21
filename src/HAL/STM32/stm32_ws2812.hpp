@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Common/Interface/indicator_ws2812_base.hpp"
+#include "../../Common/Interface/indicator_rgb_base.hpp"
 #include "hal_const.h"
 #include "hal_impl.hpp"
 
@@ -8,17 +8,17 @@
 
 namespace iFOC::HAL
 {
-class WS2812
+class WS2812 final : public IndicatorRGB
 {
     DELETE_COPY_CONSTRUCTOR(WS2812);
     OVERRIDE_NEW();
 public:
     WS2812(TIM_TypeDef* _htim, uint32_t _ch, DMA_TypeDef* _hdma, uint32_t _dma_ch, uint8_t count);
     WS2812(TIM_TypeDef* _htim, uint32_t _ch, DMA_TypeDef* _hdma, uint32_t _dma_ch);
-    FuncRetCode Init();
-    void Update();
-    void SetColor(uint8_t index, uint8_t r, uint8_t g, uint8_t b);
-    void SetBrightness(float _brightness);
+    FuncRetCode Init() override;
+    void Update() override;
+    void SetColor(uint8_t index, uint8_t r, uint8_t g, uint8_t b) override;
+    void SetBrightness(float _brightness) override;
 private:
     void SetDMABuf32(uint8_t index);
     TIM_TypeDef* htim;
