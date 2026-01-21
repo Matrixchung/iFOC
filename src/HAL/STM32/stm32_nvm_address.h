@@ -2,7 +2,16 @@
 
 #include "../hal_const.h"
 
-#if defined(STM32G431xx)
+#if defined(AXDR_DRIVER) && (!defined __has_include || (defined __has_include && (__has_include("../../../W25Qx/w25q16.h") || __has_include("w25q16.h"))))
+
+// Flash model: W25Q16JV
+#define FLASH_WRITE_GRAN_BITS   (8) // BYTE
+#define FLASH_SECTOR_SIZE_BYTES (4096)
+#define FLASH_USER_START_ADDR   (0)
+#define FLASH_USER_AREA_SIZE    (8 * FLASH_SECTOR_SIZE_BYTES) // 32K
+#define USE_FLASHDB
+
+#elif defined(STM32G431xx)
 #define ADDR_FLASH_PAGE_0     ((uint32_t)0x08000000) /* Base @ of Page 0, 2 Kbytes */
 #define ADDR_FLASH_PAGE_1     ((uint32_t)0x08000800) /* Base @ of Page 1, 2 Kbytes */
 #define ADDR_FLASH_PAGE_2     ((uint32_t)0x08001000) /* Base @ of Page 2, 2 Kbytes */
@@ -74,9 +83,8 @@
 #define FLASH_USER_AREA_SIZE            (2 * FLASH_SECTOR_SIZE_BYTES)
 //#define USE_EASYFLASH
 #define USE_FLASHDB
-#endif
 
-#if defined(STM32G474xx)
+#elif defined(STM32G474xx)
 #define ADDR_FLASH_PAGE_0     ((uint32_t)0x08000000) /* Base @ of Page 0, 2 Kbytes */
 #define ADDR_FLASH_PAGE_1     ((uint32_t)0x08000800) /* Base @ of Page 1, 2 Kbytes */
 #define ADDR_FLASH_PAGE_2     ((uint32_t)0x08001000) /* Base @ of Page 2, 2 Kbytes */
@@ -336,13 +344,12 @@
 
 #define FLASH_WRITE_GRAN_BITS           (64)   // DOUBLE WORD
 #define FLASH_SECTOR_SIZE_BYTES         (1024 * 2)
-#define FLASH_USER_START_ADDR           (ADDR_FLASH_PAGE_254)
-#define FLASH_USER_AREA_SIZE            (2 * FLASH_SECTOR_SIZE_BYTES)
+#define FLASH_USER_START_ADDR           (ADDR_FLASH_PAGE_252)
+#define FLASH_USER_AREA_SIZE            (4 * FLASH_SECTOR_SIZE_BYTES)
 //#define USE_EASYFLASH
 #define USE_FLASHDB
-#endif
 
-#if defined(STM32F070x6)
+#elif defined(STM32F070x6)
 #define ADDR_FLASH_PAGE_0     ((uint32_t)0x08000000) /* Base @ of Page 0, 1 Kbyte */
 #define ADDR_FLASH_PAGE_1     ((uint32_t)0x08000400) /* Base @ of Page 1, 1 Kbyte */
 #define ADDR_FLASH_PAGE_2     ((uint32_t)0x08000800) /* Base @ of Page 2, 1 Kbyte */
@@ -375,9 +382,8 @@
 #define ADDR_FLASH_PAGE_29    ((uint32_t)0x08007400) /* Base @ of Page 29, 1 Kbyte */
 #define ADDR_FLASH_PAGE_30    ((uint32_t)0x08007800) /* Base @ of Page 30, 1 Kbyte */
 #define ADDR_FLASH_PAGE_31    ((uint32_t)0x08007C00) /* Base @ of Page 31, 1 Kbyte */
-#endif
 
-#if defined(STM32F103xE)
+#elif defined(STM32F103xE)
 #define ADDR_FLASH_PAGE_0     ((uint32_t)0x08000000) /* Base @ of Page 0, 2 Kbytes */
 #define ADDR_FLASH_PAGE_1     ((uint32_t)0x08000800) /* Base @ of Page 1, 2 Kbytes */
 #define ADDR_FLASH_PAGE_2     ((uint32_t)0x08001000) /* Base @ of Page 2, 2 Kbytes */
@@ -634,9 +640,8 @@
 #define ADDR_FLASH_PAGE_253   ((uint32_t)0x0807E800) /* Base @ of Page 253, 2 Kbytes */
 #define ADDR_FLASH_PAGE_254   ((uint32_t)0x0807F000) /* Base @ of Page 254, 2 Kbytes */
 #define ADDR_FLASH_PAGE_255   ((uint32_t)0x0807F800) /* Base @ of Page 255, 2 Kbytes */
-#endif
 
-#if defined(STM32F722xx)
+#elif defined(STM32F722xx)
 #define ADDR_FLASH_SECTOR_0     ((uint32_t)0x08000000) /* Base address of Sector 0, 32 Kbytes */
 #define ADDR_FLASH_SECTOR_1     ((uint32_t)0x08008000) /* Base address of Sector 1, 32 Kbytes */
 #define ADDR_FLASH_SECTOR_2     ((uint32_t)0x08010000) /* Base address of Sector 2, 32 Kbytes */
@@ -645,9 +650,8 @@
 #define ADDR_FLASH_SECTOR_5     ((uint32_t)0x08040000) /* Base address of Sector 5, 256 Kbytes */
 #define ADDR_FLASH_SECTOR_6     ((uint32_t)0x08080000) /* Base address of Sector 6, 256 Kbytes */
 #define ADDR_FLASH_SECTOR_7     ((uint32_t)0x080C0000) /* Base address of Sector 7, 256 Kbytes */
-#endif
 
-#if defined(STM32F401xE) /*!< STM32F401CD, STM32F401RD, STM32F401VD, STM32F401CE, STM32F401RE and STM32F401VE Devices */
+#elif defined(STM32F401xE) /*!< STM32F401CD, STM32F401RD, STM32F401VD, STM32F401CE, STM32F401RE and STM32F401VE Devices */
 #define ADDR_FLASH_SECTOR_0     ((uint32_t)0x08000000) /* Base @ of Sector 0, 16 Kbytes */
 #define ADDR_FLASH_SECTOR_1     ((uint32_t)0x08004000) /* Base @ of Sector 1, 16 Kbytes */
 #define ADDR_FLASH_SECTOR_2     ((uint32_t)0x08008000) /* Base @ of Sector 2, 16 Kbytes */
