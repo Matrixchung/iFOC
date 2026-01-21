@@ -184,6 +184,10 @@ static void get_rgb_color_wheel(uint8_t pos, uint8_t *r, uint8_t *g, uint8_t *b)
 template<typename T>
 static uint8_t count_bits(T n)
 {
+#if defined(__GNUC__)
+    if constexpr (sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4) return __builtin_popcount(n);
+    if constexpr (sizeof(T) == 8) return __builtin_popcountll(n);
+#endif
     uint8_t count = 0;
     while(n)
     {
