@@ -1,6 +1,6 @@
 #include "foc_speed_loop_pi.hpp"
 
-#define foc GetMotor<FOCMotor>()
+// #define foc GetMotor<FOCMotor>()
 
 namespace iFOC::FOC
 {
@@ -8,6 +8,7 @@ SpeedLoopPI::SpeedLoopPI() : SpeedLoopBase() {}
 
 void SpeedLoopPI::InitSpeedLoop()
 {
+    const auto foc = GetMotor<FOCMotor>();
     speed_pi.Kp = foc->GetConfig().vel_kp();
     speed_pi.Ki = foc->GetConfig().vel_ki();
     speed_pi.limit = foc->config_max_current;
@@ -17,6 +18,8 @@ void SpeedLoopPI::InitSpeedLoop()
 
 void SpeedLoopPI::UpdateSpeedLoop(float Ts)
 {
+    const auto foc = GetMotor<FOCMotor>();
+    Motion target{}, current{};
     foc->GetTargetMotion(target,
                     Motion::Ref::BASE,
                     Motion::TorqueUnit::AMP,
@@ -64,6 +67,7 @@ void SpeedLoopPI::UpdateSpeedLoop(float Ts)
 
 void SpeedLoopPI::ResetSpeedLoop()
 {
+    const auto foc = GetMotor<FOCMotor>();
     speed_pi.Reset();
     foc->Iqd_target = {0.0f, 0.0f};
 }

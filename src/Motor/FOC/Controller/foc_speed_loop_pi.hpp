@@ -14,8 +14,8 @@ public:
     void InitSpeedLoop() final;
     void UpdateSpeedLoop(float Ts) final;
     void ResetSpeedLoop() final;
-private:
-    Motion current{};
-    Motion target{};
+// private:
+//     Motion current{};
+//     Motion target{};
 };
 }

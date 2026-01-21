@@ -1,6 +1,6 @@
 #include "foc_speed_loop_base.hpp"
 
-#define foc GetMotor<FOCMotor>()
+// #define foc GetMotor<FOCMotor>()
 
 namespace iFOC::FOC
 {
@@ -16,6 +16,7 @@ void SpeedLoopBase::InitMid()
 
 void SpeedLoopBase::UpdateMid(float Ts)
 {
+    const auto foc = GetMotor<FOCMotor>();
     if(foc->IsArmed())
     {
         UpdateSpeedLoop(Ts);
