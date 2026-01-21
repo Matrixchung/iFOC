@@ -1,6 +1,7 @@
 #include "foc_task_tone_player.hpp"
 
 static constexpr float GLOBAL_MAX_INJECT_VOLTAGE = 5.0f;
+static constexpr float GLOBAL_MAX_INJECT_CURRENT = 5.0f;
 
 namespace iFOC
 {
@@ -41,6 +42,11 @@ FuncRetCode TonePlayerTask::PlaySound(const Vector<real_t>& freq_list, float Tbe
     const auto foc = GetMotor<FOCMotor>();
     float Uinject = MAX(foc->GetBusSense()->voltage, foc->GetConfig().max_voltage()) * 0.5f;
     if(Uinject >= GLOBAL_MAX_INJECT_VOLTAGE) Uinject = GLOBAL_MAX_INJECT_VOLTAGE;
+    if(foc->GetConfig().phase_resistance_valid())
+    {
+        float Umax = GLOBAL_MAX_INJECT_CURRENT * foc->GetConfig().phase_resistance();
+        Uinject = MIN(Uinject, Umax);
+    }
     return PlaySound(freq_list, Tbeat, Uinject, is_bypass);
 }
 
