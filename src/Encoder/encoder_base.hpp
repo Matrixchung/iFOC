@@ -1,6 +1,6 @@
 #pragma once
 
-#include "foc_types.hpp"
+#include "../Common/foc_types.hpp"
 #include "../Common/Filter/lowpass_filter.hpp"
 #include "../Common/foc_task.hpp"
 
@@ -23,7 +23,7 @@ public:
         strncpy(name, _name, sizeof(name));
     };
     virtual ~EncoderBase() = default;
-    virtual FuncRetCode Init() = 0;
+    virtual FuncRetCode Init() { return FuncRetCode::OK; };
     virtual void UpdateRT(float Ts) {};
     virtual void UpdateMid(float Ts) {};
     // Since Normal task is running in RTOS loop and delay time is not proven,
@@ -60,7 +60,7 @@ public:
     long long full_rotations = 0;
 protected:
     Type encoder_type;
-    Filter::LowpassFilter speed_lpf{300};
+    Filter::LowpassFilter speed_lpf{200};
     float sign_and_deduction_ratio = 1.0f;
     bool result_valid = false;
     char name[Task::MAX_TASK_NAME_LEN] = "\0";
