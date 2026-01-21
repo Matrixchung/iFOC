@@ -8,6 +8,7 @@ namespace iFOC::Sense
 {
 class BusSenseINA237 final : public BusSenseBase
 {
+    OVERRIDE_NEW();
 private:
     using I2CBase = iFOC::HAL::I2CBase;
 public:

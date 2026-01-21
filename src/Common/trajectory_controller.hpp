@@ -7,6 +7,7 @@ namespace iFOC
 class TrajController
 {
 public:
+    OVERRIDE_NEW();
     enum class TrajStage : uint8_t
     {
         ARRIVED = 0,
