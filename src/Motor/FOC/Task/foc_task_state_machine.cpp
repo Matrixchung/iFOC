@@ -1,16 +1,17 @@
 #include "foc_task_state_machine.hpp"
 #include "foc_math.hpp"
 #include "../foc_motor.hpp"
-#include "./Controller/foc_curr_loop_pi.hpp"
-#include "./Controller/foc_speed_loop_pi.hpp"
-#include "./Task/foc_task_update_sense.hpp"
-#include "./Task/foc_task_encoder_arbiter.hpp"
-#include "./Task/foc_task_basic_param_calib.hpp"
-#include "./Task/foc_task_encoder_calib.hpp"
-#include "./Task/foc_task_tone_player.hpp"
-#include "./WaveGenerator/foc_wave_gen_svpwm.hpp"
+#include "../Controller/foc_curr_loop_pi.hpp"
+#include "../Controller/foc_speed_loop_pi.hpp"
+#include "../Controller/foc_open_loop_controller.hpp"
+#include "../Task/foc_task_update_sense.hpp"
+#include "../Task/foc_task_encoder_arbiter.hpp"
+#include "../Task/foc_task_basic_param_calib.hpp"
+#include "../Task/foc_task_encoder_calib.hpp"
+#include "../Task/foc_task_tone_player.hpp"
+#include "../WaveGenerator/foc_wave_gen_svpwm.hpp"
 
-#define foc GetMotor<FOCMotor>()
+// #define foc GetMotor<FOCMotor>()
 
 #define TRANSITION_OK(new_state) \
 do{ last_state = current_state; \
@@ -33,6 +34,7 @@ StateMachineTask::StateMachineTask() : Task("StateMachine")
 
 void StateMachineTask::InitNormal()
 {
+    const auto foc = GetMotor<FOCMotor>();
     current_state = MotorState::IDLE;
     last_state = MotorState::IDLE;
     foc->AppendTask(new EncoderArbiterTask); // "EncArbiter"
@@ -42,19 +44,20 @@ void StateMachineTask::InitNormal()
     // Here we are in IDLE.
     // Play the beep first, but with a proper basic parameter set to avoid electrical misconfiguration
     if(!CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
-        BoardConfig.GetConfig().play_startup_tone())
+        BoardConfig().GetConfig().play_startup_tone())
     {
         auto tone_player = new TonePlayerTask;
         if(foc->InsertTaskBeforeName("WaveGen", tone_player) == FuncRetCode::OK)
             tone_player->PlaySound({1200.0f, 1650.0f, 2200.0f} ,0.25f, true);
+        while(foc->GetTaskByName("TonePlayer")) sleep(100);
+        foc->Disarm();
     }
-    while(foc->GetTaskByName("TonePlayer")) sleep(100);
-    foc->Disarm();
     if(foc->GetConfig().startup_sequence_enabled()) RequestState(MotorState::STARTUP_SEQUENCE);
 }
 
 void StateMachineTask::UpdateNormal()
 {
+    const auto foc = GetMotor<FOCMotor>();
     switch(current_state)
     {
         case MotorState::STARTUP_SEQUENCE:
@@ -98,7 +101,7 @@ void StateMachineTask::UpdateNormal()
                     RequestState(MotorState::SENSORED_CLOSED_LOOP_CONTROL);
                     break;
                 }
-                foc->DisarmWithError(MotorError::STARTUP_SENSORED_CLOSE_LOOP_REQ_NOT_MET);
+                foc->DisarmWithError(MotorError::STARTUP_SEQ_REQUIREMENTS_UNMET);
                 break;
             }
             if(foc->GetConfig().startup_sensorless_closed_loop())
@@ -108,7 +111,7 @@ void StateMachineTask::UpdateNormal()
                     RequestState(MotorState::SENSORLESS_CLOSED_LOOP_CONTROL);
                     break;
                 }
-                foc->DisarmWithError(MotorError::STARTUP_SENSORLESS_CLOSE_LOOP_REQ_NOT_MET);
+                foc->DisarmWithError(MotorError::STARTUP_SEQ_REQUIREMENTS_UNMET);
                 break;
             }
             RequestState(MotorState::IDLE);
@@ -142,6 +145,8 @@ void StateMachineTask::UpdateNormal()
             break;
         }
         case MotorState::SENSORED_CLOSED_LOOP_CONTROL:
+        case MotorState::SENSORLESS_CLOSED_LOOP_CONTROL:
+        case MotorState::OPEN_LOOP_VELOCITY_CONTROL:
         {
             sleep(10);
             break;
@@ -153,6 +158,7 @@ void StateMachineTask::UpdateNormal()
 
 bool StateMachineTask::CheckStateRequirement(MotorState new_state)
 {
+    const auto foc = GetMotor<FOCMotor>();
     switch(new_state)
     {
         case MotorState::BASIC_PARAM_CALIBRATION:
@@ -167,18 +173,18 @@ bool StateMachineTask::CheckStateRequirement(MotorState new_state)
         case MotorState::ENCODER_INDEX_SEARCH:
         {
             while(foc->GetTaskByName("IndexSearch")) sleep(10);
-            if(auto enc = foc->GetPrimaryEncoder())
+            if(const auto enc = foc->GetPrimaryEncoder())
             {
                 return !CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
-                        enc.value()->GetEncoderType() == Encoder::Type::INCREMENTAL_ENCODER &&
-                        !enc.value()->IsResultValid();
+                        enc->GetEncoderType() == Encoder::Type::INCREMENTAL_ENCODER &&
+                        !enc->IsResultValid();
             }
             return false;
         }
         case MotorState::ENCODER_CALIBRATION:
         {
             while(foc->GetTaskByName("EncCalib")) sleep(10);
-            if(auto enc = foc->GetPrimaryEncoder())
+            if(const auto enc = foc->GetPrimaryEncoder())
             {
                 return !foc->GetConfig().sensor_direction_valid() ||
                         !foc->GetConfig().pole_pairs_valid() ||
@@ -205,6 +211,11 @@ bool StateMachineTask::CheckStateRequirement(MotorState new_state)
         {
             return false; // TODO
         }
+        case MotorState::OPEN_LOOP_VELOCITY_CONTROL:
+        {
+            // while(foc->GetTaskByName("IndexSearch")) sleep(10);
+            return !CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) && foc->GetConfig().pole_pairs_valid();
+        }
         default: return false;
     }
 }
@@ -216,20 +227,32 @@ MotorState StateMachineTask::BackToLastState()
 
 MotorState StateMachineTask::RequestState(MotorState new_state)
 {
+    const auto foc = GetMotor<FOCMotor>();
     if(current_state == new_state) TRANSITION_FAILED();
     switch(new_state)
     {
         case MotorState::IDLE:
         {
-            foc->Disarm();
+            // FIX: when debugging gate drivers with 'GetDriver()->SetOutput3CHPu(x, y, z)' in the main code,
+            //      foc->Disarm() will continuously disarm the driver.
+            if(foc->IsArmed()) foc->Disarm();
             // FIX: when switching state from closed_loop_control modes back to IDLE, the speed_loop & curr_loop are not handled correctly.
             foc->RemoveTaskByName("CurrLoop");
             foc->RemoveTaskByName("SpeedLoop");
+            foc->RemoveTaskByName("OpenLoop");
+            auto current_target = foc->GetTargetMotionStruct(Motion::Ref::BASE,
+                                                             Motion::TorqueUnit::AMP,
+                                                             Motion::SpeedUnit::RPM,
+                                                             Motion::PosUnit::DEG);
+            // reset current torque & speed target, but keeping pos target
+            current_target.torque.value = 0.0f;
+            current_target.speed.value = 0.0f;
+            foc->SetTargetMotion(current_target);
             TRANSITION_OK(new_state);
         }
         case MotorState::STARTUP_SEQUENCE:
         {
-            if(foc->GetError() != MotorError::NONE) TRANSITION_FAILED();
+            if(foc->GetError() != to_underlying(MotorError::NONE)) TRANSITION_FAILED();
             if((current_state == MotorState::IDLE) || // Situation #1: Initial, from IDLE state
                (last_state == MotorState::STARTUP_SEQUENCE && ( // Situation #2: From Startup Sequences' call to main sequence
                        to_underlying(current_state) >= to_underlying(MotorState::BASIC_PARAM_CALIBRATION) &&
@@ -245,7 +268,7 @@ MotorState StateMachineTask::RequestState(MotorState new_state)
         case MotorState::ENCODER_CALIBRATION:
         case MotorState::EXTEND_PARAM_CALIBRATION:
         {
-            if(foc->GetError() != MotorError::NONE) TRANSITION_FAILED();
+            if(foc->GetError() != to_underlying(MotorError::NONE)) TRANSITION_FAILED();
             if(current_state == MotorState::STARTUP_SEQUENCE || current_state == MotorState::IDLE)
             {
                 if(CheckStateRequirement(new_state)) TRANSITION_OK(new_state);
@@ -254,7 +277,7 @@ MotorState StateMachineTask::RequestState(MotorState new_state)
         }
         case MotorState::SENSORED_CLOSED_LOOP_CONTROL:
         {
-            if(foc->GetError() != MotorError::NONE) TRANSITION_FAILED();
+            if(foc->GetError() != to_underlying(MotorError::NONE)) TRANSITION_FAILED();
             if(current_state == MotorState::STARTUP_SEQUENCE ||
                 current_state == MotorState::IDLE ||
                 current_state == MotorState::SENSORLESS_CLOSED_LOOP_CONTROL)
@@ -263,6 +286,17 @@ MotorState StateMachineTask::RequestState(MotorState new_state)
                 {
                     foc->InsertTaskBeforeName("WaveGen", new CurrLoopPI);
                     foc->InsertTaskBeforeName("CurrLoop", new SpeedLoopPI);
+                    auto current_target = foc->GetTargetMotionStruct(Motion::Ref::BASE,
+                                                             Motion::TorqueUnit::AMP,
+                                                             Motion::SpeedUnit::RPM,
+                                                             Motion::PosUnit::DEG);
+                    auto current_motion = foc->GetCurrentMotionStruct(current_target);
+                    // reset current torque & speed target, and sync pos target with current state.
+                    // (to avoid unexpected movement during IDLE -> CLOSED_LOOP)
+                    current_target.torque.value = 0.0f;
+                    current_target.speed.value = 0.0f;
+                    current_target.pos.value = current_motion.pos.value;
+                    foc->SetTargetMotion(current_target);
                     foc->Arm();
                     TRANSITION_OK(new_state);
                 }
@@ -271,12 +305,27 @@ MotorState StateMachineTask::RequestState(MotorState new_state)
         }
         case MotorState::SENSORLESS_CLOSED_LOOP_CONTROL:
         {
-            if(foc->GetError() != MotorError::NONE) TRANSITION_FAILED();
+            if(foc->GetError() != to_underlying(MotorError::NONE)) TRANSITION_FAILED();
             if(current_state == MotorState::STARTUP_SEQUENCE ||
                 current_state == MotorState::IDLE ||
                 current_state == MotorState::SENSORED_CLOSED_LOOP_CONTROL)
             {
                 if(CheckStateRequirement(new_state)) TRANSITION_OK(new_state);
+            }
+            TRANSITION_FAILED();
+        }
+        case MotorState::OPEN_LOOP_VELOCITY_CONTROL:
+        {
+            if(foc->GetError() != to_underlying(MotorError::NONE)) TRANSITION_FAILED();
+            if(current_state == MotorState::IDLE)
+            {
+                if(CheckStateRequirement(new_state))
+                {
+                    foc->InsertTaskBeforeName("WaveGen", new CurrLoopPI);
+                    foc->InsertTaskBeforeName("CurrLoop", new OpenLoopController);
+                    foc->Arm();
+                    TRANSITION_OK(new_state);
+                }
             }
             TRANSITION_FAILED();
         }
