@@ -151,7 +151,7 @@ void BasicParamCalibTask::UpdateNormal()
         case EstStage::PHASE_INDUCTANCE_START:
         {
             data.Ls_est.TARGET_LOOP_COUNT = iFOC::BoardConfig().GetConfig().pwm_wave_freq(); // 1s
-            data.Ls_est.test_voltage = 1.0f;
+            data.Ls_est.test_voltage = foc->GetConfig().calibration_voltage();
             data.Ls_est.pwm_freq_div_1k = iFOC::BoardConfig().GetConfig().pwm_wave_freq() / 1000;
             if(data.Ls_est.pwm_freq_div_1k <= 1)
             {
