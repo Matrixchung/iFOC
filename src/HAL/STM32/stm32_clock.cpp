@@ -31,7 +31,16 @@ uint32_t GetCounter()
     return 0;
 }
 }
-
+uint32_t GetUptimeSeconds()
+{
+#if defined(HAL_RTC_MODULE_ENABLED)
+    RTC_TimeTypeDef sTimeRead{};
+    HAL_RTC_GetTime(&hrtc, &sTimeRead, RTC_FORMAT_BIN);
+    return (uint32_t)(sTimeRead.Hours * 3600 + sTimeRead.Minutes * 60 + sTimeRead.Seconds);
+#else
+    return 0;
+#endif
+}
 void DelayInit()
 {
 #ifdef USE_DWT_COUNTER
