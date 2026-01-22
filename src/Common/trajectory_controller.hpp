@@ -24,8 +24,9 @@ public:
     /// \param cruise_speed Expected cruise speed (we may not reach cruise speed for short track), degree/s
     /// \param max_accel Expected max acceleration value, degree/s^2
     /// \param max_decel Expected max deceleration value, degree/s^2
+    /// \param is_s_curve If set to true, will using S-Curve speed instead of T-Curve
     void PlanTrajectory(float target_pos, float current_pos, float current_speed,
-                        float cruise_speed, float max_accel, float max_decel);
+                        float cruise_speed, float max_accel, float max_decel, bool is_s_curve = false);
 
     /// Plan a simple acceleration from current_speed to cruise_speed.
     /// In this case the position starts from zero.
@@ -70,7 +71,19 @@ private:
     float final_pos = 0.0f;
 
     float state_timer = 0.0f;
+
+    float A1 = 0.0f;
+    float B1 = 0.0f;
+    float C1 = 0.0f;
+    float F1 = 0.0f;
+
+    float A2 = 0.0f;
+    float B2 = 0.0f;
+    float C2 = 0.0f;
+    float F2 = 0.0f;
+
     TrajStage stage = TrajStage::ARRIVED;
     bool task_done = true;
+    bool s_curve = false;
 };
 }
