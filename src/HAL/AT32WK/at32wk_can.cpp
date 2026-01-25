@@ -2,6 +2,8 @@
 
 #if defined(AT32WK_ENV) && defined(CAN_MODULE_ENABLED)
 
+#include "../../Common/foc_math.hpp"
+
 namespace iFOC::HAL
 {
 CAN::CAN(can_type* _hcan) : hcan(_hcan) {}
@@ -99,29 +101,62 @@ FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
         tx_msg.dlc = msg.len;
         memcpy(tx_msg.data, msg.data, msg.len);
         uint8_t selected_mailbox = can_message_transmit(hcan, &tx_msg);
-        uint8_t max_retry = 5;
-        while(selected_mailbox == CAN_TX_STATUS_NO_EMPTY)
-        {
-            selected_mailbox = can_message_transmit(hcan, &tx_msg);
-            if(max_retry > 0) max_retry--;
-            else break;
-        }
-        if(max_retry == 0)
+
+        if(selected_mailbox == CAN_TX_STATUS_NO_EMPTY)
         {
             xSemaphoreGiveAuto(tx_sem);
             return FuncRetCode::BUFFER_FULL;
         }
+
+        // if(selected_mailbox == CAN_TX_STATUS_NO_EMPTY) // forced wait approach
+        // {
+        //     const auto start_tick = xTaskGetTickCountFromISR();
+        //     while(!hcan->tsts_bit.tm0ef && !hcan->tsts_bit.tm1ef && !hcan->tsts_bit.tm2ef)
+        //     {
+        //         if(xTaskGetTickCountFromISR() - start_tick >= 10) break;
+        //     }
+        //     selected_mailbox = can_message_transmit(hcan, &tx_msg);
+        //     if(selected_mailbox == CAN_TX_STATUS_NO_EMPTY)
+        //     {
+        //         xSemaphoreGiveAuto(tx_sem);
+        //         return FuncRetCode::BUFFER_FULL;
+        //     }
+        // }
+
+        // uint8_t max_retry = 32;
+        // while(selected_mailbox == CAN_TX_STATUS_NO_EMPTY)
+        // {
+        //     selected_mailbox = can_message_transmit(hcan, &tx_msg);
+        //     if(max_retry > 0) max_retry--;
+        //     else break;
+        // }
+        // if(max_retry == 0)
+        // {
+        //     xSemaphoreGiveAuto(tx_sem);
+        //     return FuncRetCode::BUFFER_FULL;
+        // }
         // while(can_transmit_status_get(hcan, (can_tx_mailbox_num_type)selected_mailbox) != CAN_TX_STATUS_SUCCESSFUL) {}
+
         xSemaphoreGiveAuto(tx_sem);
         return FuncRetCode::OK;
     }
     return FuncRetCode::REMOTE_TIMEOUT;
 }
 
-FuncRetCode CAN::SetHWFilter(uint8_t filter_idx, uint32_t id_u32, uint32_t mask_u32)
+FuncRetCode CAN::SetHWFilter(uint8_t filter_idx, uint32_t id_u32, uint32_t mask_u32, bool ext_only, bool accept_rtr)
 {
     id_u32 <<= 3;
     mask_u32 <<= 3; // SEE DATASHEET MAPPING
+    if(ext_only) // EXT ONLY means IDT = 1
+    {
+        id_u32 |= (1 << 2);
+        mask_u32 |= (1 << 2);
+    }
+    if(!accept_rtr) // do not accept remote frame
+    {
+        // id_u32 |= (0 << 1);
+        mask_u32 |= (1 << 1);
+    }
     // CAN_FiFB1[31:21] | CAN_FiFB1[20:3] | CAN_FiFB1[2:0]
     // StandardID[10:0] |   ExtID[17:0]   | IDT   RTR   0
     can_filter_init_type can_filter_init_struct
