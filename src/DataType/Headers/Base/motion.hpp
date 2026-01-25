@@ -41,7 +41,7 @@ public:
     }
     void Reset()
     {
-        ref = Ref::ELEC;
+        // ref = Ref::ELEC; // don't reset reference frame
         torque = {0.0f, TorqueUnit::AMP};
         speed = {0.0f, SpeedUnit::RADS};
         pos = {0.0f, PosUnit::RAD};
