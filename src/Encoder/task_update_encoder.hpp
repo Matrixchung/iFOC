@@ -13,9 +13,9 @@ public:
         RegisterTask(TaskType::RT_TASK, TaskType::MID_TASK);
         // The normal loop runs in RTOS scheduler without precise timedelta.
     };
-    void InitRT() final;
-    void UpdateMid(float Ts) final;
-    void UpdateRT(float Ts) final;
+    void InitRT() override;
+    void UpdateMid(float Ts) override;
+    void UpdateRT(float Ts) override;
 };
 
 }
