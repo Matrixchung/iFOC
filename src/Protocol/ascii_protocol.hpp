@@ -405,6 +405,7 @@ void ASCIIProtocol<Motor>::ProcessEachValidLine(uint8_t* data, uint16_t len)
     {
         case 'q': CmdPosition(data, len, use_checksum); break;
         case 'p': CmdPositionWithFF(data, len, use_checksum); break;
+        case 't': CmdTrajectory(data, len, use_checksum); break;
         case 'v': CmdVelocity(data, len, use_checksum); break;
         case 'o': CmdVelocityOpenloop(data, len, use_checksum); break;
         case 'c': CmdTorque(data, len, use_checksum); break;
@@ -511,7 +512,31 @@ void ASCIIProtocol<Motor>::PrintReflectedVariable(const char* name, uint8_t* ptr
 template <class Motor>
 void ASCIIProtocol<Motor>::CmdTrajectory(uint8_t* data, uint16_t len, bool use_checksum)
 {
-
+    const auto motor = GetInst();
+    uint8_t id = 0;
+    if(CheckAndGetID(data, len, use_checksum, 5, id) && id == motor->GetInternalID())
+    {
+        uint8_t target_count = 0;
+        float target[3]{};
+        splitData_f((char*)(data + 4), len - 4, target, &target_count, 3, ' ');
+        if(target_count < 1 || target_count > 2)
+        {
+            GenerateResponse(use_checksum, false, "invalid argument input");
+            return;
+        }
+        Motion target_motion{
+            .ref = io_ref,
+            .torque = {0.0f, 0.0f, io_torque_unit},
+            .speed = {0.0f, 0.0f, io_speed_unit},
+            .pos = {target[0], 0.0f, io_pos_unit}
+        };
+        bool s_curve = false;
+        if(target_count == 2) s_curve = target[1] == 1.0f;
+        motor->UpdateWatchdog();
+        motor->SetControlMode(MotorControlMode::CTRL_MODE_POSITION);
+        motor->SetTrajectoryTargetMotion(target_motion, s_curve);
+        GenerateResponse(use_checksum, false, "ok");
+    }
 }
 
 template <class Motor>
@@ -608,7 +633,7 @@ void ASCIIProtocol<Motor>::CmdVelocityOpenloop(uint8_t* data, uint16_t len, bool
         uint8_t target_count = 0;
         float target[4]{};
         splitData_f((char*)(data + 4), len - 4, target, &target_count, 4, ' ');
-        if(target_count != 3 || target[2] <= 0.0f)
+        if(target_count != 3 || target[2] < 0.0f)
         {
             GenerateResponse(use_checksum, false, "invalid argument input");
             return;
@@ -1008,19 +1033,22 @@ void ASCIIProtocol<Motor>::CmdMotorInfo(uint8_t* data, uint16_t len, bool use_ch
                                                                                                             current_motion.pos.value,
                                                                                                             current_target.pos.value);
             const auto& encoders = motor->GetEncoders();
-            GenerateResponse(use_checksum, true, " - Encoders (%d):", encoders.size());
-            for(size_t i = 0; i < encoders.size(); i++)
+            if(encoders.size() > 0)
             {
-                const auto& enc = encoders[i];
-                switch(enc->GetEncoderType())
+                GenerateResponse(use_checksum, true, " - Encoders (%d):", encoders.size());
+                for(size_t i = 0; i < encoders.size(); i++)
                 {
-                    case Encoder::Type::ABSOLUTE_ENCODER: GenerateResponse(use_checksum, true, "    - #%d (Abs.) %d", i + 1, enc->IsResultValid()); break;
-                    case Encoder::Type::INCREMENTAL_ENCODER: GenerateResponse(use_checksum, true, "    - #%d (Inc.) %d", i + 1, enc->IsResultValid()); break;
-                    case Encoder::Type::SENSORLESS_ENCODER: GenerateResponse(use_checksum, true, "    - #%d (Est.) %d", i + 1, enc->IsResultValid()); break;
-                    default: GenerateResponse(use_checksum, true, "    - #%d (N/A) %d", i + 1, enc->IsResultValid()); break;
+                    const auto& enc = encoders[i];
+                    switch(enc->GetEncoderType())
+                    {
+                        case Encoder::Type::ABSOLUTE_ENCODER: GenerateResponse(use_checksum, true, "    - #%d (Abs.) %d", i + 1, enc->IsResultValid()); break;
+                        case Encoder::Type::INCREMENTAL_ENCODER: GenerateResponse(use_checksum, true, "    - #%d (Inc.) %d", i + 1, enc->IsResultValid()); break;
+                        case Encoder::Type::SENSORLESS_ENCODER: GenerateResponse(use_checksum, true, "    - #%d (Est.) %d", i + 1, enc->IsResultValid()); break;
+                        default: GenerateResponse(use_checksum, true, "    - #%d (N/A) %d", i + 1, enc->IsResultValid()); break;
+                    }
+                    GenerateResponse(use_checksum, true, "    - sing_rad: %.5f", enc->single_round_angle_rad);
+                    GenerateResponse(use_checksum, false, "    - mult_rad: %.5f", enc->multi_round_angle_rad);
                 }
-                GenerateResponse(use_checksum, true, "    - sing_rad: %.5f", enc->single_round_angle_rad);
-                GenerateResponse(use_checksum, false, "    - mult_rad: %.5f", enc->multi_round_angle_rad);
             }
             // print RT & mid & normal tasks call list
             const auto& task_list = motor->GetTaskProcessor().GetTaskList();
@@ -1044,7 +1072,7 @@ void ASCIIProtocol<Motor>::CmdMotorInfo(uint8_t* data, uint16_t len, bool use_ch
                 //     normal_tasks_vector.emplace_back(task->GetRTOSPriority(), task->GetName());
                 // }
             }
-            if(!rt_tasks_list.empty()) GenerateResponse(use_checksum, true, " - RT Tasks: %s", rt_tasks_list.c_str());
+            if(!rt_tasks_list.empty()) GenerateResponse(use_checksum, false, " - RT Tasks: %s", rt_tasks_list.c_str());
             if(!mid_tasks_list.empty()) GenerateResponse(use_checksum, false, " - Mid Tasks: %s", mid_tasks_list.c_str());
             // sort the normal task by priority. (higher one is prioritized)
             // std::sort(normal_tasks_vector.begin(), normal_tasks_vector.end(), [](const std::pair<UBaseType_t, const char*>& a, const std::pair<UBaseType_t, const char*>& b){
@@ -1096,7 +1124,7 @@ void ASCIIProtocol<Motor>::CmdHelp(uint8_t* data, uint16_t len, bool use_checksu
     if(motor->GetInternalID() == 0)
     {
         GenerateResponse(use_checksum, true,  "Avail cmds syntax, <optional>:");
-        GenerateResponse(use_checksum, true,  " - Trajectory: t motor_id pos");
+        GenerateResponse(use_checksum, true,  " - Trajectory: t motor_id pos <s_curve>");
         GenerateResponse(use_checksum, true,  " - Position: q motor_id pos <vel-lim> <curr-lim>");
         GenerateResponse(use_checksum, true,  " - Position: p motor_id pos <vel-ff> <curr-ff>");
         GenerateResponse(use_checksum, true,  " - Velocity: v motor_id vel <curr-ff>");
