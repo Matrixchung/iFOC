@@ -10,10 +10,6 @@ class CurrLoopBase : public Task
 {
 public:
     CurrLoopBase();
-    void InitRT() final;
-    void UpdateRT(float Ts) final;
-    virtual void InitCurrLoop();
-    virtual void UpdateCurrLoop(float Ts) = 0;
     virtual void ResetCurrLoop() = 0;
 };
 }
