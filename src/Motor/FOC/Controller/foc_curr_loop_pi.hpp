@@ -16,11 +16,11 @@ public:
     HarmonicRegulator d_harmonic_reg_12;
     PIController q_pi;
     PIController d_pi;
-    bool enable_harmonic_regulator = true;
-    bool enable_pi_feedforward = true;
-    bool enable_flux_feedforward = true;
-    void InitCurrLoop() final;
-    void ResetCurrLoop() final;
-    void UpdateCurrLoop(float Ts) final;
+    // bool enable_harmonic_regulator = false;
+    // bool enable_pi_feedforward = true;
+    // bool enable_flux_feedforward = true;
+    void InitRT() override;
+    void ResetCurrLoop() override;
+    void UpdateRT(float Ts) override;
 };
 }
