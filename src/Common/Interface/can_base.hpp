@@ -28,9 +28,7 @@ public:
 
     virtual FuncRetCode SetHWFilter(uint8_t filter_idx,
                                     uint32_t id_u32,
-                                    uint32_t mask_u32,
-                                    bool ext_only,
-                                    bool accept_rtr) { return FuncRetCode::NOT_SUPPORTED; };
+                                    uint32_t mask_u32) { return FuncRetCode::NOT_SUPPORTED; };
 
     void ProcessIncomingMsg(const DataType::Comm::CANMessage& msg) const;
 
