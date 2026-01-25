@@ -13,7 +13,7 @@ public:
     explicit CAN(can_type *_hcan);
     FuncRetCode Init(DataType::Comm::CANBaudrate baud) override;
     FuncRetCode TransmitMessage(DataType::Comm::CANMessage& msg) override;
-    FuncRetCode SetHWFilter(uint8_t filter_idx, uint32_t id_u32, uint32_t mask_u32) override;
+    FuncRetCode SetHWFilter(uint8_t filter_idx, uint32_t id_u32, uint32_t mask_u32, bool ext_only, bool accept_rtr) override;
     void OnIRQ() const;
 private:
     can_type* hcan;

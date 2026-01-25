@@ -1,0 +1,6 @@
+#pragma once
+#include "RequestVote_request.h"
+#include "RequestVote_response.h"
+
+#define UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_SERVER_REQUESTVOTE_ID 31
+#define UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_SERVER_REQUESTVOTE_SIGNATURE (0xCDDE07BB89A56356ULL)
