@@ -50,7 +50,7 @@ FuncRetCode TonePlayerTask::PlaySound(const Vector<real_t>& freq_list, float Tbe
     return PlaySound(freq_list, Tbeat, Uinject, is_bypass);
 }
 
-void TonePlayerTask::UpdateRT(float Ts)
+void TonePlayerTask::UpdateRT(const float Ts)
 {
     if(!play_complete)
     {

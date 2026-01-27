@@ -47,13 +47,13 @@ FuncRetCode EncoderMT6835::Init()
     return FuncRetCode::OK;
 }
 
-void EncoderMT6835::UpdateRT(float Ts)
+void EncoderMT6835::UpdateRT(const float Ts)
 {
     // Step #1: We get single_round_angle_rad & now_angle_cnt
     ReadAbsAngleRad();
 }
 
-void EncoderMT6835::UpdateMid(float Ts)
+void EncoderMT6835::UpdateMid(const float Ts)
 {
     // Step #2: Calculate delta
     int delta = (int)now_angle_cnt - (int)last_angle_cnt;
@@ -78,7 +78,7 @@ void EncoderMT6835::UpdateMid(float Ts)
     {
         // Step #4: Calculate velocity
         // real_t vel = (multi_round_angle_rad - last_multi_round_angle_rad) / Ts;
-        real_t vel = ((real_t)delta * PI2divCPR_f) / Ts;
+        const real_t vel = ((real_t)delta * PI2divCPR_f) / Ts;
         angular_speed_rad_s = speed_lpf.GetOutput(vel, Ts);
     }
 }

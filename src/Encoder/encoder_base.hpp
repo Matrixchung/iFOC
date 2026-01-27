@@ -45,7 +45,7 @@ public:
         if(ratio < 1.0f) return;
         sign_and_deduction_ratio = sign(sign_and_deduction_ratio) * ratio;
     }
-    void SetSpeedFilterFreq(real_t f) { speed_lpf.SetFc(f); };
+    void SetSpeedFilterFreq(const real_t f) { speed_lpf.SetFc(f); };
     bool operator==(const char* n) const noexcept
     {
         return strncasecmp(GetName(), n, sizeof(name)) == 0;

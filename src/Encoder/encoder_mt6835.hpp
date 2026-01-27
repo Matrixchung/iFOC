@@ -30,10 +30,10 @@ public:
     };
     EncoderMT6835(SPIBase *_spi, GPIOBase *_gpio);
     explicit EncoderMT6835(SPIBase *_spi);
-    ~EncoderMT6835() final;
-    FuncRetCode Init() final;
-    void UpdateRT(float Ts) final;
-    void UpdateMid(float Ts) final;
+    ~EncoderMT6835() override;
+    FuncRetCode Init() override;
+    void UpdateRT(float Ts) override;
+    void UpdateMid(float Ts) override;
     std::underlying_type_t<DeviceError> device_error = to_underlying(DeviceError::NONE);
 // private:
     FuncRetCode ReadAbsAngleRad();
