@@ -17,17 +17,15 @@ public:
     BusSenseADC(HAL::ADCPortBase* _vbus, real_t _vbus_gain,
                 HAL::ADCPortBase* _ibus, real_t _ibus_gain);
     FuncRetCode Update() override;
-    void UpdateRT(float Ts) override;
-    void UpdateRemainingCurrent(float Ts) override;
+    void SampleDCOffset(uint16_t sample_ms);
 private:
     HAL::ADCPortBase* Vbus_port;
     HAL::ADCPortBase* Ibus_port;
-    Filter::LowpassFilter Ibus_zero_lpf;
     Filter::LowpassFilter Ibus_lpf;
+    Filter::LowpassFilter Ibus_offset_lpf;
     real_t Vbus_gain_V = 1.0f;
     real_t Ibus_gain_mV = 1.0f;
-    real_t zero_Ibus = 0.0f;
-    uint16_t zero_offset_calc_times = 0;
+    TickType_t last_update_tick = 0;
     bool reversed = false;
 };
 }

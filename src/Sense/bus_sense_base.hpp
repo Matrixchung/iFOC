@@ -19,8 +19,6 @@ public:
     [[nodiscard]] BusSenseType GetBusSenseType() const { return type; }
     virtual FuncRetCode Init() { return FuncRetCode::OK; };
     virtual FuncRetCode Update() = 0;
-    virtual void UpdateRT(float Ts) {};
-    virtual void UpdateRemainingCurrent(float Ts) {};
 protected:
     BusSenseType type = BusSenseType::SINGLE_ENDED;
 };
