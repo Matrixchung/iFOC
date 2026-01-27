@@ -15,7 +15,7 @@ public:
     void Reset();
     void StartMeasureITAE();
     void StopMeasureITAE();
-    real_t GetITAE();
+    real_t GetITAE() const;
     real_t Kp = 0.0f, Ki = 0.0f;
     real_t limit = 0.0f;
     real_t ramp_limit = 0.0f;
