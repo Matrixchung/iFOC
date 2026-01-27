@@ -13,5 +13,6 @@ public:
 private:
     uint8_t overcurrent_tick = 0;
     uint8_t calibration_timeout_ms = 0;
+    uint8_t temperature_sense_tick = 0;
 };
 }
