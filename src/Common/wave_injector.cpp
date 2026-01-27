@@ -24,10 +24,10 @@ void WaveInjector::SetPeriod(float t)
     state_timer = 0.0f;
 }
 
-float WaveInjector::GetWaveform(float Ts)
+float WaveInjector::GetWaveform(const float Ts)
 {
     state_timer += Ts;
-    if(state_timer >= period_time) state_timer = 0.0f;
+    if(state_timer > period_time) state_timer = 0.0f; // in case of: Ts = 0.5f, period_time = 1.0f (0.5x fPWM)
     if(wave_type == WaveType::SQUARE)
     {
         if(state_timer <= period_time * 0.5f) return 1.0f;
