@@ -12,8 +12,8 @@ FuncRetCode TaskProcessor::AppendTask(Task *task)
         taskEXIT_CRITICAL();
         return FuncRetCode::PARAM_DUPLICATED;
     }
-    InitializeTask(task);
     tasks.push_back(task);
+    InitializeTask(task);
     taskEXIT_CRITICAL();
     return FuncRetCode::OK;
 }
@@ -28,8 +28,8 @@ FuncRetCode TaskProcessor::PushFrontTask(Task *task)
         taskEXIT_CRITICAL();
         return FuncRetCode::PARAM_DUPLICATED;
     }
-    InitializeTask(task);
     tasks.push_front(task);
+    InitializeTask(task);
     taskEXIT_CRITICAL();
     return FuncRetCode::OK;
 }
@@ -49,8 +49,8 @@ FuncRetCode TaskProcessor::InsertTaskBeforeName(const char *nextTaskName, Task *
     {
         if(*(*it) == nextTaskName)
         {
-            InitializeTask(task);
             tasks.insert(it, task);
+            InitializeTask(task);
             taskEXIT_CRITICAL();
             return FuncRetCode::OK;
         }
@@ -76,9 +76,9 @@ FuncRetCode TaskProcessor::InsertTaskAfterName(const char* prevTaskName, Task* t
         if(*(*it) == prevTaskName)
         {
             ++it;
-            InitializeTask(task);
             if(it == tasks.cend()) tasks.push_back(task);
             else tasks.insert(it, task);
+            InitializeTask(task);
             taskEXIT_CRITICAL();
             return FuncRetCode::OK;
         }
