@@ -940,6 +940,8 @@ void ASCIIProtocol<Motor>::CmdSysInfo(uint8_t* data, uint16_t len, bool use_chec
         float mem_usage_now = 1.0f - ((float)xPortGetFreeHeapSize() / (float)(configTOTAL_HEAP_SIZE));
         float mem_usage_max = 1.0f - ((float)xPortGetMinimumEverFreeHeapSize() / (float)(configTOTAL_HEAP_SIZE));
         GenerateResponse(use_checksum, true, "Compile Time: %d-%d-%d %d:%d", YEAR(), MONTH(), DAY(), HOUR(), MINUTE());
+        const auto firmware_size = HAL::GetFirmwareSizeBytes();
+        GenerateResponse(use_checksum, true, "FW size: %d Bytes", firmware_size);
         // Uptime is represented as: X hours, Y mins, Z seconds
         auto uptime_sec = HAL::GetUptimeSeconds();
         uint32_t uptime_hour = uptime_sec / 3600;
