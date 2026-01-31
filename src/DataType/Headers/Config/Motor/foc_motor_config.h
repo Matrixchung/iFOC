@@ -9,7 +9,7 @@
 
 #include <cstdint>
 #include <MessageInterface.h>
-#include "reflection.h"
+#include "../../../reflection.h"
 #include <WireFormatter.h>
 #include <Fields.h>
 #include <MessageSizeCalculator.h>
@@ -43,6 +43,7 @@ class FOCMotorConfig final: public ::EmbeddedProto::MessageInterface
         MEMBER_SIZE_OFFSET(FOCMotorConfig, d_axis_inductance_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, pole_pairs_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_zero_offset_rad_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_speed_f_lp_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, kv_rating_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, torque_constant_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, flux_linkage_),
@@ -52,6 +53,12 @@ class FOCMotorConfig final: public ::EmbeddedProto::MessageInterface
         MEMBER_SIZE_OFFSET(FOCMotorConfig, vel_kp_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, vel_ki_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, watchdog_timeout_sec_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, traj_output_speed_limit_rpm_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, traj_output_accel_limit_rpm_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, traj_output_decel_limit_rpm_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, can_heartbeat_interval_ms_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, can_feedback_interval_ms_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, enable_harmonic_suppression_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_resistance_valid_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_inductance_valid_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_direction_clockwise_),
@@ -67,8 +74,7 @@ class FOCMotorConfig final: public ::EmbeddedProto::MessageInterface
         MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_encoder_calibration_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_extend_param_calibration_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensored_closed_loop_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensorless_closed_loop_),
-        MEMBER_SIZE_OFFSET(FOCMotorConfig, can_heartbeat_interval_ms_)
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, startup_sensorless_closed_loop_)
     )
 FOCMotorConfig() = default;
     FOCMotorConfig(const FOCMotorConfig& rhs )
@@ -85,6 +91,7 @@ FOCMotorConfig() = default;
       set_d_axis_inductance(rhs.get_d_axis_inductance());
       set_pole_pairs(rhs.get_pole_pairs());
       set_sensor_zero_offset_rad(rhs.get_sensor_zero_offset_rad());
+      set_sensor_speed_f_lp(rhs.get_sensor_speed_f_lp());
       set_kv_rating(rhs.get_kv_rating());
       set_torque_constant(rhs.get_torque_constant());
       set_flux_linkage(rhs.get_flux_linkage());
@@ -94,6 +101,12 @@ FOCMotorConfig() = default;
       set_vel_kp(rhs.get_vel_kp());
       set_vel_ki(rhs.get_vel_ki());
       set_watchdog_timeout_sec(rhs.get_watchdog_timeout_sec());
+      set_traj_output_speed_limit_rpm(rhs.get_traj_output_speed_limit_rpm());
+      set_traj_output_accel_limit_rpm(rhs.get_traj_output_accel_limit_rpm());
+      set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
+      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
+      set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
+      set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -110,7 +123,6 @@ FOCMotorConfig() = default;
       set_startup_extend_param_calibration(rhs.get_startup_extend_param_calibration());
       set_startup_sensored_closed_loop(rhs.get_startup_sensored_closed_loop());
       set_startup_sensorless_closed_loop(rhs.get_startup_sensorless_closed_loop());
-      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
     }
 
     FOCMotorConfig(const FOCMotorConfig&& rhs ) noexcept
@@ -127,6 +139,7 @@ FOCMotorConfig() = default;
       set_d_axis_inductance(rhs.get_d_axis_inductance());
       set_pole_pairs(rhs.get_pole_pairs());
       set_sensor_zero_offset_rad(rhs.get_sensor_zero_offset_rad());
+      set_sensor_speed_f_lp(rhs.get_sensor_speed_f_lp());
       set_kv_rating(rhs.get_kv_rating());
       set_torque_constant(rhs.get_torque_constant());
       set_flux_linkage(rhs.get_flux_linkage());
@@ -136,6 +149,12 @@ FOCMotorConfig() = default;
       set_vel_kp(rhs.get_vel_kp());
       set_vel_ki(rhs.get_vel_ki());
       set_watchdog_timeout_sec(rhs.get_watchdog_timeout_sec());
+      set_traj_output_speed_limit_rpm(rhs.get_traj_output_speed_limit_rpm());
+      set_traj_output_accel_limit_rpm(rhs.get_traj_output_accel_limit_rpm());
+      set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
+      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
+      set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
+      set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -152,7 +171,6 @@ FOCMotorConfig() = default;
       set_startup_extend_param_calibration(rhs.get_startup_extend_param_calibration());
       set_startup_sensored_closed_loop(rhs.get_startup_sensored_closed_loop());
       set_startup_sensorless_closed_loop(rhs.get_startup_sensorless_closed_loop());
-      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
     }
 
     ~FOCMotorConfig() override = default;
@@ -190,6 +208,7 @@ FOCMotorConfig() = default;
       VEL_KP = 32,
       VEL_KI = 33,
       WATCHDOG_TIMEOUT_SEC = 34,
+      SENSOR_SPEED_F_LP = 35,
       STARTUP_SEQUENCE_ENABLED = 37,
       STARTUP_BASIC_PARAM_CALIBRATION = 38,
       STARTUP_ENCODER_INDEX_SEARCH = 39,
@@ -197,7 +216,12 @@ FOCMotorConfig() = default;
       STARTUP_EXTEND_PARAM_CALIBRATION = 41,
       STARTUP_SENSORED_CLOSED_LOOP = 42,
       STARTUP_SENSORLESS_CLOSED_LOOP = 43,
-      CAN_HEARTBEAT_INTERVAL_MS = 54
+      CAN_HEARTBEAT_INTERVAL_MS = 54,
+      CAN_FEEDBACK_INTERVAL_MS = 55,
+      ENABLE_HARMONIC_SUPPRESSION = 60,
+      TRAJ_OUTPUT_SPEED_LIMIT_RPM = 70,
+      TRAJ_OUTPUT_ACCEL_LIMIT_RPM = 71,
+      TRAJ_OUTPUT_DECEL_LIMIT_RPM = 72
     };
 
     FOCMotorConfig& operator=(const FOCMotorConfig& rhs)
@@ -214,6 +238,7 @@ FOCMotorConfig() = default;
       set_d_axis_inductance(rhs.get_d_axis_inductance());
       set_pole_pairs(rhs.get_pole_pairs());
       set_sensor_zero_offset_rad(rhs.get_sensor_zero_offset_rad());
+      set_sensor_speed_f_lp(rhs.get_sensor_speed_f_lp());
       set_kv_rating(rhs.get_kv_rating());
       set_torque_constant(rhs.get_torque_constant());
       set_flux_linkage(rhs.get_flux_linkage());
@@ -223,6 +248,12 @@ FOCMotorConfig() = default;
       set_vel_kp(rhs.get_vel_kp());
       set_vel_ki(rhs.get_vel_ki());
       set_watchdog_timeout_sec(rhs.get_watchdog_timeout_sec());
+      set_traj_output_speed_limit_rpm(rhs.get_traj_output_speed_limit_rpm());
+      set_traj_output_accel_limit_rpm(rhs.get_traj_output_accel_limit_rpm());
+      set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
+      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
+      set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
+      set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -239,7 +270,6 @@ FOCMotorConfig() = default;
       set_startup_extend_param_calibration(rhs.get_startup_extend_param_calibration());
       set_startup_sensored_closed_loop(rhs.get_startup_sensored_closed_loop());
       set_startup_sensorless_closed_loop(rhs.get_startup_sensorless_closed_loop());
-      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       return *this;
     }
 
@@ -257,6 +287,7 @@ FOCMotorConfig() = default;
       set_d_axis_inductance(rhs.get_d_axis_inductance());
       set_pole_pairs(rhs.get_pole_pairs());
       set_sensor_zero_offset_rad(rhs.get_sensor_zero_offset_rad());
+      set_sensor_speed_f_lp(rhs.get_sensor_speed_f_lp());
       set_kv_rating(rhs.get_kv_rating());
       set_torque_constant(rhs.get_torque_constant());
       set_flux_linkage(rhs.get_flux_linkage());
@@ -266,6 +297,12 @@ FOCMotorConfig() = default;
       set_vel_kp(rhs.get_vel_kp());
       set_vel_ki(rhs.get_vel_ki());
       set_watchdog_timeout_sec(rhs.get_watchdog_timeout_sec());
+      set_traj_output_speed_limit_rpm(rhs.get_traj_output_speed_limit_rpm());
+      set_traj_output_accel_limit_rpm(rhs.get_traj_output_accel_limit_rpm());
+      set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
+      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
+      set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
+      set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -282,7 +319,6 @@ FOCMotorConfig() = default;
       set_startup_extend_param_calibration(rhs.get_startup_extend_param_calibration());
       set_startup_sensored_closed_loop(rhs.get_startup_sensored_closed_loop());
       set_startup_sensorless_closed_loop(rhs.get_startup_sensorless_closed_loop());
-      set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       return *this;
     }
 
@@ -382,6 +418,14 @@ FOCMotorConfig() = default;
     inline const float& get_sensor_zero_offset_rad() const { return sensor_zero_offset_rad_.get(); }
     inline float sensor_zero_offset_rad() const { return sensor_zero_offset_rad_.get(); }
 
+    static constexpr char const* SENSOR_SPEED_F_LP_NAME = "sensor_speed_f_lp";
+    inline void clear_sensor_speed_f_lp() { sensor_speed_f_lp_.clear(); }
+    inline void set_sensor_speed_f_lp(const float& value) { sensor_speed_f_lp_ = value; }
+    inline void set_sensor_speed_f_lp(const float&& value) { sensor_speed_f_lp_ = value; }
+    inline float& mutable_sensor_speed_f_lp() { return sensor_speed_f_lp_.get(); }
+    inline const float& get_sensor_speed_f_lp() const { return sensor_speed_f_lp_.get(); }
+    inline float sensor_speed_f_lp() const { return sensor_speed_f_lp_.get(); }
+
     static constexpr char const* KV_RATING_NAME = "kv_rating";
     inline void clear_kv_rating() { kv_rating_.clear(); }
     inline void set_kv_rating(const float& value) { kv_rating_ = value; }
@@ -453,6 +497,54 @@ FOCMotorConfig() = default;
     inline float& mutable_watchdog_timeout_sec() { return watchdog_timeout_sec_.get(); }
     inline const float& get_watchdog_timeout_sec() const { return watchdog_timeout_sec_.get(); }
     inline float watchdog_timeout_sec() const { return watchdog_timeout_sec_.get(); }
+
+    static constexpr char const* TRAJ_OUTPUT_SPEED_LIMIT_RPM_NAME = "traj_output_speed_limit_rpm";
+    inline void clear_traj_output_speed_limit_rpm() { traj_output_speed_limit_rpm_.clear(); }
+    inline void set_traj_output_speed_limit_rpm(const float& value) { traj_output_speed_limit_rpm_ = value; }
+    inline void set_traj_output_speed_limit_rpm(const float&& value) { traj_output_speed_limit_rpm_ = value; }
+    inline float& mutable_traj_output_speed_limit_rpm() { return traj_output_speed_limit_rpm_.get(); }
+    inline const float& get_traj_output_speed_limit_rpm() const { return traj_output_speed_limit_rpm_.get(); }
+    inline float traj_output_speed_limit_rpm() const { return traj_output_speed_limit_rpm_.get(); }
+
+    static constexpr char const* TRAJ_OUTPUT_ACCEL_LIMIT_RPM_NAME = "traj_output_accel_limit_rpm";
+    inline void clear_traj_output_accel_limit_rpm() { traj_output_accel_limit_rpm_.clear(); }
+    inline void set_traj_output_accel_limit_rpm(const float& value) { traj_output_accel_limit_rpm_ = value; }
+    inline void set_traj_output_accel_limit_rpm(const float&& value) { traj_output_accel_limit_rpm_ = value; }
+    inline float& mutable_traj_output_accel_limit_rpm() { return traj_output_accel_limit_rpm_.get(); }
+    inline const float& get_traj_output_accel_limit_rpm() const { return traj_output_accel_limit_rpm_.get(); }
+    inline float traj_output_accel_limit_rpm() const { return traj_output_accel_limit_rpm_.get(); }
+
+    static constexpr char const* TRAJ_OUTPUT_DECEL_LIMIT_RPM_NAME = "traj_output_decel_limit_rpm";
+    inline void clear_traj_output_decel_limit_rpm() { traj_output_decel_limit_rpm_.clear(); }
+    inline void set_traj_output_decel_limit_rpm(const float& value) { traj_output_decel_limit_rpm_ = value; }
+    inline void set_traj_output_decel_limit_rpm(const float&& value) { traj_output_decel_limit_rpm_ = value; }
+    inline float& mutable_traj_output_decel_limit_rpm() { return traj_output_decel_limit_rpm_.get(); }
+    inline const float& get_traj_output_decel_limit_rpm() const { return traj_output_decel_limit_rpm_.get(); }
+    inline float traj_output_decel_limit_rpm() const { return traj_output_decel_limit_rpm_.get(); }
+
+    static constexpr char const* CAN_HEARTBEAT_INTERVAL_MS_NAME = "can_heartbeat_interval_ms";
+    inline void clear_can_heartbeat_interval_ms() { can_heartbeat_interval_ms_.clear(); }
+    inline void set_can_heartbeat_interval_ms(const uint32_t& value) { can_heartbeat_interval_ms_ = value; }
+    inline void set_can_heartbeat_interval_ms(const uint32_t&& value) { can_heartbeat_interval_ms_ = value; }
+    inline uint32_t& mutable_can_heartbeat_interval_ms() { return can_heartbeat_interval_ms_.get(); }
+    inline const uint32_t& get_can_heartbeat_interval_ms() const { return can_heartbeat_interval_ms_.get(); }
+    inline uint32_t can_heartbeat_interval_ms() const { return can_heartbeat_interval_ms_.get(); }
+
+    static constexpr char const* CAN_FEEDBACK_INTERVAL_MS_NAME = "can_feedback_interval_ms";
+    inline void clear_can_feedback_interval_ms() { can_feedback_interval_ms_.clear(); }
+    inline void set_can_feedback_interval_ms(const uint32_t& value) { can_feedback_interval_ms_ = value; }
+    inline void set_can_feedback_interval_ms(const uint32_t&& value) { can_feedback_interval_ms_ = value; }
+    inline uint32_t& mutable_can_feedback_interval_ms() { return can_feedback_interval_ms_.get(); }
+    inline const uint32_t& get_can_feedback_interval_ms() const { return can_feedback_interval_ms_.get(); }
+    inline uint32_t can_feedback_interval_ms() const { return can_feedback_interval_ms_.get(); }
+
+    static constexpr char const* ENABLE_HARMONIC_SUPPRESSION_NAME = "enable_harmonic_suppression";
+    inline void clear_enable_harmonic_suppression() { enable_harmonic_suppression_.clear(); }
+    inline void set_enable_harmonic_suppression(const bool& value) { enable_harmonic_suppression_ = value; }
+    inline void set_enable_harmonic_suppression(const bool&& value) { enable_harmonic_suppression_ = value; }
+    inline bool& mutable_enable_harmonic_suppression() { return enable_harmonic_suppression_.get(); }
+    inline const bool& get_enable_harmonic_suppression() const { return enable_harmonic_suppression_.get(); }
+    inline bool enable_harmonic_suppression() const { return enable_harmonic_suppression_.get(); }
 
     static constexpr char const* PHASE_RESISTANCE_VALID_NAME = "phase_resistance_valid";
     inline void clear_phase_resistance_valid() { phase_resistance_valid_.clear(); }
@@ -582,14 +674,6 @@ FOCMotorConfig() = default;
     inline const bool& get_startup_sensorless_closed_loop() const { return startup_sensorless_closed_loop_.get(); }
     inline bool startup_sensorless_closed_loop() const { return startup_sensorless_closed_loop_.get(); }
 
-    static constexpr char const* CAN_HEARTBEAT_INTERVAL_MS_NAME = "can_heartbeat_interval_ms";
-    inline void clear_can_heartbeat_interval_ms() { can_heartbeat_interval_ms_.clear(); }
-    inline void set_can_heartbeat_interval_ms(const uint32_t& value) { can_heartbeat_interval_ms_ = value; }
-    inline void set_can_heartbeat_interval_ms(const uint32_t&& value) { can_heartbeat_interval_ms_ = value; }
-    inline uint32_t& mutable_can_heartbeat_interval_ms() { return can_heartbeat_interval_ms_.get(); }
-    inline const uint32_t& get_can_heartbeat_interval_ms() const { return can_heartbeat_interval_ms_.get(); }
-    inline uint32_t can_heartbeat_interval_ms() const { return can_heartbeat_interval_ms_.get(); }
-
 
     ::EmbeddedProto::Error serialize(::EmbeddedProto::WriteBufferInterface& buffer) const override
     {
@@ -655,6 +739,11 @@ FOCMotorConfig() = default;
         return_value = sensor_zero_offset_rad_.serialize_with_id(static_cast<uint32_t>(FieldNumber::SENSOR_ZERO_OFFSET_RAD), buffer, false);
       }
 
+      if((0.0 != sensor_speed_f_lp_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = sensor_speed_f_lp_.serialize_with_id(static_cast<uint32_t>(FieldNumber::SENSOR_SPEED_F_LP), buffer, false);
+      }
+
       if((0.0 != kv_rating_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = kv_rating_.serialize_with_id(static_cast<uint32_t>(FieldNumber::KV_RATING), buffer, false);
@@ -698,6 +787,36 @@ FOCMotorConfig() = default;
       if((0.0 != watchdog_timeout_sec_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = watchdog_timeout_sec_.serialize_with_id(static_cast<uint32_t>(FieldNumber::WATCHDOG_TIMEOUT_SEC), buffer, false);
+      }
+
+      if((0.0 != traj_output_speed_limit_rpm_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = traj_output_speed_limit_rpm_.serialize_with_id(static_cast<uint32_t>(FieldNumber::TRAJ_OUTPUT_SPEED_LIMIT_RPM), buffer, false);
+      }
+
+      if((0.0 != traj_output_accel_limit_rpm_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = traj_output_accel_limit_rpm_.serialize_with_id(static_cast<uint32_t>(FieldNumber::TRAJ_OUTPUT_ACCEL_LIMIT_RPM), buffer, false);
+      }
+
+      if((0.0 != traj_output_decel_limit_rpm_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = traj_output_decel_limit_rpm_.serialize_with_id(static_cast<uint32_t>(FieldNumber::TRAJ_OUTPUT_DECEL_LIMIT_RPM), buffer, false);
+      }
+
+      if((0U != can_heartbeat_interval_ms_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = can_heartbeat_interval_ms_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CAN_HEARTBEAT_INTERVAL_MS), buffer, false);
+      }
+
+      if((0U != can_feedback_interval_ms_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = can_feedback_interval_ms_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CAN_FEEDBACK_INTERVAL_MS), buffer, false);
+      }
+
+      if((false != enable_harmonic_suppression_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = enable_harmonic_suppression_.serialize_with_id(static_cast<uint32_t>(FieldNumber::ENABLE_HARMONIC_SUPPRESSION), buffer, false);
       }
 
       if((false != phase_resistance_valid_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
@@ -780,11 +899,6 @@ FOCMotorConfig() = default;
         return_value = startup_sensorless_closed_loop_.serialize_with_id(static_cast<uint32_t>(FieldNumber::STARTUP_SENSORLESS_CLOSED_LOOP), buffer, false);
       }
 
-      if((0U != can_heartbeat_interval_ms_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
-      {
-        return_value = can_heartbeat_interval_ms_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CAN_HEARTBEAT_INTERVAL_MS), buffer, false);
-      }
-
       return return_value;
     };
 
@@ -849,6 +963,10 @@ FOCMotorConfig() = default;
             return_value = sensor_zero_offset_rad_.deserialize_check_type(buffer, wire_type);
             break;
 
+          case FieldNumber::SENSOR_SPEED_F_LP:
+            return_value = sensor_speed_f_lp_.deserialize_check_type(buffer, wire_type);
+            break;
+
           case FieldNumber::KV_RATING:
             return_value = kv_rating_.deserialize_check_type(buffer, wire_type);
             break;
@@ -883,6 +1001,30 @@ FOCMotorConfig() = default;
 
           case FieldNumber::WATCHDOG_TIMEOUT_SEC:
             return_value = watchdog_timeout_sec_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::TRAJ_OUTPUT_SPEED_LIMIT_RPM:
+            return_value = traj_output_speed_limit_rpm_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::TRAJ_OUTPUT_ACCEL_LIMIT_RPM:
+            return_value = traj_output_accel_limit_rpm_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::TRAJ_OUTPUT_DECEL_LIMIT_RPM:
+            return_value = traj_output_decel_limit_rpm_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::CAN_HEARTBEAT_INTERVAL_MS:
+            return_value = can_heartbeat_interval_ms_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::CAN_FEEDBACK_INTERVAL_MS:
+            return_value = can_feedback_interval_ms_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::ENABLE_HARMONIC_SUPPRESSION:
+            return_value = enable_harmonic_suppression_.deserialize_check_type(buffer, wire_type);
             break;
 
           case FieldNumber::PHASE_RESISTANCE_VALID:
@@ -949,10 +1091,6 @@ FOCMotorConfig() = default;
             return_value = startup_sensorless_closed_loop_.deserialize_check_type(buffer, wire_type);
             break;
 
-          case FieldNumber::CAN_HEARTBEAT_INTERVAL_MS:
-            return_value = can_heartbeat_interval_ms_.deserialize_check_type(buffer, wire_type);
-            break;
-
           case FieldNumber::NOT_SET:
             return_value = ::EmbeddedProto::Error::INVALID_FIELD_ID;
             break;
@@ -994,6 +1132,7 @@ FOCMotorConfig() = default;
       clear_d_axis_inductance();
       clear_pole_pairs();
       clear_sensor_zero_offset_rad();
+      clear_sensor_speed_f_lp();
       clear_kv_rating();
       clear_torque_constant();
       clear_flux_linkage();
@@ -1003,6 +1142,12 @@ FOCMotorConfig() = default;
       clear_vel_kp();
       clear_vel_ki();
       clear_watchdog_timeout_sec();
+      clear_traj_output_speed_limit_rpm();
+      clear_traj_output_accel_limit_rpm();
+      clear_traj_output_decel_limit_rpm();
+      clear_can_heartbeat_interval_ms();
+      clear_can_feedback_interval_ms();
+      clear_enable_harmonic_suppression();
       clear_phase_resistance_valid();
       clear_phase_inductance_valid();
       clear_sensor_direction_clockwise();
@@ -1019,7 +1164,6 @@ FOCMotorConfig() = default;
       clear_startup_extend_param_calibration();
       clear_startup_sensored_closed_loop();
       clear_startup_sensorless_closed_loop();
-      clear_can_heartbeat_interval_ms();
 
     }
 
@@ -1064,6 +1208,9 @@ FOCMotorConfig() = default;
         case FieldNumber::SENSOR_ZERO_OFFSET_RAD:
           name = SENSOR_ZERO_OFFSET_RAD_NAME;
           break;
+        case FieldNumber::SENSOR_SPEED_F_LP:
+          name = SENSOR_SPEED_F_LP_NAME;
+          break;
         case FieldNumber::KV_RATING:
           name = KV_RATING_NAME;
           break;
@@ -1090,6 +1237,24 @@ FOCMotorConfig() = default;
           break;
         case FieldNumber::WATCHDOG_TIMEOUT_SEC:
           name = WATCHDOG_TIMEOUT_SEC_NAME;
+          break;
+        case FieldNumber::TRAJ_OUTPUT_SPEED_LIMIT_RPM:
+          name = TRAJ_OUTPUT_SPEED_LIMIT_RPM_NAME;
+          break;
+        case FieldNumber::TRAJ_OUTPUT_ACCEL_LIMIT_RPM:
+          name = TRAJ_OUTPUT_ACCEL_LIMIT_RPM_NAME;
+          break;
+        case FieldNumber::TRAJ_OUTPUT_DECEL_LIMIT_RPM:
+          name = TRAJ_OUTPUT_DECEL_LIMIT_RPM_NAME;
+          break;
+        case FieldNumber::CAN_HEARTBEAT_INTERVAL_MS:
+          name = CAN_HEARTBEAT_INTERVAL_MS_NAME;
+          break;
+        case FieldNumber::CAN_FEEDBACK_INTERVAL_MS:
+          name = CAN_FEEDBACK_INTERVAL_MS_NAME;
+          break;
+        case FieldNumber::ENABLE_HARMONIC_SUPPRESSION:
+          name = ENABLE_HARMONIC_SUPPRESSION_NAME;
           break;
         case FieldNumber::PHASE_RESISTANCE_VALID:
           name = PHASE_RESISTANCE_VALID_NAME;
@@ -1138,9 +1303,6 @@ FOCMotorConfig() = default;
           break;
         case FieldNumber::STARTUP_SENSORLESS_CLOSED_LOOP:
           name = STARTUP_SENSORLESS_CLOSED_LOOP_NAME;
-          break;
-        case FieldNumber::CAN_HEARTBEAT_INTERVAL_MS:
-          name = CAN_HEARTBEAT_INTERVAL_MS_NAME;
           break;
         default:
           name = "Invalid FieldNumber";
@@ -1214,6 +1376,7 @@ FOCMotorConfig() = default;
       left_chars = d_axis_inductance_.to_string(left_chars, indent_level + 2, D_AXIS_INDUCTANCE_NAME, false);
       left_chars = pole_pairs_.to_string(left_chars, indent_level + 2, POLE_PAIRS_NAME, false);
       left_chars = sensor_zero_offset_rad_.to_string(left_chars, indent_level + 2, SENSOR_ZERO_OFFSET_RAD_NAME, false);
+      left_chars = sensor_speed_f_lp_.to_string(left_chars, indent_level + 2, SENSOR_SPEED_F_LP_NAME, false);
       left_chars = kv_rating_.to_string(left_chars, indent_level + 2, KV_RATING_NAME, false);
       left_chars = torque_constant_.to_string(left_chars, indent_level + 2, TORQUE_CONSTANT_NAME, false);
       left_chars = flux_linkage_.to_string(left_chars, indent_level + 2, FLUX_LINKAGE_NAME, false);
@@ -1223,6 +1386,12 @@ FOCMotorConfig() = default;
       left_chars = vel_kp_.to_string(left_chars, indent_level + 2, VEL_KP_NAME, false);
       left_chars = vel_ki_.to_string(left_chars, indent_level + 2, VEL_KI_NAME, false);
       left_chars = watchdog_timeout_sec_.to_string(left_chars, indent_level + 2, WATCHDOG_TIMEOUT_SEC_NAME, false);
+      left_chars = traj_output_speed_limit_rpm_.to_string(left_chars, indent_level + 2, TRAJ_OUTPUT_SPEED_LIMIT_RPM_NAME, false);
+      left_chars = traj_output_accel_limit_rpm_.to_string(left_chars, indent_level + 2, TRAJ_OUTPUT_ACCEL_LIMIT_RPM_NAME, false);
+      left_chars = traj_output_decel_limit_rpm_.to_string(left_chars, indent_level + 2, TRAJ_OUTPUT_DECEL_LIMIT_RPM_NAME, false);
+      left_chars = can_heartbeat_interval_ms_.to_string(left_chars, indent_level + 2, CAN_HEARTBEAT_INTERVAL_MS_NAME, false);
+      left_chars = can_feedback_interval_ms_.to_string(left_chars, indent_level + 2, CAN_FEEDBACK_INTERVAL_MS_NAME, false);
+      left_chars = enable_harmonic_suppression_.to_string(left_chars, indent_level + 2, ENABLE_HARMONIC_SUPPRESSION_NAME, false);
       left_chars = phase_resistance_valid_.to_string(left_chars, indent_level + 2, PHASE_RESISTANCE_VALID_NAME, false);
       left_chars = phase_inductance_valid_.to_string(left_chars, indent_level + 2, PHASE_INDUCTANCE_VALID_NAME, false);
       left_chars = sensor_direction_clockwise_.to_string(left_chars, indent_level + 2, SENSOR_DIRECTION_CLOCKWISE_NAME, false);
@@ -1239,7 +1408,6 @@ FOCMotorConfig() = default;
       left_chars = startup_extend_param_calibration_.to_string(left_chars, indent_level + 2, STARTUP_EXTEND_PARAM_CALIBRATION_NAME, false);
       left_chars = startup_sensored_closed_loop_.to_string(left_chars, indent_level + 2, STARTUP_SENSORED_CLOSED_LOOP_NAME, false);
       left_chars = startup_sensorless_closed_loop_.to_string(left_chars, indent_level + 2, STARTUP_SENSORLESS_CLOSED_LOOP_NAME, false);
-      left_chars = can_heartbeat_interval_ms_.to_string(left_chars, indent_level + 2, CAN_HEARTBEAT_INTERVAL_MS_NAME, false);
   
       if( 0 == indent_level) 
       {
@@ -1276,6 +1444,7 @@ FOCMotorConfig() = default;
       EmbeddedProto::floatfixed d_axis_inductance_ = 0.0;
       EmbeddedProto::uint32 pole_pairs_ = 0U;
       EmbeddedProto::floatfixed sensor_zero_offset_rad_ = 0.0;
+      EmbeddedProto::floatfixed sensor_speed_f_lp_ = 0.0;
       EmbeddedProto::floatfixed kv_rating_ = 0.0;
       EmbeddedProto::floatfixed torque_constant_ = 0.0;
       EmbeddedProto::floatfixed flux_linkage_ = 0.0;
@@ -1285,6 +1454,12 @@ FOCMotorConfig() = default;
       EmbeddedProto::floatfixed vel_kp_ = 0.0;
       EmbeddedProto::floatfixed vel_ki_ = 0.0;
       EmbeddedProto::floatfixed watchdog_timeout_sec_ = 0.0;
+      EmbeddedProto::floatfixed traj_output_speed_limit_rpm_ = 0.0;
+      EmbeddedProto::floatfixed traj_output_accel_limit_rpm_ = 0.0;
+      EmbeddedProto::floatfixed traj_output_decel_limit_rpm_ = 0.0;
+      EmbeddedProto::uint32 can_heartbeat_interval_ms_ = 0U;
+      EmbeddedProto::uint32 can_feedback_interval_ms_ = 0U;
+      EmbeddedProto::boolean enable_harmonic_suppression_ = false;
       EmbeddedProto::boolean phase_resistance_valid_ = false;
       EmbeddedProto::boolean phase_inductance_valid_ = false;
       EmbeddedProto::boolean sensor_direction_clockwise_ = false;
@@ -1301,7 +1476,6 @@ FOCMotorConfig() = default;
       EmbeddedProto::boolean startup_extend_param_calibration_ = false;
       EmbeddedProto::boolean startup_sensored_closed_loop_ = false;
       EmbeddedProto::boolean startup_sensorless_closed_loop_ = false;
-      EmbeddedProto::uint32 can_heartbeat_interval_ms_ = 0U;
 
 };
 

@@ -1,0 +1,6 @@
+#pragma once
+#include "AppendEntries_request.h"
+#include "AppendEntries_response.h"
+
+#define UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_SERVER_APPENDENTRIES_ID 30
+#define UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_SERVER_APPENDENTRIES_SIGNATURE (0x8032C7097B48A3CCULL)

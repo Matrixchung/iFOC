@@ -34,6 +34,10 @@
 #define PI2 6.283185307179586476925286766559f
 #endif
 
+#ifndef divPI2
+#define divPI2 0.15915494309189533576888376337251f
+#endif
+
 #ifndef _3PI_div2
 #define _3PI_div2 4.71238898038f
 #endif

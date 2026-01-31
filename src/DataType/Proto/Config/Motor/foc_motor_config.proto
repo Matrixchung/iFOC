@@ -24,6 +24,7 @@ message FOCMotorConfig {
     uint32 pole_pairs = 19;
 
     float sensor_zero_offset_rad = 21; // [rad]
+    float sensor_speed_f_lp = 35;      // [Hz]
 
     float kv_rating = 23;        // [RPM/V]
 
@@ -40,6 +41,17 @@ message FOCMotorConfig {
     float vel_ki = 33;                       // [(A/s) / (rad/s)]
 
     float watchdog_timeout_sec = 34;             // [seconds], set 0 to disable watchdog
+
+    /// TRAPEZOIDAL TRAJECTORY CONTROLLER PARAMETERS
+    float traj_output_speed_limit_rpm = 70;
+    float traj_output_accel_limit_rpm = 71;
+    float traj_output_decel_limit_rpm = 72;
+
+    // COMMUNICATION CONFIGURATION
+    uint32 can_heartbeat_interval_ms = 54;
+    uint32 can_feedback_interval_ms = 55;
+
+    bool enable_harmonic_suppression = 60;  // Default set to false. Will worsen performance @ low speed.
 
     /// MOTOR PARAMETERS VALIDATION, PLACED HERE TO AVOID PADDING
     bool phase_resistance_valid = 12;
@@ -62,7 +74,4 @@ message FOCMotorConfig {
     bool startup_extend_param_calibration = 41;
     bool startup_sensored_closed_loop = 42;
     bool startup_sensorless_closed_loop = 43;
-
-    // COMMUNICATION CONFIGURATION
-    uint32 can_heartbeat_interval_ms = 54;
 }
