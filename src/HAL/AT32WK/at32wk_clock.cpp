@@ -73,7 +73,11 @@ namespace iFOC::HAL
 #endif
     }
 
-    void SystemReboot() { NVIC_SystemReset(); }
+    void SystemReboot()
+    {
+        __set_FAULTMASK(1);
+        NVIC_SystemReset();
+    }
 }
 
 #endif
