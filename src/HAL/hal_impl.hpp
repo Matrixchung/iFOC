@@ -39,6 +39,28 @@ uint32_t GetSerialNumber();
 /// \return current uptime, in [sec]
 uint32_t GetUptimeSeconds();
 
+/// Get current firmware size (without Bootloader), in [bytes] \n
+/// This function helps to calculate firmware's CRC64, which is useful in IAP. \n
+/// The return value should exactly match the size of compiled binary file. \n
+/// If you cannot get accurate compiled size, simply implement it with return 0; \n
+/// In GCC, you could get the size by editing linker script \n
+/// For example, add __firmware_start = ORIGIN(FLASH); \n
+/// and another flag __firmware_end = LOADADDR(.data) + SIZEOF(.data); \n
+///                  PROVIDE(__firmware_end = __firmware_end); \n
+/// the two rows are in the end of FLASH section (likely after .data section, we need to cover all LMA),
+/// under SECTION {} bracket. \n
+/// Note that the update of compiled .map (and flag) is expected to happen only when Clean & Rebuild. \n
+/// \return current firmware size, in [bytes]
+uint32_t GetFirmwareSizeBytes();
+
+/// Get current firmware CRC64 (without Bootloader) \n
+/// This function is mandatory in IAP, combined with GetFirmwareSizeBytes(). \n
+/// Using CRC64 ECMA-182 Standard, check get_crc64() in foc_math.hpp. \n
+/// This function MUST NOT CALCULATE CRC64 AT RUNTIME due to heavy load! \n
+/// The best way is calculating the CRC64 during startup, and store it with static variable. \n
+/// \return current firmware's CRC64, start from FLASH_BASE to FLASH_BASE + GetFirmwareSizeBytes(). \n
+uint64_t GetFirmwareCRC64();
+
 /// This function does what it said.
 void SystemReboot();
 

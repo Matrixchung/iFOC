@@ -143,6 +143,33 @@ static uint8_t get_crc8(const uint8_t* data, const size_t len)
     return crc;
 }
 
+/// Get CRC64 result of data[len] \n
+/// ECMA-182 Standard: \n
+/// Polynomial: 0x42F0E1EBA9EA3693 (need reverse) \n
+/// Initial Value: 0xFFFFFFFFFFFFFFFF \n
+/// XOR Value: 0xFFFFFFFFFFFFFFFF (0x00) \n
+/// Output Flip: No \n
+/// Cross-check: OpenHashTab & https://toolkitbay.com/tkb/tool/CRC-64
+/// \param data data array that need to be calculated
+/// \param len length of the *data array
+/// \return CRC64 value
+static uint64_t get_crc64(const uint8_t* data, size_t len)
+{
+    static constexpr uint64_t CRC64_ECMA_POLY = 0xC96C5795D7870F42ULL;
+    static constexpr uint64_t CRC64_ECMA_INIT = 0xFFFFFFFFFFFFFFFFULL;
+    uint64_t crc = CRC64_ECMA_INIT;
+    while(len--)
+    {
+        crc ^= (uint64_t)(*data++);
+        for(uint8_t i = 0; i < 8; i++)
+        {
+            if(crc & 1) crc = (crc >> 1) ^ CRC64_ECMA_POLY;
+            else crc >>= 1;
+        }
+    }
+    return ~crc;
+}
+
 static uint16_t get_crc16_accumulate(uint16_t origin_crc, const uint8_t* data, const size_t len)
 {
     using namespace _const_tables;

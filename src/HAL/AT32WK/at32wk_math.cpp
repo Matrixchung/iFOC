@@ -1,5 +1,6 @@
 #include "hal_const.h"
 #include "hal_impl.hpp"
+#include "foc_math.hpp"
 
 #if defined(AT32WK_ENV)
 
@@ -52,6 +53,25 @@ uint32_t GetSerialNumber()
     return sn;
 }
 
+extern "C"
+{
+    extern const volatile uint32_t __firmware_start;
+    extern const volatile uint32_t __firmware_end;
+}
+
+uint32_t GetFirmwareSizeBytes()
+{
+    const uint32_t start_addr = (uint32_t)&__firmware_start;
+    const uint32_t end_addr = (uint32_t)&__firmware_end;
+    const static uint32_t firmware_size = end_addr - start_addr;
+    return firmware_size;
+}
+
+uint64_t GetFirmwareCRC64()
+{
+    static uint64_t crc_result = get_crc64((const uint8_t*)&__firmware_start, GetFirmwareSizeBytes());
+    return crc_result;
+}
 }
 
 #if defined(ARM_MATH_PRESENT)
