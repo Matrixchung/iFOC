@@ -12,25 +12,16 @@
 
 namespace iFOC::HAL
 {
-static void DelayUs(volatile uint32_t us)
-{
-    DelayCycle(us * (GetCoreClockHz() / 1000000));
-}
-static void DelayMs(uint32_t ms)
-{
-    while(ms--) DelayUs(1000);
-}
-static void osDelayMs(uint32_t ms)
-{
-    vTaskDelay(ms / portTICK_PERIOD_MS);
-}
+void DelayUs(volatile uint32_t us);
+void DelayMs(uint32_t ms);
+void osDelayMs(uint32_t ms);
 }
 
 namespace iFOC
 {
 /// Clarke equal-amplitude transformation
 /// \param abc Three-shunt currents
-/// \return
+/// \return Transformed value in Alpha-Beta axis
 static alphabeta_t FOC_Clark(const std::array<real_t, 3>& abc)
 {
     return {
@@ -122,6 +113,33 @@ static real_t fast_atanf(const real_t x)
         atan_val = -atanTab[idx] - 0.785398f;
     }
     return atan_val;
+}
+
+// 31(dec) -> 0x31(hex), only <= 2 digits supported
+static uint8_t dec_to_hex_byte(const uint8_t dec)
+{
+    if(dec > 99) return 0;
+    const uint8_t tens = dec / 10;
+    const uint8_t units = dec % 10;
+    return (tens << 4) | units;
+}
+
+static uint8_t get_sw_ver_major()
+{
+    return YEAR();
+}
+
+static uint8_t get_sw_ver_minor()
+{
+    return MONTH();
+}
+
+static uint32_t get_sw_ver_vcs()
+{
+    return ((uint32_t)dec_to_hex_byte(MONTH())  << 24 |
+            (uint32_t)dec_to_hex_byte(DAY())    << 16 |
+            (uint32_t)dec_to_hex_byte(HOUR())   << 8 |
+            (uint32_t)dec_to_hex_byte(MINUTE()) << 0);
 }
 
 /// Get CRC8 result of data[len] \n
