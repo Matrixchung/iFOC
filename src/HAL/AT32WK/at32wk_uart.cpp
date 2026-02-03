@@ -33,6 +33,7 @@ UART::UART(usart_type *_huart, dma_channel_type *_rx_dma, dma_channel_type *_tx_
 
 FuncRetCode UART::Init(DataType::Comm::UARTBaudrate baud)
 {
+    usart_reset(huart);
     FuncRetCode ret = tx_fifo.init(TX_FIFO_BUFFER_SIZE);
     if(ret != FuncRetCode::OK) return ret;
     ret = rx_fifo.init(RX_FIFO_BUFFER_SIZE);
