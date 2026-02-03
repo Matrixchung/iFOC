@@ -17,7 +17,7 @@ public:
 protected:
     static constexpr TickType_t WRITE_TIMEOUT_MS = 100;
     Vector<EventCallback> cb_list{};
-    SemaphoreHandle_t tx_sem = nullptr;
+    // SemaphoreHandle_t tx_sem = nullptr;
 public:
     CANBase();
     virtual ~CANBase();

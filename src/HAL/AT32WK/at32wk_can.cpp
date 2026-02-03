@@ -82,7 +82,7 @@ FuncRetCode CAN::Init(DataType::Comm::CANBaudrate baud)
 
 FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
 {
-    if(xSemaphoreTakeAuto(tx_sem, WRITE_TIMEOUT_MS) == pdTRUE)
+    // if(xSemaphoreTakeAuto(tx_sem, WRITE_TIMEOUT_MS) == pdTRUE)
     {
         can_tx_message_type tx_msg{};
         if(msg.is_ext)
@@ -104,7 +104,7 @@ FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
 
         if(selected_mailbox == CAN_TX_STATUS_NO_EMPTY)
         {
-            xSemaphoreGiveAuto(tx_sem);
+            // xSemaphoreGiveAuto(tx_sem);
             return FuncRetCode::BUFFER_FULL;
         }
 
@@ -137,7 +137,7 @@ FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
         // }
         // while(can_transmit_status_get(hcan, (can_tx_mailbox_num_type)selected_mailbox) != CAN_TX_STATUS_SUCCESSFUL) {}
 
-        xSemaphoreGiveAuto(tx_sem);
+        // xSemaphoreGiveAuto(tx_sem);
         return FuncRetCode::OK;
     }
     return FuncRetCode::REMOTE_TIMEOUT;

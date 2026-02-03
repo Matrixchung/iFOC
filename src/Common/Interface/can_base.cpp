@@ -4,13 +4,13 @@ namespace iFOC::HAL
 {
 CANBase::CANBase()
 {
-    tx_sem = xSemaphoreCreateBinary();
-    xSemaphoreGive(tx_sem);
+    // tx_sem = xSemaphoreCreateBinary();
+    // xSemaphoreGive(tx_sem);
 }
 
 CANBase::~CANBase()
 {
-    vSemaphoreDelete(tx_sem);
+    // vSemaphoreDelete(tx_sem);
 }
 
 void CANBase::ProcessIncomingMsg(const DataType::Comm::CANMessage& msg) const
