@@ -29,11 +29,11 @@ FuncRetCode Erase(uint32_t addr, size_t size) // erase sectors
         sector_count++;
     }
     // generate first sector address
-    const uint32_t first_sector_addr = first_sector * FLASH_SECTOR_SIZE_BYTES;
+    const uint32_t first_sector_addr = FLASH_BASE + first_sector * FLASH_SECTOR_SIZE_BYTES; // absolute address
     flash_unlock();
     for(uint32_t i = 0; i < sector_count; i++)
     {
-        uint32_t sector_addr = first_sector_addr + i * FLASH_SECTOR_SIZE_BYTES;
+        const uint32_t sector_addr = first_sector_addr + i * FLASH_SECTOR_SIZE_BYTES;
 #if FLASH_SECTOR_SIZE_BYTES == (1024 * 1)
         flash_sector_erase(sector_addr);
 #elif FLASH_SECTOR_SIZE_BYTES == (1024 * 2) || FLASH_SECTOR_SIZE_BYTES == (1024 * 4)
