@@ -7,6 +7,7 @@
 
 namespace iFOC::DataType::Ringbuf
 {
+// Lock-free ring queue under Single Producer, Single Consumer (SPSC) situation
 struct kfifo_t
 {
     DELETE_COPY_CONSTRUCTOR(kfifo_t);
@@ -19,8 +20,8 @@ public:
     uint32_t peek(uint8_t *p, uint32_t len);
     uint32_t get(uint8_t *p, uint32_t len);
     void wipe_n(uint32_t len);
-    __fast_inline uint32_t used() { return in - out; };
-    __fast_inline uint32_t available() { return size - (in - out); };
+    [[nodiscard]] __fast_inline uint32_t used() const { return in - out; };
+    [[nodiscard]] __fast_inline uint32_t available() const { return size - (in - out); };
     __fast_inline void flush() { in = out = 0; };
 private:
     uint32_t size = 0;
