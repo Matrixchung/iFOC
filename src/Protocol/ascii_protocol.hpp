@@ -939,9 +939,20 @@ void ASCIIProtocol<Motor>::CmdSysInfo(uint8_t* data, uint16_t len, bool use_chec
 #endif
         float mem_usage_now = 1.0f - ((float)xPortGetFreeHeapSize() / (float)(configTOTAL_HEAP_SIZE));
         float mem_usage_max = 1.0f - ((float)xPortGetMinimumEverFreeHeapSize() / (float)(configTOTAL_HEAP_SIZE));
-        GenerateResponse(use_checksum, true, "Compile Time: %d-%d-%d %d:%d", YEAR(), MONTH(), DAY(), HOUR(), MINUTE());
-        const auto firmware_size = HAL::GetFirmwareSizeBytes();
-        GenerateResponse(use_checksum, true, "FW size: %d Bytes", firmware_size);
+        // print App/BL software version
+        uint8_t major = 0, minor = 0;
+        uint32_t vcs = 0;
+        // App first
+        major = get_sw_ver_major();
+        minor = get_sw_ver_minor();
+        vcs = get_sw_ver_vcs();
+        GenerateResponse(use_checksum, true, "SW Ver: %d.%d.%08x", major, minor, vcs);
+        // Bootloader
+        if(HAL::Bootloader::HasBL())
+        {
+            HAL::Bootloader::GetBLVersion(major, minor, vcs);
+            GenerateResponse(use_checksum, true, "BL Ver: %d.%d.%08x", major, minor, vcs);
+        }
         // Uptime is represented as: X hours, Y mins, Z seconds
         auto uptime_sec = HAL::GetUptimeSeconds();
         uint32_t uptime_hour = uptime_sec / 3600;
@@ -960,17 +971,17 @@ void ASCIIProtocol<Motor>::CmdSysInfo(uint8_t* data, uint16_t len, bool use_chec
             GenerateResponse(use_checksum, true, "Task Times(us): RT:%d, MID:%d", motor->task_times.rt_main_task.elapsed_time_us,
                                                                                                motor->task_times.mid_interval_task.elapsed_time_us);
         }
-        GenerateResponse(use_checksum, true, "Memory: %d/%d Bytes (%.2f,Max:%.2f)", configTOTAL_HEAP_SIZE - xPortGetFreeHeapSize(),
+        GenerateResponse(use_checksum, true, "Mem: %d/%d Bytes (%.0f%%,Max:%.0f%%)", configTOTAL_HEAP_SIZE - xPortGetFreeHeapSize(),
                                                                                             configTOTAL_HEAP_SIZE,
-                                                                                            mem_usage_now,
-                                                                                            mem_usage_max);
+                                                                                            mem_usage_now * 100.0f,
+                                                                                            mem_usage_max * 100.0f);
 #if defined(USE_FLASHDB)
         auto used_size = BoardConfig().GetNVMUsedSize();
         auto total_size = BoardConfig().GetNVMTotalSize();
         if(total_size > 0)
-            GenerateResponse(use_checksum, true, "KVDB: %d/%d Bytes (%.2f)", used_size, total_size, ((float)used_size / (float)total_size));
+            GenerateResponse(use_checksum, true, "KVDB: %d/%d Bytes (%.0f%%)", used_size, total_size, 100.0f * ((float)used_size / (float)total_size));
 #endif
-        GenerateResponse(use_checksum, true, "Core clock: %d MHz", HAL::GetCoreClockHz() / 1000000);
+        // GenerateResponse(use_checksum, true, "Core clock: %d MHz", HAL::GetCoreClockHz() / 1000000);
         GenerateResponse(use_checksum, false, "HW S/N: %lu", HAL::GetSerialNumber());
     }
 }
