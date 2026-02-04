@@ -74,12 +74,14 @@
 
       4. [3] app_init_success: 由 App 在初始化完成后置位，可以辅助判断 App 区域是否完整。
 
-      5. [4:7] 保留
+      5. [4] enable_can_resistor: 对于有终端电阻切换功能的硬件，由 App 根据配置情况置位，Bootloader 读取后决定是否开启终端电阻。
+
+      6. [5:7] 保留
 
    2. struct version
-
+   
       1. uint8_t major: 定义对应 `uavcan.protocol.SoftwareVersion::major`
-      2. uint8_t minor: 定义对应 `uavcan.protocol.SoftwareVersion::minor`
+   2. uint8_t minor: 定义对应 `uavcan.protocol.SoftwareVersion::minor`
       3. uint32_t vcs_commit: 定义对应 `uavcan.protocol.SoftwareVersion::vcs_commit`
 
       （附录）iFOC 固件版本定义规则：major 对应固件编译年份，minor 对应固件编译月份，vcs_commit 为 32 位无符号整数，可以拆分为 4 个字节，这四个字节按 16 位字面量表示固件编译的 月份 日期 小时 分钟（MM-DD-HH-mm），例如：2 月 1 日 16 点 32 分编译的固件，其 vcs_commit 的十六进制为 0x02011632，对应十进制整数为 33625650。
@@ -88,17 +90,15 @@
 
       由 App 在初始化时复位，可控 HardFault 中断计数，当超过三次时，Bootloader 不执行跳转。
 
-   4. uint8_t app_node_id
-
-      当 `flags.update_requested` 置位时，Bootloader 读取该变量，若合法则直接 “继承” 原 App 的节点 ID，开始固件更新。否则，则需要通过 Dynamic Node-ID Allocation 从最低优先级的节点 ID 开始枚举。
-
-   5. uint8_t file_server_node_id
+   4. uint8_t file_server_node_id
 
       当 `flags.update_requested` 置位时，Bootloader 读取该变量，若文件服务器节点 ID 合法则向该节点请求分包传输，开始固件更新。否则，该固件更新请求视为不合法，需要重新初始化相关变量并在 Bootloader 等待。
 
-   6. uint8_t dronecan_image_path[7]
+   5. uint8_t dronecan_image_path[7]
 
       当 `flags.update_requested` 置位时，Bootloader 读取该路径并向文件服务器请求对应文件大小，若符合要求则将节点模式更新到 SOFTWARE_UPDATE，开始固件更新。
+
+   6. uint8_t reserved
 
    7. uint8_t crc8
 
@@ -109,7 +109,7 @@
 3. AT32 中，通过 CRM_CTRLSTS 寄存器判断复位原因（STM32 相似）
 
    - LPRSTF：低功耗复位标志
-   - WWDTRSTF / WDTRSTF：窗口看门狗 / 看门狗复位标志
+   - WWDTRSTF / WDTRSTF：窗口看门狗 / 看门狗复位标志**（若该标志置位，则 DroneCAN 节点健康度为 WARNING）**
    - SWRSTF：软件复位标志
    - PORRSTF：上电 / 低电压复位标志
    - NRSTF：NRST 管脚复位标志
@@ -120,14 +120,15 @@
       - 若校验通过，数据有效：
         - 若 `app_init_success`：
           - 看门狗复位：
-            - 若 `controllable_hardfault`，且 `controllable_hardfault_count <= 3`：不再初始化，直接跳转 App
-            - 不满足条件：在 Bootloader 中等待
+            - 若 `app_init_success && controllable_hardfault`，且 `controllable_hardfault_count > 0 && <= 3`：不再初始化，直接跳转 App
+            - 不满足条件：在 Bootloader 中等待，检查 `enable_can_resistor`
           - 软件复位：
-            - 若 `update_requested`：开始固件更新过程
+            - 若 `update_requested`：检查参数合法性（不合法的固件更新参数可以用来仅跳转到 Bootloader，而不自动开始固件更新），开始固件更新过程，检查 `enable_can_resistor`
             - 不满足条件：初始化结构体，跳转 App
         - 不满足条件：初始化结构体，在 Bootloader 中等待
-      - 若校验未通过：初始化并跳转
+      - 若校验未通过：初始化结构体，在 Bootloader 中等待
    2. 其他复位：直接初始化 `bkp_struct_t`，置位 `bootloader_presented`，跳转 App
+   3. 若无任一复位 flag 置位，说明**是从其他位置跳转到此处**，仅初始化，而不向外跳转。
 
 5. （由 Bootloader 触发的）固件更新流程：收到 `uavcan.protocol.file.BeginFirmwareUpdate`，校验完整性后填充 `fw_update_struct_t`，检测到 `file_server_node_id` 合法且 `file_full_size` 为 0 时，发送 `uavcan.protocol.file.GetInfo` 查询完整大小（此处同样适用重传机制，复用 `last_requested_tick`），校验完大小合法后填充 `file_full_size`，正式开始分包传输。
 

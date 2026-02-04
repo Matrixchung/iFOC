@@ -1,5 +1,12 @@
 # iFOC 智能驱动系统
 
+### 使用说明
+
+#### 前置准备工作
+
+- 改进版 DroneCAN GUI Tool 上位机：https://github.com/Matrixchung/dronecan_gui_tool
+- 配套的 Bootloader 工程：https://github.com/Matrixchung/iBL
+
 ### 设计文档
 
 1. [设计目标](https://github.com/Matrixchung/iFOC/blob/v2.0/docs/zh/%E8%AE%BE%E8%AE%A1%E7%9B%AE%E6%A0%87.md)
