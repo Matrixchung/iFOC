@@ -76,10 +76,10 @@ public:
 
     void Print(bool transmit, const char *fmt, ...);
 
-    __fast_inline void RegisterRxHandler(EventCallback cb) { event_handler.RegisterHandler(cb); };
+    __fast_inline void RegisterRxHandler(const EventCallback& cb) { event_handler.RegisterHandler(cb); };
 
-    __fast_inline auto GetRxLen() { return rx_fifo.used(); };
-    __fast_inline auto GetTxPending() { return tx_fifo.used(); };
-    __fast_inline auto GetTxAvailable() { return tx_fifo.available(); };
+    [[nodiscard]] __fast_inline auto GetRxLen() const { return rx_fifo.used(); };
+    [[nodiscard]] __fast_inline auto GetTxPending() const { return tx_fifo.used(); };
+    [[nodiscard]] __fast_inline auto GetTxAvailable() const { return tx_fifo.available(); };
 };
 }

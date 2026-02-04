@@ -69,7 +69,7 @@ uint32_t GetFirmwareSizeBytes()
 
 uint64_t GetFirmwareCRC64()
 {
-    static uint64_t crc_result = get_crc64((const uint8_t*)&__firmware_start, GetFirmwareSizeBytes());
+    const static uint64_t crc_result = get_crc64((const uint8_t*)&__firmware_start, GetFirmwareSizeBytes());
     return crc_result;
 }
 }

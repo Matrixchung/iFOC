@@ -1,4 +1,5 @@
 #include "hal_const.h"
+#include "hal_impl.hpp"
 
 #if defined(AT32WK_ENV)
 
