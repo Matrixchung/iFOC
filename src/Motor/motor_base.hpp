@@ -15,6 +15,7 @@
 #include "../Protocol/protocol_base.hpp"
 #include "../DataType/Headers/Base/motion.hpp"
 #include "../DataType/config_nvm_wrapper.hpp"
+#include "../Common/trajectory_controller.hpp"
 
 namespace iFOC
 {
@@ -76,7 +77,11 @@ public:
     /// \param motion target Motion struct, with reference frame and units stored in std::pair.second
     virtual void SetTargetMotion(Motion& motion) = 0;
 
-    void SetRampedTargetMotion(Motion& motion, float target_Ts);
+    virtual void SetTrajectoryTargetMotion(Motion& motion, bool is_s_curve) {};
+
+    [[nodiscard]] __fast_inline virtual MotorState GetCurrentState() const { return MotorState::IDLE; }
+
+    void SetRampedTargetMotion(const Motion& motion, float target_Ts);
 
     [[nodiscard]] Motion GetCurrentMotionStruct(Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit);
     [[nodiscard]] Motion GetCurrentMotionStruct(const Motion& ref);
@@ -105,7 +110,7 @@ public:
     Sense::TempSenseBase* GetCoreTempSense() const;
     Sense::TempSenseBase* GetMosfetTempSense() const;
     Sense::TempSenseBase* GetMotorTempSense() const;
-    HAL::IndicatorBase* GetIndicator();
+    HAL::IndicatorBase* GetIndicator() const;
     [[nodiscard]] __fast_inline uint8_t GetInternalID() const;
     void ThrowError(MotorError e);
     void ClearError();
@@ -122,7 +127,6 @@ public:
     [[nodiscard]] __fast_inline const Vector<Encoder::EncoderBase*>& GetEncoders();
     __fast_inline void SetPrimaryEncoderIndex(uint8_t idx);
     __fast_inline void RegisterProtocol(ProtocolBase* protocol);
-    [[nodiscard]] __fast_inline MotorState GetCurrentState() const;
     [[nodiscard]] __fast_inline bool IsArmed() const;
     [[nodiscard]] __fast_inline MotorControlMode GetControlMode() const;
     __fast_inline void SetControlMode(MotorControlMode mode);
@@ -133,7 +137,8 @@ public:
     Motion GetRampedStartMotion() const;
     Motion GetRampedDiffMotion() const;
 protected:
-    TaskProcessor tasks;
+    TaskProcessor tasks{};
+    TrajController traj_controller{};
     /// \brief used to store all associated encoders (primary encoder, auxiliary encoder, sensorless...)
     Vector<Encoder::EncoderBase*> encoders{};
     /// \brief used to store all registered communication protocol
@@ -155,7 +160,9 @@ protected:
     /// If set to > 0, watchdog is enabled.
     uint32_t watchdog_timeout_cnt = 0;
 
+    void ProcessTrajTargetMotion(float Ts);   // called in DispatchMidTask
     void ProcessRampedTargetMotion(float Ts); // called in DispatchMidTask
+    Motion _traj_final_target_motion{}; // reference frame: BASE
     Motion _ramped_start_target_motion{};
     Motion _ramped_diff_motion{};
     float _ramped_target_timer = 0.0f;
@@ -166,17 +173,17 @@ protected:
     uint8_t internal_id = 0;
     bool is_armed = false;
     bool _is_ramping_motion = false;
+    bool _is_trajectory_motion = false;
     /// \brief Primary Encoder index which has been selected as data source
     uint8_t primary_encoder_idx = 0;
     std::underlying_type_t<MotorError> error = to_underlying(MotorError::NONE);
-    MotorState current_state = MotorState::IDLE;
     MotorControlMode control_mode = MotorControlMode::CTRL_MODE_POSITION;
 };
 
 template <uint8_t shunt_count>
-void MotorBase<shunt_count>::SetRampedTargetMotion(Motion& motion, float target_Ts)
+void MotorBase<shunt_count>::SetRampedTargetMotion(const Motion& motion, const float target_Ts)
 {
-    if(target_Ts <= 0.0f) return;
+    if(target_Ts < 0.0f || _is_trajectory_motion || !IsArmed()) return;
     _is_ramping_motion = false;
     _ramped_start_target_motion = GetTargetMotionStruct(motion);
     _ramped_diff_motion = _ramped_start_target_motion;
@@ -189,11 +196,25 @@ void MotorBase<shunt_count>::SetRampedTargetMotion(Motion& motion, float target_
 }
 
 template <uint8_t shunt_count>
-void MotorBase<shunt_count>::ProcessRampedTargetMotion(float Ts)
+void MotorBase<shunt_count>::ProcessTrajTargetMotion(const float Ts)
+{
+    if(_is_trajectory_motion)
+    {
+        traj_controller.Update(Ts);
+        Motion target_motion{_traj_final_target_motion};
+        target_motion.pos.value = traj_controller.GetCurrPos();
+        target_motion.speed.value = traj_controller.GetCurrSpeed();
+        SetTargetMotion(target_motion);
+        _is_trajectory_motion = true;
+    }
+}
+
+template <uint8_t shunt_count>
+void MotorBase<shunt_count>::ProcessRampedTargetMotion(const float Ts)
 {
     if(_is_ramping_motion)
     {
-        if(_ramped_target_Ts <= 0.0f)
+        if(_ramped_target_Ts < 0.0f)
         {
             _is_ramping_motion = false;
             return;
@@ -201,6 +222,12 @@ void MotorBase<shunt_count>::ProcessRampedTargetMotion(float Ts)
         if(_ramped_target_timer >= _ramped_target_Ts)
         {
             _is_ramping_motion = false;
+            // set final motion
+            Motion target_motion{_ramped_start_target_motion};
+            target_motion.torque.value += _ramped_diff_motion.torque.value;
+            target_motion.speed.value += _ramped_diff_motion.speed.value;
+            target_motion.pos.value += _ramped_diff_motion.pos.value;
+            SetTargetMotion(target_motion);
             return;
         }
         float pct = _ramped_target_timer / _ramped_target_Ts;
@@ -217,7 +244,8 @@ void MotorBase<shunt_count>::ProcessRampedTargetMotion(float Ts)
 }
 
 template<uint8_t shunt_count>
-Motion MotorBase<shunt_count>::GetCurrentMotionStruct(Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit)
+Motion MotorBase<shunt_count>::GetCurrentMotionStruct(const Motion::Ref ref_frame,
+    const Motion::TorqueUnit torque_unit, const Motion::SpeedUnit speed_unit, const Motion::PosUnit pos_unit)
 {
     Motion ret{};
     GetCurrentMotion(ret, ref_frame, torque_unit, speed_unit, pos_unit);
@@ -231,7 +259,8 @@ Motion MotorBase<shunt_count>::GetCurrentMotionStruct(const Motion& ref)
 }
 
 template<uint8_t shunt_count>
-Motion MotorBase<shunt_count>::GetTargetMotionStruct(Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit)
+Motion MotorBase<shunt_count>::GetTargetMotionStruct(const Motion::Ref ref_frame,
+    const Motion::TorqueUnit torque_unit, const Motion::SpeedUnit speed_unit, const Motion::PosUnit pos_unit)
 {
     Motion ret{};
     GetTargetMotion(ret, ref_frame, torque_unit, speed_unit, pos_unit);
@@ -245,13 +274,13 @@ Motion MotorBase<shunt_count>::GetTargetMotionStruct(const Motion& ref)
 }
 
 template<uint8_t shunt_count>
-__fast_inline void MotorBase<shunt_count>::DispatchRTTasks(float Ts)
+__fast_inline void MotorBase<shunt_count>::DispatchRTTasks(const float Ts)
 {
     tasks.RTTaskScheduler(Ts);
 }
 
 template<uint8_t shunt_count>
-__fast_inline void MotorBase<shunt_count>::DispatchMidTasks(float Ts)
+__fast_inline void MotorBase<shunt_count>::DispatchMidTasks(const float Ts)
 {
     if(watchdog_timeout_cnt > 0)
     {
@@ -261,7 +290,11 @@ __fast_inline void MotorBase<shunt_count>::DispatchMidTasks(float Ts)
         }
         else watchdog_cnt++;
     }
-    if(IsArmed()) ProcessRampedTargetMotion(Ts);
+    if(IsArmed())
+    {
+        ProcessTrajTargetMotion(Ts);
+        ProcessRampedTargetMotion(Ts);
+    }
     tasks.MidTaskScheduler(Ts);
 }
 
@@ -386,7 +419,7 @@ Sense::TempSenseBase* MotorBase<shunt_count>::GetMotorTempSense() const
 }
 
 template <uint8_t shunt_count>
-HAL::IndicatorBase* MotorBase<shunt_count>::GetIndicator()
+HAL::IndicatorBase* MotorBase<shunt_count>::GetIndicator() const
 {
     return indicator;
 }
@@ -437,7 +470,8 @@ bool MotorBase<shunt_count>::CheckError(const MotorError e) const
 template<uint8_t shunt_count>
 FuncRetCode MotorBase<shunt_count>::AppendEncoder(Encoder::EncoderBase *encoder)
 {
-    auto ret = AppendTask(new Encoder::UpdateEncoderTask(encoder));
+    // auto ret = AppendTask(new Encoder::UpdateEncoderTask(encoder));
+    const auto ret = InsertTaskBeforeName("EncArbiter", new Encoder::UpdateEncoderTask(encoder));
     if(ret == FuncRetCode::OK) encoders.push_back(encoder);
     return ret;
 }
@@ -446,7 +480,7 @@ template<uint8_t shunt_count>
 FuncRetCode MotorBase<shunt_count>::RemoveEncoderByName(const char *name)
 {
     // Remove update task first
-    auto ret = tasks.RemoveTaskByName(name);
+    const auto ret = tasks.RemoveTaskByName(name);
     if(ret == FuncRetCode::OK)
     {
         for(size_t i = 0; i < encoders.size(); i++)
@@ -469,7 +503,7 @@ template<uint8_t shunt_count>
 FuncRetCode MotorBase<shunt_count>::RemoveEncoderByIndex(uint8_t index)
 {
     if(encoders.size() <= index) return FuncRetCode::PARAM_NOT_EXIST;
-    auto ret = tasks.RemoveTaskByName(encoders[index]->GetName());
+    const auto ret = tasks.RemoveTaskByName(encoders[index]->GetName());
     if(ret == FuncRetCode::OK)
     {
         delete encoders[index];
@@ -511,7 +545,7 @@ const Vector<Encoder::EncoderBase*>& MotorBase<shunt_count>::GetEncoders()
 }
 
 template<uint8_t shunt_count>
-__fast_inline void MotorBase<shunt_count>::SetPrimaryEncoderIndex(uint8_t idx)
+__fast_inline void MotorBase<shunt_count>::SetPrimaryEncoderIndex(const uint8_t idx)
 {
     primary_encoder_idx = idx;
 }
@@ -524,11 +558,11 @@ void MotorBase<shunt_count>::RegisterProtocol(ProtocolBase *protocol)
     protocols.push_back(protocol);
 }
 
-template<uint8_t shunt_count>
-__fast_inline MotorState MotorBase<shunt_count>::GetCurrentState() const
-{
-    return current_state;
-}
+// template<uint8_t shunt_count>
+// __fast_inline MotorState MotorBase<shunt_count>::GetCurrentState() const
+// {
+//     return current_state;
+// }
 
 template<uint8_t shunt_count>
 __fast_inline bool MotorBase<shunt_count>::IsArmed() const

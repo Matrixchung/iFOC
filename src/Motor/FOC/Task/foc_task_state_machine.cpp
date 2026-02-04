@@ -4,14 +4,14 @@
 #include "../Controller/foc_curr_loop_pi.hpp"
 #include "../Controller/foc_speed_loop_pi.hpp"
 #include "../Controller/foc_open_loop_controller.hpp"
-#include "../Task/foc_task_update_sense.hpp"
-#include "../Task/foc_task_encoder_arbiter.hpp"
 #include "../Task/foc_task_basic_param_calib.hpp"
 #include "../Task/foc_task_encoder_calib.hpp"
 #include "../Task/foc_task_tone_player.hpp"
-#include "../WaveGenerator/foc_wave_gen_svpwm.hpp"
+#include "../Observer/foc_observer_hfi.hpp"
 
-// #define foc GetMotor<FOCMotor>()
+/*
+ * TASK LINE: SenseTask -> Encoders... -> EncArbiter -> Park -> ...
+ */
 
 #define TRANSITION_OK(new_state) \
 do{ last_state = current_state; \
@@ -37,10 +37,12 @@ void StateMachineTask::InitNormal()
     const auto foc = GetMotor<FOCMotor>();
     current_state = MotorState::IDLE;
     last_state = MotorState::IDLE;
-    foc->AppendTask(new EncoderArbiterTask); // "EncArbiter"
-    foc->AppendTask(new UpdateSenseTask); // "SenseTask"
-    sleep(50);
-    foc->AppendTask(new WaveGenSVPWM);    // "WaveGen"
+    // now initial tasks are appended in INIT()
+    // foc->AppendTask(new UpdateSenseTask); // "SenseTask"
+    // foc->AppendTask(new EncoderArbiterTask); // "EncArbiter"
+    // foc->AppendTask(new ParkTransformTask); // "Park"
+    // sleep(50);
+    // foc->AppendTask(new WaveGenSVPWM);    // "WaveGen"
     // Here we are in IDLE.
     // Play the beep first, but with a proper basic parameter set to avoid electrical misconfiguration
     if(!CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
@@ -156,7 +158,7 @@ void StateMachineTask::UpdateNormal()
     }
 }
 
-bool StateMachineTask::CheckStateRequirement(MotorState new_state)
+bool StateMachineTask::CheckStateRequirement(const MotorState new_state)
 {
     const auto foc = GetMotor<FOCMotor>();
     switch(new_state)
@@ -209,7 +211,7 @@ bool StateMachineTask::CheckStateRequirement(MotorState new_state)
         }
         case MotorState::SENSORLESS_CLOSED_LOOP_CONTROL:
         {
-            return false; // TODO
+            return !CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION);
         }
         case MotorState::OPEN_LOOP_VELOCITY_CONTROL:
         {
@@ -225,7 +227,7 @@ MotorState StateMachineTask::BackToLastState()
     return RequestState(last_state);
 }
 
-MotorState StateMachineTask::RequestState(MotorState new_state)
+MotorState StateMachineTask::RequestState(const MotorState new_state)
 {
     const auto foc = GetMotor<FOCMotor>();
     if(current_state == new_state) TRANSITION_FAILED();
@@ -240,6 +242,7 @@ MotorState StateMachineTask::RequestState(MotorState new_state)
             foc->RemoveTaskByName("CurrLoop");
             foc->RemoveTaskByName("SpeedLoop");
             foc->RemoveTaskByName("OpenLoop");
+            foc->RemoveTaskByName("HFIMain");
             auto current_target = foc->GetTargetMotionStruct(Motion::Ref::BASE,
                                                              Motion::TorqueUnit::AMP,
                                                              Motion::SpeedUnit::RPM,
@@ -248,6 +251,7 @@ MotorState StateMachineTask::RequestState(MotorState new_state)
             current_target.torque.value = 0.0f;
             current_target.speed.value = 0.0f;
             foc->SetTargetMotion(current_target);
+            foc->SetControlMode(MotorControlMode::CTRL_MODE_POSITION); // reset to default mode
             TRANSITION_OK(new_state);
         }
         case MotorState::STARTUP_SEQUENCE:
@@ -310,7 +314,13 @@ MotorState StateMachineTask::RequestState(MotorState new_state)
                 current_state == MotorState::IDLE ||
                 current_state == MotorState::SENSORED_CLOSED_LOOP_CONTROL)
             {
-                if(CheckStateRequirement(new_state)) TRANSITION_OK(new_state);
+                if(CheckStateRequirement(new_state))
+                {
+                    foc->InsertTaskAfterName("SenseTask", new ObserverHFI); // HFI injector acts as a modifier to Ialphabeta_measured, before park
+                    // foc->InsertTaskBeforeName("WaveGen", new CurrLoopPI);
+                    foc->Arm();
+                    TRANSITION_OK(new_state);
+                }
             }
             TRANSITION_FAILED();
         }

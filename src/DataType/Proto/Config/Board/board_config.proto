@@ -27,4 +27,6 @@ message BoardConfig {
     uint32 current_sense_f_lp = 24;
 
     bool play_startup_tone = 31;
+    bool use_square_wave_tone = 32;
+    bool enable_can_terminal_resistor = 33;
 }

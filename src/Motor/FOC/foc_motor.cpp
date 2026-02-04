@@ -1,9 +1,14 @@
 #include "foc_motor.hpp"
 #include "./Controller/foc_curr_loop_base.hpp"
 #include "./Controller/foc_speed_loop_base.hpp"
+#include "./Task/foc_task_update_sense.hpp"
+#include "./Task/foc_task_park_transform.hpp"
+#include "./Task/foc_task_encoder_arbiter.hpp"
+#include "./WaveGenerator/foc_wave_gen_svpwm.hpp"
 
 #define DEFAULT_NODE_ID (255UL)
 #define DEFAULT_CAN_HEARTBEAT_INTERVAL_MS (1000)
+#define DEFAULT_CAN_FEEDBACK_INTERVAL_MS  (2)
 #define DEFAULT_CURRENT_LOOP_BANDWIDTH (1000.0f)
 #define DEFAULT_CALIBRATION_VOLTAGE (1.0f)
 #define DEFAULT_CALIBRATION_CURRENT (1.0f)
@@ -106,6 +111,11 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
     }
     if(const auto ind = GetIndicator()) ind->Init();
     AppendTask(&this->state_machine);
+    AppendTask(new UpdateSenseTask); // "SenseTask"
+    AppendTask(new EncoderArbiterTask); // "EncArbiter"
+    AppendTask(new ParkTransformTask); // "Park"
+    HAL::DelayMs(50);
+    AppendTask(new WaveGenSVPWM);    // "WaveGen"
     return FuncRetCode::OK;
 error:
     if(const auto ind = GetIndicator())
@@ -142,7 +152,6 @@ bool FOCMotor::Arm()
 void FOCMotor::Disarm()
 {
     is_armed = false;
-    _is_ramping_motion = false; // reset ramping
     GetDriver()->SetOutput3CHPu(0.0f, 0.0f, 0.0f);
     GetDriver()->DisableBridges(Driver::FOCDriverBase::Bridge::HB_U,
                                 Driver::FOCDriverBase::Bridge::LB_U,
@@ -150,6 +159,15 @@ void FOCMotor::Disarm()
                                 Driver::FOCDriverBase::Bridge::LB_V,
                                 Driver::FOCDriverBase::Bridge::HB_W,
                                 Driver::FOCDriverBase::Bridge::LB_W);
+    _is_ramping_motion = false; // reset ramping
+    _is_trajectory_motion = false; // reset trajectory
+    current_target.Reset();
+    Iqd_target = {0.0f, 0.0f};
+    Uqd_target = {0.0f, 0.0f};
+    traj_controller.Reset();
+    _traj_final_target_motion.Reset();
+    _ramped_diff_motion.Reset();
+    _ramped_start_target_motion.Reset();
 }
 
 void FOCMotor::DisarmWithError(MotorError e)
@@ -189,8 +207,17 @@ void FOCMotor::GetCurrentMotion(Motion& ret, Motion::Ref r, Motion::TorqueUnit t
             else ret.torque = {Iqd_measured.q, curr_torque_limit_base_amp, Motion::TorqueUnit::AMP};
             if(const auto& enc = GetPrimaryEncoder())
             {
-                ret.speed = {enc->angular_speed_rad_s, curr_speed_limit_base_rad_s, Motion::SpeedUnit::RADS};
-                ret.pos = {enc->multi_round_angle_rad, Motion::PosUnit::RAD};
+                float spd = enc->angular_speed_rad_s, pos = enc->multi_round_angle_rad;
+                if(enc->GetEncoderType() == Encoder::Type::SENSORLESS_ENCODER)
+                {
+                    if(GetConfig().pole_pairs_valid() && GetConfig().pole_pairs() > 0)
+                    {
+                        spd /= GetConfig().pole_pairs();
+                        pos /= GetConfig().pole_pairs();
+                    }
+                }
+                ret.speed = {spd, curr_speed_limit_base_rad_s, Motion::SpeedUnit::RADS};
+                ret.pos = {pos, Motion::PosUnit::RAD};
             }
             break;
         }
@@ -204,9 +231,18 @@ void FOCMotor::GetCurrentMotion(Motion& ret, Motion::Ref r, Motion::TorqueUnit t
             else ret.torque = {Iqd_measured.q, curr_torque_limit_base_amp, Motion::TorqueUnit::AMP}; // for Amps torque, we still use current from base.
             if(const auto& enc = GetPrimaryEncoder())
             {
+                float spd = enc->angular_speed_rad_s, pos = enc->multi_round_angle_rad;
+                if(enc->GetEncoderType() == Encoder::Type::SENSORLESS_ENCODER)
+                {
+                    if(GetConfig().pole_pairs_valid() && GetConfig().pole_pairs() > 0)
+                    {
+                        spd /= GetConfig().pole_pairs();
+                        pos /= GetConfig().pole_pairs();
+                    }
+                }
                 const real_t temp = 1.0f / GetConfig().deduction_ratio();
-                ret.speed = {enc->angular_speed_rad_s * temp, curr_speed_limit_base_rad_s * temp, Motion::SpeedUnit::RADS};
-                ret.pos = {enc->multi_round_angle_rad * temp, Motion::PosUnit::RAD};
+                ret.speed = {spd * temp, curr_speed_limit_base_rad_s * temp, Motion::SpeedUnit::RADS};
+                ret.pos = {pos * temp, Motion::PosUnit::RAD};
             }
         }
         default: break;
@@ -279,6 +315,48 @@ void FOCMotor::SetTargetMotion(Motion& motion)
     motion.ref = Motion::Ref::BASE;
     current_target = motion;
     _is_ramping_motion = false; // If ramping, will be overrided by SetRampedMotion() later.
+    _is_trajectory_motion = false;
+}
+
+void FOCMotor::SetTrajectoryTargetMotion(Motion& motion, bool is_s_curve)
+{
+    if(_is_ramping_motion || !IsArmed()) return;
+    // Given that trajectory parameters: traj_output_speed/accel/decel_limit_rpm
+    // are set under OUTPUT reference with RPM/RPM^2 unit,
+    // we should first transform the parameters to BASE reference, with RADS unit.
+    if(motion.ref == Motion::Ref::ELEC) return; // ignore ELEC reference.
+    if(GetConfig().deduction_ratio() <= 0.0f) return; // deduction ratio invalid, return
+
+    real_t traj_base_speed_lim_rads = RPM2RAD(GetConfig().traj_output_speed_limit_rpm() * GetConfig().deduction_ratio(), 1);
+    real_t traj_base_accel_lim_rads2 = RPM2RAD(GetConfig().traj_output_accel_limit_rpm() * GetConfig().deduction_ratio(), 1);
+    real_t traj_base_decel_lim_rads2 = RPM2RAD(GetConfig().traj_output_decel_limit_rpm() * GetConfig().deduction_ratio(), 1);
+    if(traj_base_speed_lim_rads <= 0.0f || traj_base_accel_lim_rads2 <= 0.0f || traj_base_decel_lim_rads2 <= 0.0f) return; // settings invalid, return
+
+    motion.ConvertSpeedPosToDefault();
+    if(motion.ref == Motion::Ref::OUTPUT)
+    {
+        if(motion.torque.unit == Motion::TorqueUnit::NM)
+        {
+            real_t temp = 1.0f / GetConfig().deduction_ratio();
+            motion.torque.value *= temp; // OUTPUT -> BASE
+            motion.torque.limit *= temp;
+        }
+        motion.speed.value *= GetConfig().deduction_ratio(); // OUTPUT -> BASE
+        motion.speed.limit *= GetConfig().deduction_ratio();
+        motion.pos.value *= GetConfig().deduction_ratio();
+        motion.pos.limit *= GetConfig().deduction_ratio();
+    }
+    motion.ref = Motion::Ref::BASE;
+    // now we have BASE ref, with RADS speed & RAD pos.
+    const auto current_motion = GetCurrentMotionStruct(motion);
+    traj_controller.PlanTrajectory(motion.pos.value,
+                                   current_motion.pos.value,
+                                   current_motion.speed.value,
+                                   traj_base_speed_lim_rads,
+                                   traj_base_accel_lim_rads2,
+                                   traj_base_decel_lim_rads2, is_s_curve);
+    _traj_final_target_motion = motion;
+    _is_trajectory_motion = true;
 }
 
 FuncRetCode FOCMotor::AppendEncoder(Encoder::EncoderBase* encoder)
@@ -303,6 +381,7 @@ void FOCMotor::ResetDefaultConfig()
     cfg.clear();
     cfg.set_node_id(DEFAULT_NODE_ID);
     cfg.set_can_heartbeat_interval_ms(DEFAULT_CAN_HEARTBEAT_INTERVAL_MS);
+    cfg.set_can_feedback_interval_ms(DEFAULT_CAN_FEEDBACK_INTERVAL_MS);
     cfg.set_current_loop_bandwidth(DEFAULT_CURRENT_LOOP_BANDWIDTH);
     cfg.set_calibration_voltage(DEFAULT_CALIBRATION_VOLTAGE);
     cfg.set_calibration_current(DEFAULT_CALIBRATION_CURRENT);

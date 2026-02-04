@@ -1,7 +1,7 @@
 import os
 import re
 
-REFLECTION_HEADER = '"reflection.h"'
+REFLECTION_HEADER = '"../../../reflection.h"'
 
 def process_header_file(file_path):
     with open(file_path, 'r') as f:

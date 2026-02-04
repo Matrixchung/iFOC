@@ -9,7 +9,7 @@
 
 #include <cstdint>
 #include <MessageInterface.h>
-#include "reflection.h"
+#include "../../../reflection.h"
 #include <WireFormatter.h>
 #include <Fields.h>
 #include <MessageSizeCalculator.h>
@@ -43,7 +43,9 @@ class BoardConfig final: public ::EmbeddedProto::MessageInterface
         MEMBER_SIZE_OFFSET(BoardConfig, current_sense_gain_),
         MEMBER_SIZE_OFFSET(BoardConfig, current_sense_shunt_ohm_),
         MEMBER_SIZE_OFFSET(BoardConfig, current_sense_f_lp_),
-        MEMBER_SIZE_OFFSET(BoardConfig, play_startup_tone_)
+        MEMBER_SIZE_OFFSET(BoardConfig, play_startup_tone_),
+        MEMBER_SIZE_OFFSET(BoardConfig, use_square_wave_tone_),
+        MEMBER_SIZE_OFFSET(BoardConfig, enable_can_terminal_resistor_)
     )
 BoardConfig() = default;
     BoardConfig(const BoardConfig& rhs )
@@ -62,6 +64,8 @@ BoardConfig() = default;
       set_current_sense_shunt_ohm(rhs.get_current_sense_shunt_ohm());
       set_current_sense_f_lp(rhs.get_current_sense_f_lp());
       set_play_startup_tone(rhs.get_play_startup_tone());
+      set_use_square_wave_tone(rhs.get_use_square_wave_tone());
+      set_enable_can_terminal_resistor(rhs.get_enable_can_terminal_resistor());
     }
 
     BoardConfig(const BoardConfig&& rhs ) noexcept
@@ -80,6 +84,8 @@ BoardConfig() = default;
       set_current_sense_shunt_ohm(rhs.get_current_sense_shunt_ohm());
       set_current_sense_f_lp(rhs.get_current_sense_f_lp());
       set_play_startup_tone(rhs.get_play_startup_tone());
+      set_use_square_wave_tone(rhs.get_use_square_wave_tone());
+      set_enable_can_terminal_resistor(rhs.get_enable_can_terminal_resistor());
     }
 
     ~BoardConfig() override = default;
@@ -100,7 +106,9 @@ BoardConfig() = default;
       CURRENT_SENSE_GAIN = 21,
       CURRENT_SENSE_SHUNT_OHM = 22,
       CURRENT_SENSE_F_LP = 24,
-      PLAY_STARTUP_TONE = 31
+      PLAY_STARTUP_TONE = 31,
+      USE_SQUARE_WAVE_TONE = 32,
+      ENABLE_CAN_TERMINAL_RESISTOR = 33
     };
 
     BoardConfig& operator=(const BoardConfig& rhs)
@@ -119,6 +127,8 @@ BoardConfig() = default;
       set_current_sense_shunt_ohm(rhs.get_current_sense_shunt_ohm());
       set_current_sense_f_lp(rhs.get_current_sense_f_lp());
       set_play_startup_tone(rhs.get_play_startup_tone());
+      set_use_square_wave_tone(rhs.get_use_square_wave_tone());
+      set_enable_can_terminal_resistor(rhs.get_enable_can_terminal_resistor());
       return *this;
     }
 
@@ -138,6 +148,8 @@ BoardConfig() = default;
       set_current_sense_shunt_ohm(rhs.get_current_sense_shunt_ohm());
       set_current_sense_f_lp(rhs.get_current_sense_f_lp());
       set_play_startup_tone(rhs.get_play_startup_tone());
+      set_use_square_wave_tone(rhs.get_use_square_wave_tone());
+      set_enable_can_terminal_resistor(rhs.get_enable_can_terminal_resistor());
       return *this;
     }
 
@@ -251,6 +263,22 @@ BoardConfig() = default;
     inline const bool& get_play_startup_tone() const { return play_startup_tone_.get(); }
     inline bool play_startup_tone() const { return play_startup_tone_.get(); }
 
+    static constexpr char const* USE_SQUARE_WAVE_TONE_NAME = "use_square_wave_tone";
+    inline void clear_use_square_wave_tone() { use_square_wave_tone_.clear(); }
+    inline void set_use_square_wave_tone(const bool& value) { use_square_wave_tone_ = value; }
+    inline void set_use_square_wave_tone(const bool&& value) { use_square_wave_tone_ = value; }
+    inline bool& mutable_use_square_wave_tone() { return use_square_wave_tone_.get(); }
+    inline const bool& get_use_square_wave_tone() const { return use_square_wave_tone_.get(); }
+    inline bool use_square_wave_tone() const { return use_square_wave_tone_.get(); }
+
+    static constexpr char const* ENABLE_CAN_TERMINAL_RESISTOR_NAME = "enable_can_terminal_resistor";
+    inline void clear_enable_can_terminal_resistor() { enable_can_terminal_resistor_.clear(); }
+    inline void set_enable_can_terminal_resistor(const bool& value) { enable_can_terminal_resistor_ = value; }
+    inline void set_enable_can_terminal_resistor(const bool&& value) { enable_can_terminal_resistor_ = value; }
+    inline bool& mutable_enable_can_terminal_resistor() { return enable_can_terminal_resistor_.get(); }
+    inline const bool& get_enable_can_terminal_resistor() const { return enable_can_terminal_resistor_.get(); }
+    inline bool enable_can_terminal_resistor() const { return enable_can_terminal_resistor_.get(); }
+
 
     ::EmbeddedProto::Error serialize(::EmbeddedProto::WriteBufferInterface& buffer) const override
     {
@@ -326,6 +354,16 @@ BoardConfig() = default;
         return_value = play_startup_tone_.serialize_with_id(static_cast<uint32_t>(FieldNumber::PLAY_STARTUP_TONE), buffer, false);
       }
 
+      if((false != use_square_wave_tone_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = use_square_wave_tone_.serialize_with_id(static_cast<uint32_t>(FieldNumber::USE_SQUARE_WAVE_TONE), buffer, false);
+      }
+
+      if((false != enable_can_terminal_resistor_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = enable_can_terminal_resistor_.serialize_with_id(static_cast<uint32_t>(FieldNumber::ENABLE_CAN_TERMINAL_RESISTOR), buffer, false);
+      }
+
       return return_value;
     };
 
@@ -398,6 +436,14 @@ BoardConfig() = default;
             return_value = play_startup_tone_.deserialize_check_type(buffer, wire_type);
             break;
 
+          case FieldNumber::USE_SQUARE_WAVE_TONE:
+            return_value = use_square_wave_tone_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::ENABLE_CAN_TERMINAL_RESISTOR:
+            return_value = enable_can_terminal_resistor_.deserialize_check_type(buffer, wire_type);
+            break;
+
           case FieldNumber::NOT_SET:
             return_value = ::EmbeddedProto::Error::INVALID_FIELD_ID;
             break;
@@ -441,6 +487,8 @@ BoardConfig() = default;
       clear_current_sense_shunt_ohm();
       clear_current_sense_f_lp();
       clear_play_startup_tone();
+      clear_use_square_wave_tone();
+      clear_enable_can_terminal_resistor();
 
     }
 
@@ -490,6 +538,12 @@ BoardConfig() = default;
           break;
         case FieldNumber::PLAY_STARTUP_TONE:
           name = PLAY_STARTUP_TONE_NAME;
+          break;
+        case FieldNumber::USE_SQUARE_WAVE_TONE:
+          name = USE_SQUARE_WAVE_TONE_NAME;
+          break;
+        case FieldNumber::ENABLE_CAN_TERMINAL_RESISTOR:
+          name = ENABLE_CAN_TERMINAL_RESISTOR_NAME;
           break;
         default:
           name = "Invalid FieldNumber";
@@ -565,6 +619,8 @@ BoardConfig() = default;
       left_chars = current_sense_shunt_ohm_.to_string(left_chars, indent_level + 2, CURRENT_SENSE_SHUNT_OHM_NAME, false);
       left_chars = current_sense_f_lp_.to_string(left_chars, indent_level + 2, CURRENT_SENSE_F_LP_NAME, false);
       left_chars = play_startup_tone_.to_string(left_chars, indent_level + 2, PLAY_STARTUP_TONE_NAME, false);
+      left_chars = use_square_wave_tone_.to_string(left_chars, indent_level + 2, USE_SQUARE_WAVE_TONE_NAME, false);
+      left_chars = enable_can_terminal_resistor_.to_string(left_chars, indent_level + 2, ENABLE_CAN_TERMINAL_RESISTOR_NAME, false);
   
       if( 0 == indent_level) 
       {
@@ -603,6 +659,8 @@ BoardConfig() = default;
       EmbeddedProto::floatfixed current_sense_shunt_ohm_ = 0.0;
       EmbeddedProto::uint32 current_sense_f_lp_ = 0U;
       EmbeddedProto::boolean play_startup_tone_ = false;
+      EmbeddedProto::boolean use_square_wave_tone_ = false;
+      EmbeddedProto::boolean enable_can_terminal_resistor_ = false;
 
 };
 

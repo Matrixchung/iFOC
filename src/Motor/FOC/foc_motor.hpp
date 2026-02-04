@@ -59,7 +59,9 @@ public:
     void GetCurrentMotion(Motion& ret, Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit) override;
     void GetTargetMotion(Motion& ret, Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit) override;
     void SetTargetMotion(Motion& motion) override;
+    void SetTrajectoryTargetMotion(Motion& motion, bool is_s_curve) override;
     FuncRetCode AppendEncoder(Encoder::EncoderBase* encoder) override;
+    [[nodiscard]] __fast_inline MotorState GetCurrentState() const override { return state_machine.GetState(); }
     __fast_inline void LinkDriver(Driver::FOCDriverImpl auto *drv) { driver = drv; }
     __fast_inline void LinkCurrSense(Sense::FOCCurrSenseImpl auto *curr) { curr_sense = curr; }
     __fast_inline Driver::FOCDriverBase *GetDriver() { return static_cast<Driver::FOCDriverBase *>(driver); };
