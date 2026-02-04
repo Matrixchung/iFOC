@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Common/foc_types.hpp"
+#include "../DataType/Headers/Base/bootloader_msg.h"
 #include "hal_const.h"
 
 /*
@@ -63,6 +64,25 @@ uint64_t GetFirmwareCRC64();
 
 /// This function does what it said.
 void SystemReboot();
+
+/// Provides an interface to access the bootloader.
+namespace Bootloader
+{
+    /// This function does what it said. \n
+    /// \param msg message that is passed to the bootloader,
+    /// and how to deal with the message is up to implementation.
+    void JumpToBL(const BootloaderMsg& msg);
+
+    /// \return true if a correct bootloader is presented, false if not.
+    bool HasBL();
+
+    /// Get bootloader version described in major.minor.vcs_commit. \n
+    /// set to 0.0.00000000 if bootloader is damaged or not presented. \n
+    /// \param major reference that will be used to store read out MAJOR value
+    /// \param minor reference that will be used to store read out MINOR value
+    /// \param vcs_commit reference that will be used to store read out VCS_COMMIT.
+    void GetBLVersion(uint8_t& major, uint8_t& minor, uint32_t& vcs_commit);
+}
 
 /// Provides an interface to Non-Volatile Memory (NVM) for persistent storage use.
 /// Used in: iFOC::DataType::ConfigNVMWrapper
