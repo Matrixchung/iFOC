@@ -1,6 +1,7 @@
 #pragma once
 
 #include "protocol_base.hpp"
+#include "../DataType/Ringbuf/obj_kfifo.hpp"
 #include "../Common/Interface/can_base.hpp"
 #include "../ThirdParty/libcanard-dronecan/canard_dronecan.h"
 #include "../Common/foc_task.hpp"
@@ -31,13 +32,15 @@ private:
     public:
         explicit PollingTask(DroneCANProtocol* p);
         void UpdateNormal() override;
+        void UpdateMid(float Ts) override;
     };
     friend class PollingTask;
     static constexpr size_t CANARD_MEMORY_POOL_SIZE = 1024;
     static constexpr size_t ISR_MSG_QUEUE_SIZE = 32;
     PollingTask polling_task;
     DroneCAN::CanardInstance canard{};
-    QueueHandle_t isr_msg_queue{};
+    // QueueHandle_t isr_msg_queue{};
+    DataType::Ringbuf::obj_kfifo_t<DataType::Comm::CANMessage> isr_msg_fifo{};
     uint64_t rx_frame_received = 0;
     uint64_t rx_frame_error = 0;
     uint64_t tx_frame_sent = 0;
@@ -68,6 +71,7 @@ private:
     void SendParamGetSetResponse(DroneCAN::CanardRxTransfer* transfer);
     void SendRestartNodeResponse(DroneCAN::CanardRxTransfer* transfer);
     void SendExecuteOpcodeResponse(DroneCAN::CanardRxTransfer* transfer);
+    void SendFWUpdateResponse(DroneCAN::CanardRxTransfer* transfer);
     void RequestDNAAllocation();
     void OnDNAAllocation(DroneCAN::CanardRxTransfer* transfer);
     void OnRxEvent(const DataType::Comm::CANMessage& message);
