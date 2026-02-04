@@ -10,3 +10,4 @@
 #include "at32wk_adc_port.hpp"
 #include "at32wk_temp_sense_core.hpp"
 #include "at32wk_encoder_ab.hpp"
+#include "at32wk_bkp.hpp"
