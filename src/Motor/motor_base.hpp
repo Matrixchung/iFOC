@@ -301,6 +301,7 @@ __fast_inline void MotorBase<shunt_count>::DispatchMidTasks(const float Ts)
 template<uint8_t shunt_count>
 FuncRetCode MotorBase<shunt_count>::AppendTask(Task *task)
 {
+    if(!task) return FuncRetCode::ACCESS_VIOLATION;
     task->_motor = (void*)this;
     return tasks.AppendTask(task);
 }
@@ -308,6 +309,7 @@ FuncRetCode MotorBase<shunt_count>::AppendTask(Task *task)
 template<uint8_t shunt_count>
 FuncRetCode MotorBase<shunt_count>::PushFrontTask(Task *task)
 {
+    if(!task) return FuncRetCode::ACCESS_VIOLATION;
     task->_motor = (void*)this;
     return tasks.PushFrontTask(task);
 }
@@ -315,6 +317,7 @@ FuncRetCode MotorBase<shunt_count>::PushFrontTask(Task *task)
 template<uint8_t shunt_count>
 FuncRetCode MotorBase<shunt_count>::InsertTaskBeforeName(const char *next, Task *task)
 {
+    if(!task) return FuncRetCode::ACCESS_VIOLATION;
     task->_motor = (void*)this;
     return tasks.InsertTaskBeforeName(next, task);
 }
@@ -322,6 +325,7 @@ FuncRetCode MotorBase<shunt_count>::InsertTaskBeforeName(const char *next, Task 
 template<uint8_t shunt_count>
 FuncRetCode MotorBase<shunt_count>::InsertTaskAfterName(const char *prev, Task *task)
 {
+    if(!task) return FuncRetCode::ACCESS_VIOLATION;
     task->_motor = (void*)this;
     return tasks.InsertTaskAfterName(prev, task);
 }
@@ -470,6 +474,7 @@ bool MotorBase<shunt_count>::CheckError(const MotorError e) const
 template<uint8_t shunt_count>
 FuncRetCode MotorBase<shunt_count>::AppendEncoder(Encoder::EncoderBase *encoder)
 {
+    if(!encoder) return FuncRetCode::ACCESS_VIOLATION;
     // auto ret = AppendTask(new Encoder::UpdateEncoderTask(encoder));
     const auto ret = InsertTaskBeforeName("EncArbiter", new Encoder::UpdateEncoderTask(encoder));
     if(ret == FuncRetCode::OK) encoders.push_back(encoder);
@@ -553,6 +558,7 @@ __fast_inline void MotorBase<shunt_count>::SetPrimaryEncoderIndex(const uint8_t 
 template<uint8_t shunt_count>
 void MotorBase<shunt_count>::RegisterProtocol(ProtocolBase *protocol)
 {
+    if(!protocol) return;
     protocol->_motor = (void*)this;
     protocol->Init();
     protocols.push_back(protocol);
