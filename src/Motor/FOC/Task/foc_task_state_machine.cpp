@@ -48,11 +48,16 @@ void StateMachineTask::InitNormal()
     if(!CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
         BoardConfig().GetConfig().play_startup_tone())
     {
-        auto tone_player = new TonePlayerTask;
+        auto* tone_player = new TonePlayerTask;
         if(foc->InsertTaskBeforeName("WaveGen", tone_player) == FuncRetCode::OK)
+        {
             tone_player->PlaySound({1200.0f, 1650.0f, 2200.0f} ,0.25f, true);
-        while(foc->GetTaskByName("TonePlayer")) sleep(100);
-        foc->Disarm();
+            while(!tone_player->IsCompleted()) sleep(100);
+            foc->RemoveTaskByName("TonePlayer");
+            foc->Disarm();
+        }
+        else delete tone_player;
+        // while(foc->GetTaskByName("TonePlayer")) sleep(100);
     }
     if(foc->GetConfig().startup_sequence_enabled()) RequestState(MotorState::STARTUP_SEQUENCE);
 }
@@ -243,6 +248,7 @@ MotorState StateMachineTask::RequestState(const MotorState new_state)
             foc->RemoveTaskByName("SpeedLoop");
             foc->RemoveTaskByName("OpenLoop");
             foc->RemoveTaskByName("HFIMain");
+            foc->RemoveTaskByName("TonePlayer");
             auto current_target = foc->GetTargetMotionStruct(Motion::Ref::BASE,
                                                              Motion::TorqueUnit::AMP,
                                                              Motion::SpeedUnit::RPM,
@@ -275,7 +281,11 @@ MotorState StateMachineTask::RequestState(const MotorState new_state)
             if(foc->GetError() != to_underlying(MotorError::NONE)) TRANSITION_FAILED();
             if(current_state == MotorState::STARTUP_SEQUENCE || current_state == MotorState::IDLE)
             {
-                if(CheckStateRequirement(new_state)) TRANSITION_OK(new_state);
+                if(CheckStateRequirement(new_state))
+                {
+                    foc->RemoveTaskByName("TonePlayer");
+                    TRANSITION_OK(new_state);
+                }
             }
             TRANSITION_FAILED();
         }
@@ -288,6 +298,7 @@ MotorState StateMachineTask::RequestState(const MotorState new_state)
             {
                 if(CheckStateRequirement(new_state))
                 {
+                    foc->RemoveTaskByName("TonePlayer");
                     foc->InsertTaskBeforeName("WaveGen", new CurrLoopPI);
                     foc->InsertTaskBeforeName("CurrLoop", new SpeedLoopPI);
                     auto current_target = foc->GetTargetMotionStruct(Motion::Ref::BASE,
@@ -316,6 +327,7 @@ MotorState StateMachineTask::RequestState(const MotorState new_state)
             {
                 if(CheckStateRequirement(new_state))
                 {
+                    foc->RemoveTaskByName("TonePlayer");
                     foc->InsertTaskAfterName("SenseTask", new ObserverHFI); // HFI injector acts as a modifier to Ialphabeta_measured, before park
                     // foc->InsertTaskBeforeName("WaveGen", new CurrLoopPI);
                     foc->Arm();
@@ -331,6 +343,7 @@ MotorState StateMachineTask::RequestState(const MotorState new_state)
             {
                 if(CheckStateRequirement(new_state))
                 {
+                    foc->RemoveTaskByName("TonePlayer");
                     foc->InsertTaskBeforeName("WaveGen", new CurrLoopPI);
                     foc->InsertTaskBeforeName("CurrLoop", new OpenLoopController);
                     foc->Arm();

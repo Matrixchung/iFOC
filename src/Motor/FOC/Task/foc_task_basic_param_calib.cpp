@@ -38,7 +38,8 @@ BasicParamCalibTask::BasicParamCalibTask() : Task("BasicParam")
 void BasicParamCalibTask::InitNormal()
 {
     const auto foc = GetMotor<FOCMotor>();
-    while(foc->GetTaskByName("TonePlayer")) sleep(500);
+    // while(foc->GetTaskByName("TonePlayer")) sleep(500);
+    if(foc->GetTaskByName("TonePlayer")) foc->RemoveTaskByName("TonePlayer");
     sleep(500);
     foc->BypassTaskByName("WaveGen");
     while(!foc->GetCurrSense()->IsCalibrated()) sleep(100);

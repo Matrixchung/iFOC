@@ -7,6 +7,7 @@ namespace iFOC
 {
 class TonePlayerTask final : public Task
 {
+    OVERRIDE_NEW();
 private:
     Vector<real_t> note_period_list;
     decltype(note_period_list)::const_iterator iter_begin;
@@ -14,13 +15,18 @@ private:
     float beat_timer = 0.0f;
     float inject_voltage = 0.0f;
     bool play_complete = true;
+    bool continuous = false;
     bool is_encoder_bypassed = false; // bypass encoder to prevent unintended movement
     WaveInjector wave{WaveInjector::WaveType::SINUSOIDAL};
 public:
     TonePlayerTask();
+    ~TonePlayerTask() override;
     FuncRetCode PlaySound(const Vector<real_t>& freq_list, float Tbeat, float voltage, bool is_bypass = false);
     FuncRetCode PlaySound(const Vector<real_t>& freq_list, float Tbeat, bool is_bypass = false);
-    void UpdateRT(float Ts) final;
-    void UpdateNormal() final;
+    FuncRetCode PlaySoundContinuously(const Vector<real_t>& freq_list, float Tbeat, bool is_bypass = false);
+    void UpdateRT(float Ts) override;
+    // void UpdateNormal() override;
+    bool IsCompleted() const;
+    bool IsContinuous() const;
 };
 }
