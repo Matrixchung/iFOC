@@ -58,6 +58,7 @@ class FOCMotorConfig final: public ::EmbeddedProto::MessageInterface
         MEMBER_SIZE_OFFSET(FOCMotorConfig, traj_output_decel_limit_rpm_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, can_heartbeat_interval_ms_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, can_feedback_interval_ms_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, can_misc_fdbk_interval_ms_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, enable_harmonic_suppression_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_resistance_valid_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_inductance_valid_),
@@ -106,6 +107,7 @@ FOCMotorConfig() = default;
       set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
+      set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
       set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
@@ -154,6 +156,7 @@ FOCMotorConfig() = default;
       set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
+      set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
       set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
@@ -218,6 +221,7 @@ FOCMotorConfig() = default;
       STARTUP_SENSORLESS_CLOSED_LOOP = 43,
       CAN_HEARTBEAT_INTERVAL_MS = 54,
       CAN_FEEDBACK_INTERVAL_MS = 55,
+      CAN_MISC_FDBK_INTERVAL_MS = 56,
       ENABLE_HARMONIC_SUPPRESSION = 60,
       TRAJ_OUTPUT_SPEED_LIMIT_RPM = 70,
       TRAJ_OUTPUT_ACCEL_LIMIT_RPM = 71,
@@ -253,6 +257,7 @@ FOCMotorConfig() = default;
       set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
+      set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
       set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
@@ -302,6 +307,7 @@ FOCMotorConfig() = default;
       set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
+      set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
       set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
@@ -537,6 +543,14 @@ FOCMotorConfig() = default;
     inline uint32_t& mutable_can_feedback_interval_ms() { return can_feedback_interval_ms_.get(); }
     inline const uint32_t& get_can_feedback_interval_ms() const { return can_feedback_interval_ms_.get(); }
     inline uint32_t can_feedback_interval_ms() const { return can_feedback_interval_ms_.get(); }
+
+    static constexpr char const* CAN_MISC_FDBK_INTERVAL_MS_NAME = "can_misc_fdbk_interval_ms";
+    inline void clear_can_misc_fdbk_interval_ms() { can_misc_fdbk_interval_ms_.clear(); }
+    inline void set_can_misc_fdbk_interval_ms(const uint32_t& value) { can_misc_fdbk_interval_ms_ = value; }
+    inline void set_can_misc_fdbk_interval_ms(const uint32_t&& value) { can_misc_fdbk_interval_ms_ = value; }
+    inline uint32_t& mutable_can_misc_fdbk_interval_ms() { return can_misc_fdbk_interval_ms_.get(); }
+    inline const uint32_t& get_can_misc_fdbk_interval_ms() const { return can_misc_fdbk_interval_ms_.get(); }
+    inline uint32_t can_misc_fdbk_interval_ms() const { return can_misc_fdbk_interval_ms_.get(); }
 
     static constexpr char const* ENABLE_HARMONIC_SUPPRESSION_NAME = "enable_harmonic_suppression";
     inline void clear_enable_harmonic_suppression() { enable_harmonic_suppression_.clear(); }
@@ -814,6 +828,11 @@ FOCMotorConfig() = default;
         return_value = can_feedback_interval_ms_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CAN_FEEDBACK_INTERVAL_MS), buffer, false);
       }
 
+      if((0U != can_misc_fdbk_interval_ms_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = can_misc_fdbk_interval_ms_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CAN_MISC_FDBK_INTERVAL_MS), buffer, false);
+      }
+
       if((false != enable_harmonic_suppression_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = enable_harmonic_suppression_.serialize_with_id(static_cast<uint32_t>(FieldNumber::ENABLE_HARMONIC_SUPPRESSION), buffer, false);
@@ -1023,6 +1042,10 @@ FOCMotorConfig() = default;
             return_value = can_feedback_interval_ms_.deserialize_check_type(buffer, wire_type);
             break;
 
+          case FieldNumber::CAN_MISC_FDBK_INTERVAL_MS:
+            return_value = can_misc_fdbk_interval_ms_.deserialize_check_type(buffer, wire_type);
+            break;
+
           case FieldNumber::ENABLE_HARMONIC_SUPPRESSION:
             return_value = enable_harmonic_suppression_.deserialize_check_type(buffer, wire_type);
             break;
@@ -1147,6 +1170,7 @@ FOCMotorConfig() = default;
       clear_traj_output_decel_limit_rpm();
       clear_can_heartbeat_interval_ms();
       clear_can_feedback_interval_ms();
+      clear_can_misc_fdbk_interval_ms();
       clear_enable_harmonic_suppression();
       clear_phase_resistance_valid();
       clear_phase_inductance_valid();
@@ -1252,6 +1276,9 @@ FOCMotorConfig() = default;
           break;
         case FieldNumber::CAN_FEEDBACK_INTERVAL_MS:
           name = CAN_FEEDBACK_INTERVAL_MS_NAME;
+          break;
+        case FieldNumber::CAN_MISC_FDBK_INTERVAL_MS:
+          name = CAN_MISC_FDBK_INTERVAL_MS_NAME;
           break;
         case FieldNumber::ENABLE_HARMONIC_SUPPRESSION:
           name = ENABLE_HARMONIC_SUPPRESSION_NAME;
@@ -1391,6 +1418,7 @@ FOCMotorConfig() = default;
       left_chars = traj_output_decel_limit_rpm_.to_string(left_chars, indent_level + 2, TRAJ_OUTPUT_DECEL_LIMIT_RPM_NAME, false);
       left_chars = can_heartbeat_interval_ms_.to_string(left_chars, indent_level + 2, CAN_HEARTBEAT_INTERVAL_MS_NAME, false);
       left_chars = can_feedback_interval_ms_.to_string(left_chars, indent_level + 2, CAN_FEEDBACK_INTERVAL_MS_NAME, false);
+      left_chars = can_misc_fdbk_interval_ms_.to_string(left_chars, indent_level + 2, CAN_MISC_FDBK_INTERVAL_MS_NAME, false);
       left_chars = enable_harmonic_suppression_.to_string(left_chars, indent_level + 2, ENABLE_HARMONIC_SUPPRESSION_NAME, false);
       left_chars = phase_resistance_valid_.to_string(left_chars, indent_level + 2, PHASE_RESISTANCE_VALID_NAME, false);
       left_chars = phase_inductance_valid_.to_string(left_chars, indent_level + 2, PHASE_INDUCTANCE_VALID_NAME, false);
@@ -1459,6 +1487,7 @@ FOCMotorConfig() = default;
       EmbeddedProto::floatfixed traj_output_decel_limit_rpm_ = 0.0;
       EmbeddedProto::uint32 can_heartbeat_interval_ms_ = 0U;
       EmbeddedProto::uint32 can_feedback_interval_ms_ = 0U;
+      EmbeddedProto::uint32 can_misc_fdbk_interval_ms_ = 0U;
       EmbeddedProto::boolean enable_harmonic_suppression_ = false;
       EmbeddedProto::boolean phase_resistance_valid_ = false;
       EmbeddedProto::boolean phase_inductance_valid_ = false;

@@ -28,19 +28,23 @@ private:
         {
             TickType_t heartbeat = 0;
             TickType_t feedback = 0;
+            TickType_t misc_feedback = 0;
         } last_send_tick;
+        TickType_t xLastWakeTick = 0;
     public:
         explicit PollingTask(DroneCANProtocol* p);
+        void InitNormal() override;
         void UpdateNormal() override;
         void UpdateMid(float Ts) override;
     };
     friend class PollingTask;
-    static constexpr size_t CANARD_MEMORY_POOL_SIZE = 1024;
+    static constexpr size_t CANARD_MEMORY_POOL_SIZE = 2048;
     static constexpr size_t ISR_MSG_QUEUE_SIZE = 32;
     PollingTask polling_task;
     DroneCAN::CanardInstance canard{};
     // QueueHandle_t isr_msg_queue{};
     DataType::Ringbuf::obj_kfifo_t<DataType::Comm::CANMessage> isr_msg_fifo{};
+    DataType::Ringbuf::obj_kfifo_t<DataType::Comm::CANMessage> tx_msg_fifo{};
     uint64_t rx_frame_received = 0;
     uint64_t rx_frame_error = 0;
     uint64_t tx_frame_sent = 0;
@@ -50,6 +54,7 @@ private:
     {
         uint8_t uavcan_protocol_nodestatus = 0;
         uint8_t ifoc_compact_feedback = 0;
+        uint8_t ifoc_misc_feedback = 0;
         uint8_t node_allocation = 0;
     } next_transfer_id;
     struct
@@ -65,7 +70,13 @@ private:
                       uint8_t source_node_id);
     uavcan_protocol_NodeStatus BuildNodeStatus();
     void SendNodeStatus();
+
     void SendFOCCompactFeedback();
+    void SendFOCMiscFeedback();
+    void SendFOCGetErrorResponse(DroneCAN::CanardRxTransfer* transfer);
+    void SendFOCClearErrorResponse(DroneCAN::CanardRxTransfer* transfer);
+    void SendFOCGetOSStatsResponse(DroneCAN::CanardRxTransfer* transfer);
+
     void SendGetInfoResponse(DroneCAN::CanardRxTransfer* transfer);
     void SendGetTransportStatsResponse(DroneCAN::CanardRxTransfer* transfer);
     void SendParamGetSetResponse(DroneCAN::CanardRxTransfer* transfer);

@@ -50,6 +50,7 @@ message FOCMotorConfig {
     // COMMUNICATION CONFIGURATION
     uint32 can_heartbeat_interval_ms = 54;
     uint32 can_feedback_interval_ms = 55;
+    uint32 can_misc_fdbk_interval_ms = 56;
 
     bool enable_harmonic_suppression = 60;  // Default set to false. Will worsen performance @ low speed.
 
