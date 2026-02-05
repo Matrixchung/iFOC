@@ -1,14 +1,17 @@
 #include "foc_motor.hpp"
+
 #include "./Controller/foc_curr_loop_base.hpp"
 #include "./Controller/foc_speed_loop_base.hpp"
 #include "./Task/foc_task_update_sense.hpp"
 #include "./Task/foc_task_park_transform.hpp"
 #include "./Task/foc_task_encoder_arbiter.hpp"
+#include "./Task/foc_task_tone_player.hpp"
 #include "./WaveGenerator/foc_wave_gen_svpwm.hpp"
 
 #define DEFAULT_NODE_ID (255UL)
 #define DEFAULT_CAN_HEARTBEAT_INTERVAL_MS (1000)
 #define DEFAULT_CAN_FEEDBACK_INTERVAL_MS  (2)
+#define DEFAULT_CAN_MISC_FDBK_INTERVAL_MS (50)
 #define DEFAULT_CURRENT_LOOP_BANDWIDTH (1000.0f)
 #define DEFAULT_CALIBRATION_VOLTAGE (1.0f)
 #define DEFAULT_CALIBRATION_CURRENT (1.0f)
@@ -382,6 +385,7 @@ void FOCMotor::ResetDefaultConfig()
     cfg.set_node_id(DEFAULT_NODE_ID);
     cfg.set_can_heartbeat_interval_ms(DEFAULT_CAN_HEARTBEAT_INTERVAL_MS);
     cfg.set_can_feedback_interval_ms(DEFAULT_CAN_FEEDBACK_INTERVAL_MS);
+    cfg.set_can_misc_fdbk_interval_ms(DEFAULT_CAN_MISC_FDBK_INTERVAL_MS);
     cfg.set_current_loop_bandwidth(DEFAULT_CURRENT_LOOP_BANDWIDTH);
     cfg.set_calibration_voltage(DEFAULT_CALIBRATION_VOLTAGE);
     cfg.set_calibration_current(DEFAULT_CALIBRATION_CURRENT);
@@ -414,4 +418,27 @@ SpeedLoopBase* FOCMotor::GetSpeedLoop()
     return nullptr;
 }
 
+FuncRetCode FOCMotor::ToggleBeepIdentify()
+{
+    auto* player = GetTaskByName("TonePlayer");
+    if(player)
+    {
+        if(((TonePlayerTask*)player)->IsContinuous())
+        {
+            RemoveTaskByName("TonePlayer");
+            return FuncRetCode::PARAM_NOT_EXIST;
+        }
+    }
+    else
+    {
+        player = new TonePlayerTask();
+        if(InsertTaskBeforeName("WaveGen", player) == FuncRetCode::OK)
+        {
+            ((TonePlayerTask*)player)->PlaySoundContinuously({2200.0f, 0.0f}, 0.5f, true);
+            return FuncRetCode::OK;
+        }
+        delete player;
+    }
+    return FuncRetCode::NOT_SUPPORTED;
+}
 }

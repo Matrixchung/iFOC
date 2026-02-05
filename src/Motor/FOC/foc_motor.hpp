@@ -70,6 +70,7 @@ public:
     void ResetDefaultConfig();
     FOC::CurrLoopBase* GetCurrLoop();
     FOC::SpeedLoopBase* GetSpeedLoop();
+    FuncRetCode ToggleBeepIdentify();
 // private:
     // friend class iFOC::Task; // Friendship is neither inherited nor transitive.
     FOC::StateMachineTask state_machine;
