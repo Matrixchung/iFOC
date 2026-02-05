@@ -888,10 +888,10 @@ void ASCIIProtocol<Motor>::CmdSysInfo(uint8_t* data, uint16_t len, bool use_chec
 #if configGENERATE_RUN_TIME_STATS == 1
             uint32_t ulStatsAsPercentage = 0;
             if(ulTotalRunTime > 0)
-                uart->Print(false, "   TaskName\tState\tPrio.\tMin.Stack\tCPUTime\tTaskID\r\n");
+                uart->Print(false, "   TaskName\tState\tPrio.\tMin.Stack\tCPUTime\r\n");
             else
 #endif
-                uart->Print(false, "   TaskName\tState\tPrio.\tMin.Stack\tTaskID\r\n");
+                uart->Print(false, "   TaskName\tState\tPrio.\tMin.Stack\r\n");
             for(UBaseType_t x = 0; x < uxArraySize; x++)
             {
                 switch(pxTaskStatusArray[x].eCurrentState)
@@ -928,10 +928,9 @@ void ASCIIProtocol<Motor>::CmdSysInfo(uint8_t* data, uint16_t len, bool use_chec
                 }
                 else
 #endif
-                uart->Print(false, "\t%c\t%u\t%u\t%u\r\n", cStatus,
+                uart->Print(false, "\t%c\t%d\t%d\r\n", cStatus,
                             (uint32_t)pxTaskStatusArray[x].uxCurrentPriority,
-                            (uint32_t)pxTaskStatusArray[x].usStackHighWaterMark,
-                            (uint32_t)pxTaskStatusArray[x].xTaskNumber);
+                            (uint32_t)pxTaskStatusArray[x].usStackHighWaterMark);
             }
             uart->StartTransmit(false);
         }
