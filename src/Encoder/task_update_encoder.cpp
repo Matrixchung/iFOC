@@ -1,11 +1,14 @@
 #include "task_update_encoder.hpp"
 
+#include "../Motor/FOC/foc_motor.hpp"
+
 namespace iFOC::Encoder
 {
 
 void UpdateEncoderTask::InitRT()
 {
-    encoder->Init();
+    const auto foc = GetMotor<FOCMotor>();
+    encoder->Init(foc->GetInternalID());
 }
 
 void UpdateEncoderTask::UpdateMid(const float Ts)

@@ -11,7 +11,7 @@ class EncoderAB final : public EncoderABBase
 {
 public:
     EncoderAB(tmr_type *_htim, uint32_t _cpr);
-    FuncRetCode Init() override;
+    FuncRetCode Init(uint8_t motor_id) override;
     void UpdatePulse() override;
 private:
     tmr_type *htim;

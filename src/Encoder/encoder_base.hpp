@@ -6,6 +6,9 @@
 
 namespace iFOC::Encoder
 {
+constexpr char NONLINEAR_LUT_DB_KEY_PREFIX[] = "nl";
+constexpr uint16_t NONLINEAR_LUT_POINTS = 1025;
+
 enum class Type : uint8_t
 {
     ABSOLUTE_ENCODER = 0,
@@ -23,9 +26,10 @@ public:
         strncpy(name, _name, sizeof(name));
     };
     virtual ~EncoderBase() = default;
-    virtual FuncRetCode Init() { return FuncRetCode::OK; };
+    virtual FuncRetCode Init(uint8_t motor_id) { return FuncRetCode::OK; };
     virtual void UpdateRT(float Ts) {};
     virtual void UpdateMid(float Ts) {};
+    virtual void SaveConfig(uint8_t motor_id) {};
     // Since Normal task is running in RTOS loop and delay time is not proven,
     // all encoder instance shouldn't run a normal task.
     [[nodiscard]] const char* GetName() const { return name; };

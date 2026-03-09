@@ -6,7 +6,7 @@ namespace iFOC::Encoder
 {
 EncoderAB::EncoderAB(tmr_type* _htim, uint32_t _cpr) : EncoderABBase(_cpr), htim(_htim) {}
 
-FuncRetCode EncoderAB::Init()
+FuncRetCode EncoderAB::Init(uint8_t motor_id)
 {
     tmr_reset(htim);
 
