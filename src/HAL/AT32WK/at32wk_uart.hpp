@@ -17,7 +17,7 @@ public:
     void OnRxDMAIRQ();
     void OnTxDMAIRQ();
 private:
-    enum class State : uint8_t
+    enum class State : uint16_t
     {
         UART_STATE_READY,
         UART_STATE_BUSY_TX,
