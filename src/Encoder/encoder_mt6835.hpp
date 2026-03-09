@@ -21,13 +21,13 @@ public:
         CORE_UVLO = (1 << 2),
         CRC_ERROR = (1 << 3),
     };
-    enum class SelfCalibState : uint8_t
-    {
-        NO_CALIB = 0,
-        CALIB_ONGOING = 1,
-        CALIB_FAILED = 2,
-        CALIB_SUCCESS = 3
-    };
+    // enum class SelfCalibState : uint8_t
+    // {
+    //     NO_CALIB = 0,
+    //     CALIB_ONGOING = 1,
+    //     CALIB_FAILED = 2,
+    //     CALIB_SUCCESS = 3
+    // };
     EncoderMT6835(SPIBase *_spi, GPIOBase *_gpio);
     explicit EncoderMT6835(SPIBase *_spi);
     ~EncoderMT6835() override;
@@ -41,8 +41,8 @@ public:
     FuncRetCode ReadReg(uint16_t reg, uint8_t* data);
     FuncRetCode ReadAngleRegBurst(uint8_t *ret); // fixed length: 6
     FuncRetCode BurnEEPROM();
-    FuncRetCode GetSelfCalibrationState(SelfCalibState &ret);
-    FuncRetCode SetSelfCalibrationRPM(real_t rpm);
+    // FuncRetCode GetSelfCalibrationState(SelfCalibState &ret);
+    // FuncRetCode SetSelfCalibrationRPM(real_t rpm);
 // private:
     static constexpr uint32_t CPR = 2097151; // 2^21 = 2097152, 2^21 - 1 = 2097151
     static constexpr int CPRdiv2 = (CPR >> 1);
