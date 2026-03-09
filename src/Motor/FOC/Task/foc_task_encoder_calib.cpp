@@ -254,6 +254,13 @@ void EncoderCalibTask::UpdateNormal()
         }
         case EstStage::SENSOR_ZERO_OFFSET_TESTED:
         {
+            const auto encoder = foc->GetPrimaryEncoder();
+            if(!encoder)
+            {
+                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_COMPONENT_MISSING);
+                foc->RemoveTaskByName(GetName());
+                break;
+            }
             const uint32_t M  = foc->GetConfig().pole_pairs() * SAMPLES_PER_POLE_PAIR;
             double moving_average = 0.0;
             for(uint16_t i = 0; i < (uint16_t)M; i++)
@@ -263,61 +270,70 @@ void EncoderCalibTask::UpdateNormal()
             }
             moving_average /= ((double)SAMPLES_PER_POLE_PAIR);
 
-            const float zero_offset_mech = moving_average / (float)foc->GetConfig().pole_pairs();
-            constexpr size_t LUT_SEGMENTS = NONLINEAR_LUT_POINTS - 1;
-            DataType::LookupTable lut(NONLINEAR_LUT_POINTS, 0.0f, PI2);
-
-            // calculate rotation offset
-            // temp_map (based on 0-elec rad reference axis) -> lut (based on 0-sensor rad reference axis)
-            const float raw0 = normalize_rad(temp_map[0]);
-            const size_t lut_offset = (size_t)std::lroundf(raw0 * (float)LUT_SEGMENTS * divPI2) % LUT_SEGMENTS;
-
-            // resampling (SAMPLES_PER_POLE_PAIR * pp -> NONLINEAR_LUT_POINTS) && FIR smoothing to LUT
-            constexpr int window = (int)SAMPLES_PER_POLE_PAIR / 2U;
-            for(size_t i = 0; i < LUT_SEGMENTS; i++)
+            if(encoder->GetEncoderType() == Encoder::Type::ABSOLUTE_ENCODER)
             {
-                // LUT 第 i 个周期分段在原始样本序列中的中心位置
-                const int center = (int)((uint64_t)i * (uint64_t)M / (uint64_t)LUT_SEGMENTS);
-                double accmulate = 0.0;
-                int count = 0;
-                for(int j = -window / 2; j < window / 2; ++j)
+                const float zero_offset_mech = moving_average / (float)foc->GetConfig().pole_pairs();
+                constexpr size_t LUT_SEGMENTS = Encoder::NONLINEAR_LUT_POINTS - 1;
+                DataType::LookupTable lut(Encoder::NONLINEAR_LUT_POINTS, 0.0f, PI2);
+
+                // calculate rotation offset
+                // temp_map (based on 0-elec rad reference axis) -> lut (based on 0-sensor rad reference axis)
+                const float raw0 = normalize_rad(temp_map[0]);
+                const size_t lut_offset = (size_t)std::lroundf(raw0 * (float)LUT_SEGMENTS * divPI2) % LUT_SEGMENTS;
+
+                // resampling (SAMPLES_PER_POLE_PAIR * pp -> NONLINEAR_LUT_POINTS) && FIR smoothing to LUT
+                constexpr int window = (int)SAMPLES_PER_POLE_PAIR / 2U;
+                for(size_t i = 0; i < LUT_SEGMENTS; i++)
                 {
-                    int idx = center + j;
-                    while(idx < 0) idx += (int)M;
-                    while(idx >= (int)M) idx -= (int)M;
-                    const float residual = normalize_rad_pm_pi(temp_map[(uint32_t)idx] - zero_offset_mech);
-                    accmulate += residual;
-                    ++count;
+                    // LUT 第 i 个周期分段在原始样本序列中的中心位置
+                    const int center = (int)((uint64_t)i * (uint64_t)M / (uint64_t)LUT_SEGMENTS);
+                    double accmulate = 0.0;
+                    int count = 0;
+                    for(int j = -window / 2; j < window / 2; ++j)
+                    {
+                        int idx = center + j;
+                        while(idx < 0) idx += (int)M;
+                        while(idx >= (int)M) idx -= (int)M;
+                        const float residual = normalize_rad_pm_pi(temp_map[(uint32_t)idx] - zero_offset_mech);
+                        accmulate += residual;
+                        ++count;
+                    }
+                    const float lut_value = (count > 0) ? (accmulate / (double)count) : 0.0f;
+                    const size_t lut_index = (lut_offset + i) % LUT_SEGMENTS;
+                    lut.setValueByIndex(lut_index, lut_value);
                 }
-                const float lut_value = (count > 0) ? (accmulate / (double)count) : 0.0f;
-                const size_t lut_index = (lut_offset + i) % LUT_SEGMENTS;
-                lut.setValueByIndex(lut_index, lut_value);
+                lut.setValueByIndex(LUT_SEGMENTS, lut.getValueByIndex(0)); // wrap around
+
+                if(temp_map)
+                {
+                    vPortFree(temp_map);
+                    temp_map = nullptr;
+                }
+
+                char key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
+                memcpy(key, Encoder::NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
+                key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';
+                key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
+                BlobNVMStorage().ClearNVM(key);
+
+                auto lut_serialized_size = lut.getSerializedSize();
+                uint8_t* serialize_buffer = (uint8_t*)pvPortMalloc(lut_serialized_size * sizeof(uint8_t));
+                if(serialize_buffer)
+                {
+                    if(lut.serialize(serialize_buffer, lut_serialized_size))
+                    {
+                        // By changing FDB_KVDB_CTRL_SET_SEC_SIZE using fdb_kvdb_control(), larger KV is allowed.
+                        BlobNVMStorage().SaveNVM(key, serialize_buffer, lut_serialized_size);
+                    }
+                    vPortFree(serialize_buffer);
+                    serialize_buffer = nullptr;
+                }
             }
-            lut.setValueByIndex(LUT_SEGMENTS, lut.getValueByIndex(0)); // wrap around
 
             if(temp_map)
             {
                 vPortFree(temp_map);
                 temp_map = nullptr;
-            }
-
-            char key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
-            memcpy(key, NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
-            key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';
-            key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
-            BlobNVMStorage().ClearNVM(key);
-
-            auto lut_serialized_size = lut.getSerializedSize();
-            uint8_t* serialize_buffer = (uint8_t*)pvPortMalloc(lut_serialized_size * sizeof(uint8_t));
-            if(serialize_buffer)
-            {
-                if(lut.serialize(serialize_buffer, lut_serialized_size))
-                {
-                    // By changing FDB_KVDB_CTRL_SET_SEC_SIZE using fdb_kvdb_control(), larger KV is allowed.
-                    BlobNVMStorage().SaveNVM(key, serialize_buffer, lut_serialized_size);
-                }
-                vPortFree(serialize_buffer);
-                serialize_buffer = nullptr;
             }
 
             foc->GetConfig().set_sensor_zero_offset_rad(normalize_rad(moving_average));

@@ -14,10 +14,10 @@ void EncoderArbiterTask::InitRT()
     const auto foc = GetMotor<FOCMotor>();
 
     // try to read nonlinear compensation lut
-    char key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
-    memcpy(key, NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
-    key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';
-    key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
+    char key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
+    memcpy(key, Encoder::NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
+    key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';
+    key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
 
     auto buffer_size = BlobNVMStorage().GetKVSize(key);
     if(buffer_size > 0)
