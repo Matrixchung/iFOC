@@ -720,6 +720,17 @@ size_t fdb_kv_get_blob(fdb_kvdb_t db, const char *key, fdb_blob_t blob)
     return read_len;
 }
 
+size_t fdb_kv_get_blob_len(fdb_kvdb_t db, const char* key)
+{
+    size_t ret = 0;
+    struct fdb_kv kv{};
+    if(find_kv(db, key, &kv))
+    {
+        ret = kv.value_len;
+    }
+    return ret;
+}
+
 /**
  * Get an KV value by key name.
  *
@@ -1201,7 +1212,7 @@ static fdb_err_t align_write(fdb_kvdb_t db, uint32_t addr, const uint32_t *buf, 
 #endif
 
     memset(align_data, FDB_BYTE_ERASED, align_data_size);
-    result = _fdb_flash_write((fdb_db_t) db, addr, buf, FDB_WG_ALIGN_DOWN(size), false);
+    if(FDB_WG_ALIGN_DOWN(size) > 0) result = _fdb_flash_write((fdb_db_t) db, addr, buf, FDB_WG_ALIGN_DOWN(size), false);
 
     align_remain = size - FDB_WG_ALIGN_DOWN(size);
     if (result == FDB_NO_ERR && align_remain) {

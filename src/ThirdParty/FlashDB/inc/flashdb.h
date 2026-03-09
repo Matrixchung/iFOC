@@ -55,6 +55,7 @@ namespace iFOC::HAL::NVM
     char             *fdb_kv_get          (fdb_kvdb_t db, const char *key);
     fdb_err_t         fdb_kv_set_blob     (fdb_kvdb_t db, const char *key, fdb_blob_t blob);
     size_t            fdb_kv_get_blob     (fdb_kvdb_t db, const char *key, fdb_blob_t blob);
+    size_t            fdb_kv_get_blob_len (fdb_kvdb_t db, const char *key);
     fdb_err_t         fdb_kv_del          (fdb_kvdb_t db, const char *key);
     fdb_kv_t          fdb_kv_get_obj      (fdb_kvdb_t db, const char *key, fdb_kv_t kv);
     fdb_blob_t        fdb_kv_to_blob      (fdb_kv_t   kv, fdb_blob_t blob);
