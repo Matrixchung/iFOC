@@ -13,12 +13,30 @@ using namespace DroneCAN;
 #include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/param/ExecuteOpcode.h"
 #include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/dynamic_node_id/Allocation.h"
 #include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/file/BeginFirmwareUpdate.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/file/GetInfo.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/file/Delete.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/file/Read.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/file/Write.h"
 
+// iFOC custom definitions below
 #include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/CompactFeedback.h"
 #include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/MiscFeedback.h"
-#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/GetError.h"
-#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/ClearError.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/GetClearError.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/GetClearErrorIndex.h"
 #include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/GetOSStats.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/GetTaskStats.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/GetEncoders.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/GetCurrentMotion.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/GetTargetMotion.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/SetRefFrame.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/SetMotorState.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/SetControlMode.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/SetMITTarget.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/SetTrajTarget.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/SetPosTarget.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/SetVelTarget.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/SetTorqueTarget.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/SetDebugCmd.h"
 
 #include <algorithm>
 
@@ -26,9 +44,26 @@ using namespace DroneCAN;
 #define IFOC_NODE_NAME ("com.ifoc.driver")
 #endif
 
+static constexpr char DRONECAN_NODE_NAME_DB_KEY_PREFIX[] = "nn";
+static constexpr char DRONECAN_NODE_NAME[] = "node_name";
+
 // Fixed a bug causing difference between dronecan_dsdlc.py compiled signature and PyDroneCAN compiled
 // check the real signature using show_data_type_info.py
-#define IFOC_GETOSSTATS_SIGNATURE_OVERRIDE (0xAFAF32F68F2500F4ULL)
+#define IFOC_GETOSSTATS_SIGNATURE_OVERRIDE (0x16e27da430c78667ULL)
+#define IFOC_GETTASKSTATS_SIGNATURE_OVERRIDE (0xAC9B145FEDF47CA4ULL)
+#define IFOC_GETCLEARERRORINDEX_SIGNATURE_OVERRIDE (0x62bb476f3e79fa2cULL)
+#define IFOC_GETENCODERS_SIGNATURE_OVERRIDE (0x3057F54C149920A3ULL)
+#define IFOC_GETCURRENTMOTION_SIGNATURE_OVERRIDE (0x5AFC5D6C10FB572CULL)
+#define IFOC_GETTARGETMOTION_SIGNATURE_OVERRIDE (0x67D5E143B1B01898ULL)
+#define IFOC_SETREFFRAME_SIGNATURE_OVERRIDE (0x1d8a09f14b68e511ULL)
+#define IFOC_SETMOTORSTATE_SIGNATURE_OVERRIDE (0x75b84757ca4943cbULL)
+#define IFOC_SETCONTROLMODE_SIGNATURE_OVERRIDE (0xa7a844f501ba1097ULL)
+#define IFOC_SETMITTARGET_SIGNATURE_OVERRIDE (0x2263b1bc574f3145ULL)
+#define IFOC_SETTRAJTARGET_SIGNATURE_OVERRIDE (0x1b7941f7d9387e1aULL)
+#define IFOC_SETPOSTARGET_SIGNATURE_OVERRIDE (0x8936246d79f9d46fULL)
+#define IFOC_SETVELTARGET_SIGNATURE_OVERRIDE (0x2c78b99b3b1bd8e0ULL)
+#define IFOC_SETTORQUETARGET_SIGNATURE_OVERRIDE (0x6b5d8a788d7c2b4fULL)
+#define IFOC_SETDEBUGCMD_SIGNATURE_OVERRIDE (0x5aa8f22d46113408ULL)
 
 namespace iFOC::Protocol
 {
@@ -65,10 +100,27 @@ void DroneCANProtocol::Init()
         target_node_id = CANARD_BROADCAST_NODE_ID;
         motor->GetConfig().set_node_id(target_node_id);
     }
-    canard.node_id = target_node_id;
+    // canard.node_id = target_node_id;
+    SetNodeID(target_node_id);
+    // read node name
+    char key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) + 1];
+    memcpy(key, DRONECAN_NODE_NAME_DB_KEY_PREFIX, sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) - 1);
+    key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) - 1] = motor->GetInternalID() + '0';
+    key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX)] = '\0';
+    uint16_t buffer_len = sizeof(node_name);
+    if(BlobNVMStorage().ReadNVM(key, (uint8_t*)node_name, &buffer_len) != FuncRetCode::OK || buffer_len == 0 || buffer_len >= sizeof(node_name))
+    {
+        static_assert(sizeof(IFOC_NODE_NAME) < sizeof(node_name) - 1);
+        const auto len = strlen(IFOC_NODE_NAME);
+        memcpy(node_name, IFOC_NODE_NAME, len);
+        node_name[len] = '\0';
+    }
+    else
+    {
+        node_name[buffer_len] = '\0';
+    }
     BoardConfig().GetConfig().GetReflectMap(); // generate reflect map first, to avoid generate in interrupt
     motor->GetConfig().GetReflectMap();
-    can->SetHWFilter(motor->GetInternalID(), 0, 0, true, false); // accept ext only
     // polling_task.Start();
     motor->AppendTask(&polling_task);
     can->RegisterRxHandler(std::bind(&DroneCANProtocol::OnRxEvent, this, std::placeholders::_1));
@@ -96,13 +148,15 @@ void DroneCANProtocol::PollingTask::UpdateNormal()
         if(fallback_node_id > CANARD_MAX_NODE_ID)
         {
             fallback_node_id = CANARD_BROADCAST_NODE_ID;
-            parent->canard.node_id = fallback_node_id;
+            // parent->canard.node_id = fallback_node_id;
+            parent->SetNodeID(fallback_node_id);
         }
         motor->GetConfig().set_node_id(fallback_node_id);
     }
     else if(new_node_id != parent->canard.node_id)
     {
-        parent->canard.node_id = new_node_id;
+        // parent->canard.node_id = new_node_id;
+        parent->SetNodeID(new_node_id);
     }
     // #1: Response received transfer first
     DataType::Comm::CANMessage message{};
@@ -167,6 +221,23 @@ void DroneCANProtocol::PollingTask::UpdateNormal()
                 last_send_tick.misc_feedback = xTaskGetTickCount();
                 parent->SendFOCMiscFeedback();
             }
+        }
+        // Cleanup file read buffer
+        if(parent->file_read_buffer.last_read_tick > 0 && xTaskGetTickCount() - parent->file_read_buffer.last_read_tick >= parent->FILE_READ_TIMEOUT_MS)
+        {
+            if(parent->file_read_buffer.key)
+            {
+                vPortFree(parent->file_read_buffer.key);
+                parent->file_read_buffer.key = nullptr;
+            }
+            parent->file_read_buffer.key_length = 0;
+            if(parent->file_read_buffer.data)
+            {
+                vPortFree(parent->file_read_buffer.data);
+                parent->file_read_buffer.data = nullptr;
+            }
+            parent->file_read_buffer.data_length = 0;
+            parent->file_read_buffer.last_read_tick = 0;
         }
     }
     else // waiting for Dynamic Node-ID Allocation (DNA)
@@ -239,7 +310,7 @@ void DroneCANProtocol::ProcessTransfer(DroneCAN::CanardInstance* ins, DroneCAN::
             {
                 case UAVCAN_PROTOCOL_GETNODEINFO_ID:
                 {
-                    SendGetInfoResponse(transfer);
+                    SendGetNodeInfoResponse(transfer);
                     break;
                 }
                 case UAVCAN_PROTOCOL_GETTRANSPORTSTATS_ID:
@@ -267,19 +338,89 @@ void DroneCANProtocol::ProcessTransfer(DroneCAN::CanardInstance* ins, DroneCAN::
                     SendFWUpdateResponse(transfer);
                     break;
                 }
-                case IFOC_GETERROR_ID:
+                case UAVCAN_PROTOCOL_FILE_GETINFO_ID:
                 {
-                    SendFOCGetErrorResponse(transfer);
+                    SendFileGetInfoResponse(transfer);
                     break;
                 }
-                case IFOC_CLEARERROR_ID:
+                case UAVCAN_PROTOCOL_FILE_DELETE_ID:
                 {
-                    SendFOCClearErrorResponse(transfer);
+                    SendFileDeleteResponse(transfer);
+                    break;
+                }
+                case UAVCAN_PROTOCOL_FILE_READ_ID:
+                {
+                    SendFileReadResponse(transfer);
+                    break;
+                }
+                case IFOC_GETCLEARERROR_ID:
+                {
+                    SendFOCGetClearErrorResponse(transfer);
+                    break;
+                }
+                case IFOC_GETCLEARERRORINDEX_ID:
+                {
+                    SendFOCGetClearErrorIndexResponse(transfer);
                     break;
                 }
                 case IFOC_GETOSSTATS_ID:
                 {
                     SendFOCGetOSStatsResponse(transfer);
+                    break;
+                }
+                case IFOC_GETTASKSTATS_ID:
+                {
+                    SendFOCGetTaskStatsResponse(transfer);
+                    break;
+                }
+                case IFOC_GETENCODERS_ID:
+                {
+                    SendFOCGetEncodersResponse(transfer);
+                    break;
+                }
+                case IFOC_GETCURRENTMOTION_ID:
+                {
+                    SendFOCGetCurrentMotionResponse(transfer);
+                    break;
+                }
+                case IFOC_GETTARGETMOTION_ID:
+                {
+                    SendFOCGetTargetMotionResponse(transfer);
+                    break;
+                }
+                case IFOC_SETREFFRAME_ID:
+                {
+                    SendFOCSetRefFrameResponse(transfer);
+                    break;
+                }
+                case IFOC_SETMOTORSTATE_ID:
+                {
+                    SendFOCSetMotorStateResponse(transfer);
+                    break;
+                }
+                case IFOC_SETCONTROLMODE_ID:
+                {
+                    SendFOCSetControlModeResponse(transfer);
+                    break;
+                }
+                case IFOC_SETTRAJTARGET_ID:
+                {
+                    SendFOCSetTrajTargetResponse(transfer);
+                    break;
+                }
+                case IFOC_SETPOSTARGET_ID:
+                {
+                    SendFOCSetPosTargetResponse(transfer);
+                    break;
+                }
+                case IFOC_SETVELTARGET_ID:
+                {
+                    SendFOCSetVelTargetResponse(transfer);
+                    break;
+                }
+                case IFOC_SETTORQUETARGET_ID:
+                {
+                    SendFOCSetTorqueTargetResponse(transfer);
                     break;
                 }
                 default: break;
@@ -346,20 +487,90 @@ bool DroneCANProtocol::ShouldAccept(const DroneCAN::CanardInstance* ins, uint64_
                     *out = UAVCAN_PROTOCOL_FILE_BEGINFIRMWAREUPDATE_REQUEST_SIGNATURE;
                     return true;
                 }
-                case IFOC_GETERROR_ID:
+                case UAVCAN_PROTOCOL_FILE_GETINFO_ID:
                 {
-                    *out = IFOC_GETERROR_REQUEST_SIGNATURE;
+                    *out = UAVCAN_PROTOCOL_FILE_GETINFO_REQUEST_SIGNATURE;
                     return true;
                 }
-                case IFOC_CLEARERROR_ID:
+                case UAVCAN_PROTOCOL_FILE_DELETE_ID:
                 {
-                    *out = IFOC_CLEARERROR_REQUEST_SIGNATURE;
+                    *out = UAVCAN_PROTOCOL_FILE_DELETE_REQUEST_SIGNATURE;
+                    return true;
+                }
+                case UAVCAN_PROTOCOL_FILE_READ_ID:
+                {
+                    *out = UAVCAN_PROTOCOL_FILE_READ_REQUEST_SIGNATURE;
+                    return true;
+                }
+                case IFOC_GETCLEARERROR_ID:
+                {
+                    *out = IFOC_GETCLEARERROR_REQUEST_SIGNATURE;
+                    return true;
+                }
+                case IFOC_GETCLEARERRORINDEX_ID:
+                {
+                    *out = IFOC_GETCLEARERRORINDEX_SIGNATURE_OVERRIDE;
                     return true;
                 }
                 case IFOC_GETOSSTATS_ID:
                 {
                     // *out = IFOC_GETOSSTATS_SIGNATURE;
                     *out = IFOC_GETOSSTATS_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_GETTASKSTATS_ID:
+                {
+                    *out = IFOC_GETTASKSTATS_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_GETENCODERS_ID:
+                {
+                    *out = IFOC_GETENCODERS_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_GETCURRENTMOTION_ID:
+                {
+                    *out = IFOC_GETCURRENTMOTION_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_GETTARGETMOTION_ID:
+                {
+                    *out = IFOC_GETTARGETMOTION_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_SETREFFRAME_ID:
+                {
+                    *out = IFOC_SETREFFRAME_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_SETMOTORSTATE_ID:
+                {
+                    *out = IFOC_SETMOTORSTATE_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_SETCONTROLMODE_ID:
+                {
+                    *out = IFOC_SETCONTROLMODE_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_SETTRAJTARGET_ID:
+                {
+                    *out = IFOC_SETTRAJTARGET_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_SETPOSTARGET_ID:
+                {
+                    *out = IFOC_SETPOSTARGET_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_SETVELTARGET_ID:
+                {
+                    *out = IFOC_SETVELTARGET_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_SETTORQUETARGET_ID:
+                {
+                    *out = IFOC_SETTORQUETARGET_SIGNATURE_OVERRIDE;
                     return true;
                 }
                 default: break;
@@ -386,6 +597,21 @@ bool DroneCANProtocol::ShouldAccept(const DroneCAN::CanardInstance* ins, uint64_
         default: break;
     }
     return false;
+}
+
+void DroneCANProtocol::_SendResponse(DroneCAN::CanardRxTransfer* transfer, const uint64_t signature, const uint8_t id,
+    const void* payload, const uint16_t len)
+{
+    canardReleaseRxTransferPayload(&canard, transfer);
+    canardRequestOrRespond(&canard,
+                           transfer->source_node_id,
+                           signature,
+                           id,
+                           &transfer->transfer_id,
+                           transfer->priority,
+                           CanardResponse,
+                           payload,
+                           len);
 }
 
 uavcan_protocol_NodeStatus DroneCANProtocol::BuildNodeStatus()
@@ -482,52 +708,54 @@ void DroneCANProtocol::SendFOCMiscFeedback()
                     len);
 }
 
-void DroneCANProtocol::SendFOCGetErrorResponse(DroneCAN::CanardRxTransfer* transfer)
+void DroneCANProtocol::SendFOCGetClearErrorResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    const auto motor = GetMotor<FOCMotor>();
+    ifoc_GetClearErrorRequest request{};
+    if(ifoc_GetClearErrorRequest_decode(transfer, &request)) return;
 
-    ifoc_GetErrorResponse response{};
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    if(request.clear_mask) motor->ClearError(request.clear_mask);
+
+    ifoc_GetClearErrorResponse response{};
     response.error = motor->GetError();
 
-    uint8_t buffer[IFOC_GETERROR_RESPONSE_MAX_SIZE];
-    const uint32_t len = ifoc_GetErrorResponse_encode(&response, buffer);
+    uint8_t buffer[IFOC_GETCLEARERROR_RESPONSE_MAX_SIZE];
+    const uint32_t len = ifoc_GetClearErrorResponse_encode(&response, buffer);
 
-    canardReleaseRxTransferPayload(&canard, transfer);
-    canardRequestOrRespond(&canard,
-                           transfer->source_node_id,
-                           IFOC_GETERROR_RESPONSE_SIGNATURE,
-                           IFOC_GETERROR_RESPONSE_ID,
-                           &transfer->transfer_id,
-                           transfer->priority,
-                           CanardResponse,
-                           buffer,
-                           len);
+    _SendResponse(transfer, IFOC_GETCLEARERROR_RESPONSE_SIGNATURE, IFOC_GETCLEARERROR_RESPONSE_ID, buffer, len);
 }
 
-void DroneCANProtocol::SendFOCClearErrorResponse(DroneCAN::CanardRxTransfer* transfer)
+void DroneCANProtocol::SendFOCGetClearErrorIndexResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_ClearErrorRequest request{};
-    if(ifoc_ClearErrorRequest_decode(transfer, &request)) return;
-
+    ifoc_GetClearErrorIndexRequest request{};
+    if(ifoc_GetClearErrorIndexRequest_decode(transfer, &request)) return;
     const auto motor = GetMotor<FOCMotor>();
-    motor->ClearError(request.clear_mask);
+    motor->UpdateWatchdog();
+    for(auto i = 0; i < request.clear_index.len; i++)
+    {
+        const uint64_t temp_error = (1 << request.clear_index.data[i]);
+        if(motor->GetError() & temp_error)
+        {
+            motor->ClearError(temp_error);
+        }
+    }
+    ifoc_GetClearErrorIndexResponse response{};
+    auto error = motor->GetError();
+    uint8_t error_index = 0;
+    while(error && response.error_index.len < sizeof(response.error_index.data))
+    {
+        if(error & 0x01)
+        {
+            response.error_index.data[response.error_index.len++] = error_index;
+        }
+        error_index++;
+        error >>= 1LL;
+    }
+    uint8_t buffer[IFOC_GETCLEARERRORINDEX_RESPONSE_MAX_SIZE];
+    const uint32_t len = ifoc_GetClearErrorIndexResponse_encode(&response, buffer);
 
-    ifoc_ClearErrorResponse response{};
-    response.error = motor->GetError();
-
-    uint8_t buffer[IFOC_CLEARERROR_RESPONSE_MAX_SIZE];
-    const uint32_t len = ifoc_ClearErrorResponse_encode(&response, buffer);
-
-    canardReleaseRxTransferPayload(&canard, transfer);
-    canardRequestOrRespond(&canard,
-        transfer->source_node_id,
-        IFOC_CLEARERROR_RESPONSE_SIGNATURE,
-        IFOC_CLEARERROR_RESPONSE_ID,
-        &transfer->transfer_id,
-        transfer->priority,
-        CanardResponse,
-        buffer,
-        len);
+    _SendResponse(transfer, IFOC_GETCLEARERRORINDEX_SIGNATURE_OVERRIDE, IFOC_GETCLEARERRORINDEX_RESPONSE_ID, buffer, len);
 }
 
 void DroneCANProtocol::SendFOCGetOSStatsResponse(DroneCAN::CanardRxTransfer* transfer)
@@ -571,16 +799,23 @@ void DroneCANProtocol::SendFOCGetOSStatsResponse(DroneCAN::CanardRxTransfer* tra
     if(pxTaskStatusArray)
     {
         uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, &ulTotalRunTime);
-        Vector<TaskStatus_t> task_vector(pxTaskStatusArray, pxTaskStatusArray + uxArraySize);
-        std::sort(task_vector.begin(), task_vector.end(), [](const TaskStatus_t &a, const TaskStatus_t &b) -> bool { return a.uxCurrentPriority > b.uxCurrentPriority; } );
-        response.tasks.len = _constrain(uxArraySize, 0, sizeof(response.tasks.data));
-        for(uint8_t i = 0; i < response.tasks.len; i++)
+        ulTotalRunTime /= 100UL;
+        if(ulTotalRunTime > 0)
         {
-            response.tasks.data[i].task_state = (uint8_t)task_vector[i].eCurrentState;
-            response.tasks.data[i].priority = (uint8_t)task_vector[i].uxCurrentPriority;
-            response.tasks.data[i].min_stack_remaining = (uint16_t)task_vector[i].usStackHighWaterMark;
-            response.tasks.data[i].task_name.len = _constrain(strlen(task_vector[i].pcTaskName), 0, sizeof(response.tasks.data->task_name.data));
-            memcpy(response.tasks.data[i].task_name.data, task_vector[i].pcTaskName, response.tasks.data[i].task_name.len);
+            Vector<TaskStatus_t> task_vector(pxTaskStatusArray, pxTaskStatusArray + uxArraySize);
+            std::sort(task_vector.begin(), task_vector.end(), [](const TaskStatus_t &a, const TaskStatus_t &b) -> bool { return a.uxCurrentPriority > b.uxCurrentPriority; } );
+            response.tasks.len = _constrain(uxArraySize, 0, sizeof(response.tasks.data));
+            uint32_t ulStatsAsPct = 0;
+            for(uint8_t i = 0; i < response.tasks.len; i++)
+            {
+                ulStatsAsPct = task_vector[i].ulRunTimeCounter / ulTotalRunTime;
+                response.tasks.data[i].task_state = (uint8_t)task_vector[i].eCurrentState;
+                response.tasks.data[i].priority = (uint8_t)task_vector[i].uxCurrentPriority;
+                response.tasks.data[i].min_stack_remaining = (uint16_t)task_vector[i].usStackHighWaterMark;
+                response.tasks.data[i].task_name.len = _constrain(strlen(task_vector[i].pcTaskName), 0, sizeof(response.tasks.data->task_name.data));
+                response.tasks.data[i].run_time_pct = _constrain(ulStatsAsPct, 1, 100);
+                memcpy(response.tasks.data[i].task_name.data, task_vector[i].pcTaskName, response.tasks.data[i].task_name.len);
+            }
         }
     }
     vPortFree(pxTaskStatusArray);
@@ -589,19 +824,532 @@ void DroneCANProtocol::SendFOCGetOSStatsResponse(DroneCAN::CanardRxTransfer* tra
     uint8_t buffer[IFOC_GETOSSTATS_RESPONSE_MAX_SIZE];
     const uint32_t len = ifoc_GetOSStatsResponse_encode(&response, buffer);
 
-    canardReleaseRxTransferPayload(&canard, transfer);
-    canardRequestOrRespond(&canard,
-                           transfer->source_node_id,
-                           IFOC_GETOSSTATS_SIGNATURE_OVERRIDE,
-                           IFOC_GETOSSTATS_ID,
-                           &transfer->transfer_id,
-                           transfer->priority,
-                           CanardResponse,
-                           buffer,
-                           len);
+    _SendResponse(transfer, IFOC_GETOSSTATS_SIGNATURE_OVERRIDE, IFOC_GETOSSTATS_ID, buffer, len);
 }
 
-void DroneCANProtocol::SendGetInfoResponse(DroneCAN::CanardRxTransfer* transfer)
+void DroneCANProtocol::SendFOCGetTaskStatsResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    ifoc_GetTaskStatsResponse response
+    {
+        .rt_task_time_us = (uint8_t)motor->task_times.rt_main_task.elapsed_time_us,
+        .rt_to_rem_wait_time_us = (uint8_t)motor->task_times.rt_waiting_for_remaining.elapsed_time_us,
+        .rem_task_time_us = (uint8_t)motor->task_times.rt_remaining_task.elapsed_time_us,
+        .mid_task_time_us = (uint8_t)motor->task_times.mid_interval_task.elapsed_time_us,
+        .rt_task_list = {},
+        .mid_task_list = {}
+    };
+    static_assert(sizeof(response.rt_task_list.data) == sizeof(response.mid_task_list.data));
+    const auto& task_list = motor->GetTaskProcessor().GetTaskList();
+    auto it = task_list.cbegin();
+    for(uint8_t i = 0; i < sizeof(response.rt_task_list.data) && it != task_list.cend(); ++i, ++it)
+    {
+        if((*it)->IsTaskRegistered(Task::TaskType::RT_TASK))
+        {
+            response.rt_task_list.data[response.rt_task_list.len].task_name.len = strlen((*it)->GetName());
+            memcpy(response.rt_task_list.data[response.rt_task_list.len].task_name.data,
+                (*it)->GetName(),
+                response.rt_task_list.data[response.rt_task_list.len].task_name.len);
+            response.rt_task_list.len++;
+        }
+        if((*it)->IsTaskRegistered(Task::TaskType::MID_TASK))
+        {
+            response.mid_task_list.data[response.mid_task_list.len].task_name.len = strlen((*it)->GetName());
+            memcpy(response.mid_task_list.data[response.mid_task_list.len].task_name.data,
+                (*it)->GetName(),
+                response.mid_task_list.data[response.mid_task_list.len].task_name.len);
+            response.mid_task_list.len++;
+        }
+    }
+    uint8_t buffer[IFOC_GETTASKSTATS_RESPONSE_MAX_SIZE];
+    const uint16_t len = ifoc_GetTaskStatsResponse_encode(&response, buffer);
+
+    _SendResponse(transfer, IFOC_GETTASKSTATS_SIGNATURE_OVERRIDE, IFOC_GETTASKSTATS_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendFOCGetEncodersResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    const auto& encoders = motor->GetEncoders();
+    const uint8_t encoders_count = MIN(encoders.size(), sizeof(ifoc_GetEncodersResponse::encoders.data));
+    ifoc_GetEncodersResponse response{};
+    response.encoders.len = encoders_count;
+    for(uint8_t i = 0; i < encoders_count; i++)
+    {
+        const auto& enc = encoders[i];
+        auto& target = response.encoders.data[i];
+        target.name.len = MIN(strlen(enc->GetName()), sizeof(ifoc_GetEncodersResponse::encoders.data->name.data));
+        memcpy(target.name.data, enc->GetName(), target.name.len);
+        target.type = (uint8_t)enc->GetEncoderType();
+        target.primary = motor->GetPrimaryEncoderIndex() == i;
+        target.result_valid = enc->IsResultValid();
+        target.single_round_angle_rad = enc->single_round_angle_rad;
+        target.multi_round_angle_rad = enc->multi_round_angle_rad;
+        target.angular_speed_rad_s = enc->angular_speed_rad_s;
+        target.full_rotations = enc->full_rotations;
+    }
+
+    uint8_t buffer[IFOC_GETENCODERS_RESPONSE_MAX_SIZE];
+    const uint16_t len = ifoc_GetEncodersResponse_encode(&response, buffer);
+
+    _SendResponse(transfer, IFOC_GETENCODERS_SIGNATURE_OVERRIDE, IFOC_GETENCODERS_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendFOCGetCurrentMotionResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    const auto& current_motion = motor->GetCurrentMotionStruct(io_ref, io_torque_unit, io_speed_unit, io_pos_unit);
+    ifoc_GetCurrentMotionResponse response
+    {
+        .current =
+        {
+            .torque = current_motion.torque.value,
+            .speed = current_motion.speed.value,
+            .pos = current_motion.pos.value
+        }
+    };
+
+    uint8_t buffer[IFOC_GETCURRENTMOTION_RESPONSE_MAX_SIZE];
+    const uint16_t len = ifoc_GetCurrentMotionResponse_encode(&response, buffer);
+
+    _SendResponse(transfer, IFOC_GETCURRENTMOTION_SIGNATURE_OVERRIDE, IFOC_GETCURRENTMOTION_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendFOCGetTargetMotionResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    const auto& current_motion = motor->GetTargetMotionStruct(io_ref, io_torque_unit, io_speed_unit, io_pos_unit);
+    ifoc_GetTargetMotionResponse response
+    {
+        .target =
+        {
+            .torque = current_motion.torque.value,
+            .speed = current_motion.speed.value,
+            .pos = current_motion.pos.value
+        }
+    };
+
+    uint8_t buffer[IFOC_GETTARGETMOTION_RESPONSE_MAX_SIZE];
+    const uint16_t len = ifoc_GetTargetMotionResponse_encode(&response, buffer);
+
+    _SendResponse(transfer, IFOC_GETTARGETMOTION_SIGNATURE_OVERRIDE, IFOC_GETTARGETMOTION_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendFOCSetRefFrameResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    ifoc_SetRefFrameRequest request{};
+    if(ifoc_SetRefFrameRequest_decode(transfer, &request)) return;
+
+    if((Motion::Ref)request.set_ref.reference != Motion::Ref::ELEC)
+    {
+        io_ref = (Motion::Ref)request.set_ref.reference;
+        io_torque_unit = (Motion::TorqueUnit)request.set_ref.torque_unit;
+        io_speed_unit = (Motion::SpeedUnit)request.set_ref.speed_unit;
+        io_pos_unit = (Motion::PosUnit)request.set_ref.pos_unit;
+    }
+
+    ifoc_SetRefFrameResponse response
+    {
+        .get_ref =
+        {
+            .reference = (uint8_t)io_ref,
+            .torque_unit = (bool)io_torque_unit,
+            .speed_unit = (uint8_t)io_speed_unit,
+            .pos_unit = (uint8_t)io_pos_unit
+        }
+    };
+
+    uint8_t buffer[IFOC_SETREFFRAME_RESPONSE_MAX_SIZE];
+    const uint16_t len = ifoc_SetRefFrameResponse_encode(&response, buffer);
+
+    _SendResponse(transfer, IFOC_SETREFFRAME_SIGNATURE_OVERRIDE, IFOC_SETREFFRAME_ID, buffer, len);
+}
+
+// void DroneCANProtocol::SendFOCGetBlobStorageResponse(DroneCAN::CanardRxTransfer* transfer)
+// {
+//     ifoc_GetBlobStorageRequest request{};
+//     if(ifoc_GetBlobStorageRequest_decode(transfer, &request)) return;
+//
+//     char key[sizeof(request.key.data) + 1]{};
+//     memcpy(key, request.key.data, request.key.len);
+//     key[request.key.len] = '\0';
+//     auto* response = new ifoc_GetBlobStorageResponse();
+//     response->data.len = sizeof(response->data.data);
+//     response->ok = BlobNVMStorage().ReadNVM(key, response->data.data, &response->data.len) == FuncRetCode::OK;
+//
+//     auto* buffer = new uint8_t[IFOC_GETBLOBSTORAGE_RESPONSE_MAX_SIZE];
+//     const uint32_t len = ifoc_GetBlobStorageResponse_encode(response, buffer);
+//     delete response;
+//
+//     _SendResponse(transfer, IFOC_GETBLOBSTORAGE_SIGNATURE_OVERRIDE, IFOC_GETBLOBSTORAGE_ID, buffer, len);
+//     delete[] buffer;
+// }
+//
+// void DroneCANProtocol::SendFOCSetBlobStorageResponse(DroneCAN::CanardRxTransfer* transfer)
+// {
+//     auto* request = new ifoc_SetBlobStorageRequest();
+//     if(ifoc_SetBlobStorageRequest_decode(transfer, request))
+//     {
+//         delete request;
+//         return;
+//     }
+//
+//     char key[sizeof(request->key.data) + 1]{};
+//     memcpy(key, request->key.data, request->key.len);
+//     key[request->key.len] = '\0';
+//
+//     ifoc_SetBlobStorageResponse response
+//     {
+//         .ok = BlobNVMStorage().SaveNVM(key, request->data.data, request->data.len) == FuncRetCode::OK
+//     };
+//
+//     delete request;
+//
+//     uint8_t buffer[IFOC_SETBLOBSTORAGE_RESPONSE_MAX_SIZE];
+//     const uint16_t len = ifoc_SetBlobStorageResponse_encode(&response, buffer);
+//
+//     _SendResponse(transfer, IFOC_SETBLOBSTORAGE_SIGNATURE_OVERRIDE, IFOC_SETBLOBSTORAGE_ID, buffer, len);
+// }
+//
+// void DroneCANProtocol::SendFOCClearBlobStorageResponse(DroneCAN::CanardRxTransfer* transfer)
+// {
+//     ifoc_ClearBlobStorageRequest request{};
+//     if(ifoc_ClearBlobStorageRequest_decode(transfer, &request)) return;
+//
+//     char key[sizeof(request.key.data) + 1]{};
+//     memcpy(key, request.key.data, request.key.len);
+//     key[request.key.len] = '\0';
+//
+//     ifoc_ClearBlobStorageResponse response
+//     {
+//         .ok = BlobNVMStorage().ClearNVM(key) == FuncRetCode::OK
+//     };
+//
+//     uint8_t buffer[IFOC_CLEARBLOBSTORAGE_RESPONSE_MAX_SIZE];
+//     const uint16_t len = ifoc_ClearBlobStorageResponse_encode(&response, buffer);
+//
+//     _SendResponse(transfer, IFOC_CLEARBLOBSTORAGE_SIGNATURE_OVERRIDE, IFOC_CLEARBLOBSTORAGE_ID, buffer, len);
+// }
+
+void DroneCANProtocol::SendFOCSetMotorStateResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    ifoc_SetMotorStateRequest request{};
+    if(ifoc_SetMotorStateRequest_decode(transfer, &request)) return;
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    const MotorState req_state = (MotorState)request.set_state;
+    ifoc_SetMotorStateResponse response
+    {
+        .state = (uint8_t)motor->state_machine.RequestState(req_state)
+    };
+    uint8_t buffer[IFOC_SETMOTORSTATE_RESPONSE_MAX_SIZE];
+    const uint16_t len = ifoc_SetMotorStateResponse_encode(&response, buffer);
+    _SendResponse(transfer, IFOC_SETMOTORSTATE_SIGNATURE_OVERRIDE, IFOC_SETMOTORSTATE_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendFOCSetControlModeResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    ifoc_SetControlModeRequest request{};
+    if(ifoc_SetControlModeRequest_decode(transfer, &request)) return;
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    motor->SetControlMode((MotorControlMode)request.set_mode);
+    ifoc_SetControlModeResponse response
+    {
+        .control_mode = (uint8_t)motor->GetControlMode()
+    };
+    uint8_t buffer[IFOC_SETCONTROLMODE_RESPONSE_MAX_SIZE];
+    const uint16_t len = ifoc_SetControlModeResponse_encode(&response, buffer);
+    _SendResponse(transfer, IFOC_SETCONTROLMODE_SIGNATURE_OVERRIDE, IFOC_SETCONTROLMODE_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendFOCSetTrajTargetResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    ifoc_SetTrajTargetRequest request{};
+    if(ifoc_SetTrajTargetRequest_decode(transfer, &request)) return;
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    Motion target_motion
+    {
+        .ref = io_ref,
+        .torque = {0.0f, 0.0f, io_torque_unit},
+        .speed = {0.0f, 0.0f, io_speed_unit},
+        .pos = {request.target, 0.0f, io_pos_unit}
+    };
+    if(request.relative)
+    {
+        if(request.rel_curr_based)
+        {
+            const auto curr_motion = motor->GetCurrentMotionStruct(target_motion);
+            target_motion.pos.value += curr_motion.pos.value;
+        }
+        else
+        {
+            const auto last_target_motion = motor->GetTargetMotionStruct(target_motion);
+            target_motion.pos.value += last_target_motion.pos.value;
+        }
+    }
+    motor->SetControlMode(MotorControlMode::CTRL_MODE_POSITION);
+    motor->SetTrajectoryTargetMotion(target_motion, request.s_curve);
+}
+
+void DroneCANProtocol::SendFOCSetPosTargetResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    ifoc_SetPosTargetRequest request{};
+    if(ifoc_SetPosTargetRequest_decode(transfer, &request)) return;
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    if(motor->GetConfig().deduction_ratio() <= 0.0f) return;
+    // int10: [-512,511]
+    static constexpr float _1_div_512 = 1.0f / 512.0f;
+    const float real_velocity_output_rpm = (float)request.velocity_pu * _1_div_512 * motor->GetConfig().mit_output_vel_range_rpm();
+    const float real_torque_output_nm = (float)request.torque_pu * _1_div_512 * motor->GetConfig().mit_output_tor_range_nm();
+    // transform to base frame, RPM -> RADS, NM -> AMP
+    const float real_velocity_base_rads = RPM2RAD(real_velocity_output_rpm * motor->GetConfig().deduction_ratio(), 1);
+    float real_torque_base_amp = real_torque_output_nm / motor->GetConfig().deduction_ratio();
+    if(motor->GetConfig().torque_constant_valid() && motor->GetConfig().torque_constant() > 0.0f) // [Nm/A]
+    {
+        real_torque_base_amp /= motor->GetConfig().torque_constant();
+    }
+    else real_torque_base_amp = 0.0f;
+    Motion target_motion
+    {
+        .ref = io_ref,
+        .torque = {0.0f, 0.0f, Motion::TorqueUnit::AMP},
+        .speed = {0.0f, 0.0f, io_speed_unit},
+        .pos = {request.target, 0.0f, io_pos_unit}
+    };
+    if(request.relative)
+    {
+        if(request.rel_curr_based)
+        {
+            const auto curr_motion = motor->GetCurrentMotionStruct(target_motion);
+            target_motion.pos.value += curr_motion.pos.value;
+        }
+        else
+        {
+            const auto last_target_motion = motor->GetTargetMotionStruct(target_motion);
+            target_motion.pos.value += last_target_motion.pos.value;
+        }
+    }
+    target_motion.ConvertSpeedPosToDefault();
+    if(target_motion.ref == Motion::Ref::OUTPUT) // OUTPUT -> BASE
+    {
+        target_motion.speed.value *= motor->GetConfig().deduction_ratio();
+        target_motion.speed.limit *= motor->GetConfig().deduction_ratio();
+        target_motion.pos.value *= motor->GetConfig().deduction_ratio();
+        target_motion.pos.limit *= motor->GetConfig().deduction_ratio();
+    }
+    target_motion.ref = Motion::Ref::BASE;
+    // Now we have BASE ref, with AMP, RADS and RAD.
+    if(request.vel_tor_ff)
+    {
+        target_motion.torque.value = real_torque_base_amp;
+        target_motion.speed.value = real_velocity_base_rads;
+    }
+    else
+    {
+        target_motion.torque.limit = ABS(real_torque_base_amp);
+        target_motion.speed.limit = ABS(real_velocity_base_rads);
+    }
+    motor->SetControlMode(MotorControlMode::CTRL_MODE_POSITION);
+    motor->SetTargetMotion(target_motion);
+}
+
+void DroneCANProtocol::SendFOCSetVelTargetResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    ifoc_SetVelTargetRequest request{};
+    if(ifoc_SetVelTargetRequest_decode(transfer, &request)) return;
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    // int10: [-512,511]
+    static constexpr float _1_div_512 = 1.0f / 512.0f;
+    const float real_torque_output_nm = (float)request.torque_pu * _1_div_512 * motor->GetConfig().mit_output_tor_range_nm();
+    // transform to base frame, NM -> AMP
+    float real_torque_base_amp = real_torque_output_nm / motor->GetConfig().deduction_ratio();
+    if(motor->GetConfig().torque_constant_valid() && motor->GetConfig().torque_constant() > 0.0f) // [Nm/A]
+    {
+        real_torque_base_amp /= motor->GetConfig().torque_constant();
+    }
+    else real_torque_base_amp = 0.0f;
+    Motion target_motion
+    {
+        .ref = io_ref,
+        .torque = {0.0f, 0.0f, Motion::TorqueUnit::AMP},
+        .speed = {request.target, 0.0f, io_speed_unit},
+        .pos = {0.0f, 0.0f, io_pos_unit}
+    };
+    target_motion.ConvertSpeedPosToDefault();
+    if(target_motion.ref == Motion::Ref::OUTPUT) // OUTPUT -> BASE
+    {
+        target_motion.speed.value *= motor->GetConfig().deduction_ratio();
+        target_motion.speed.limit *= motor->GetConfig().deduction_ratio();
+        target_motion.pos.value *= motor->GetConfig().deduction_ratio();
+        target_motion.pos.limit *= motor->GetConfig().deduction_ratio();
+    }
+    target_motion.ref = Motion::Ref::BASE;
+    // Now we have BASE ref, with AMP, RADS and RAD.
+    if(request.torque_ff)
+    {
+        target_motion.torque.value = real_torque_base_amp;
+    }
+    else target_motion.torque.limit = ABS(real_torque_base_amp);
+    motor->SetControlMode(MotorControlMode::CTRL_MODE_VELOCITY);
+    motor->SetTargetMotion(target_motion);
+}
+
+void DroneCANProtocol::SendFOCSetTorqueTargetResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    ifoc_SetTorqueTargetRequest request{};
+    if(ifoc_SetTorqueTargetRequest_decode(transfer, &request)) return;
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    Motion target_motion
+    {
+        .ref = io_ref,
+        .torque = {request.target, 0.0f, io_torque_unit},
+        .speed = {0.0f, 0.0f, io_speed_unit},
+        .pos = {0.0f, 0.0f, io_pos_unit}
+    };
+    motor->SetControlMode(MotorControlMode::CTRL_MODE_CURRENT);
+    motor->SetTargetMotion(target_motion);
+}
+
+void DroneCANProtocol::SendFOCSetDebugCmdResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    ifoc_SetDebugCmdRequest request{};
+    if(ifoc_SetDebugCmdRequest_decode(transfer, &request)) return;
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    if(!motor->GetError() && motor->GetCurrentState() == MotorState::IDLE)
+    {
+        request.phase_a_duty = _constrain(request.phase_a_duty, -1.0f, 1.0f);
+        request.phase_b_duty = _constrain(request.phase_b_duty, -1.0f, 1.0f);
+        request.phase_c_duty = _constrain(request.phase_c_duty, -1.0f, 1.0f);
+        motor->Arm();
+        motor->GetDriver()->SetOutput3CHPu(request.phase_a_duty, request.phase_b_duty, request.phase_c_duty);
+    }
+}
+
+void DroneCANProtocol::SendFileGetInfoResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    uavcan_protocol_file_GetInfoRequest request{};
+    if(uavcan_protocol_file_GetInfoRequest_decode(transfer, &request)) return;
+    if(request.path.path.len < sizeof(request.path.path.data)) request.path.path.data[request.path.path.len] = '\0';
+    const auto size = BlobNVMStorage().GetKVSize((const char*)request.path.path.data);
+    uavcan_protocol_file_GetInfoResponse response
+    {
+        .size = size,
+        .error = {},
+        .entry_type = {}
+    };
+    if(size > 0)
+    {
+        response.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
+        response.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_FILE | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_WRITEABLE;
+    }
+    else
+    {
+        response.error.value = UAVCAN_PROTOCOL_FILE_ERROR_NOT_FOUND;
+        response.entry_type.flags = 0;
+    }
+    uint8_t buffer[UAVCAN_PROTOCOL_FILE_GETINFO_RESPONSE_MAX_SIZE];
+    const auto len = uavcan_protocol_file_GetInfoResponse_encode(&response, buffer);
+    _SendResponse(transfer, UAVCAN_PROTOCOL_FILE_GETINFO_SIGNATURE, UAVCAN_PROTOCOL_FILE_GETINFO_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendFileDeleteResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    uavcan_protocol_file_DeleteRequest request{};
+    if(uavcan_protocol_file_DeleteRequest_decode(transfer, &request)) return;
+    if(request.path.path.len < sizeof(request.path.path.data)) request.path.path.data[request.path.path.len] = '\0';
+    uavcan_protocol_file_DeleteResponse response
+    {
+        .error = {.value = BlobNVMStorage().ClearNVM((const char*)request.path.path.data) == FuncRetCode::OK ? (int16_t)UAVCAN_PROTOCOL_FILE_ERROR_OK : (int16_t)UAVCAN_PROTOCOL_FILE_ERROR_NOT_FOUND,}
+    };
+    uint8_t buffer[UAVCAN_PROTOCOL_FILE_DELETE_RESPONSE_MAX_SIZE];
+    const auto len = uavcan_protocol_file_DeleteResponse_encode(&response, buffer);
+    _SendResponse(transfer, UAVCAN_PROTOCOL_FILE_DELETE_SIGNATURE, UAVCAN_PROTOCOL_FILE_DELETE_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendFileReadResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    uavcan_protocol_file_ReadRequest request{};
+    if(uavcan_protocol_file_ReadRequest_decode(transfer, &request)) return;
+    if(request.path.path.len < sizeof(request.path.path.data)) request.path.path.data[request.path.path.len] = '\0';
+    // check key match
+    if(!file_read_buffer.key ||
+        file_read_buffer.key_length != request.path.path.len ||
+        strncmp((const char*)request.path.path.data, file_read_buffer.key, file_read_buffer.key_length))
+    {
+        // get data length first
+        file_read_buffer.data_length = BlobNVMStorage().GetKVSize((const char*)request.path.path.data);
+        if(file_read_buffer.data_length > 0)
+        {
+            // rebuild key, and read data to buffer here.
+            file_read_buffer.key_length = request.path.path.len;
+            if(file_read_buffer.key)
+            {
+                vPortFree(file_read_buffer.key);
+                file_read_buffer.key = nullptr;
+            }
+            file_read_buffer.key = (char*)pvPortMalloc(file_read_buffer.key_length + 1);
+            if(!file_read_buffer.key) return;
+            memcpy(file_read_buffer.key, request.path.path.data, file_read_buffer.key_length);
+            file_read_buffer.key[file_read_buffer.key_length] = '\0';
+            // read data
+            if(file_read_buffer.data)
+            {
+                vPortFree(file_read_buffer.data);
+                file_read_buffer.data = nullptr;
+            }
+            // read buffer
+            file_read_buffer.data = (uint8_t*)pvPortMalloc(file_read_buffer.data_length);
+            if(!file_read_buffer.data) return;
+            if(BlobNVMStorage().ReadNVM(file_read_buffer.key, file_read_buffer.data, (uint16_t*)&file_read_buffer.data_length) != FuncRetCode::OK)
+            {
+                if(file_read_buffer.data)
+                {
+                    vPortFree(file_read_buffer.data);
+                    file_read_buffer.data = nullptr;
+                }
+                file_read_buffer.data_length = 0;
+            }
+        }
+    }
+    file_read_buffer.last_read_tick = xTaskGetTickCount();
+
+    uavcan_protocol_file_ReadResponse response{};
+    if(!file_read_buffer.key || file_read_buffer.key_length == 0 || !file_read_buffer.data || file_read_buffer.data_length == 0)
+    {
+        response.error.value = UAVCAN_PROTOCOL_FILE_ERROR_NOT_FOUND;
+    }
+    else
+    {
+        // determine offset
+        if(request.offset >= file_read_buffer.data_length)
+        {
+            response.error.value = UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE;
+        }
+        else
+        {
+            const uint16_t size_to_read = MIN(sizeof(response.data.data), file_read_buffer.data_length - request.offset);
+            const uint8_t* ptr = file_read_buffer.data + request.offset;
+            memcpy(response.data.data, ptr, size_to_read);
+            response.data.len = size_to_read;
+        }
+    }
+
+    uint8_t buffer[UAVCAN_PROTOCOL_FILE_READ_RESPONSE_MAX_SIZE];
+    const auto len = uavcan_protocol_file_ReadResponse_encode(&response, buffer);
+    _SendResponse(transfer, UAVCAN_PROTOCOL_FILE_READ_SIGNATURE, UAVCAN_PROTOCOL_FILE_READ_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendGetNodeInfoResponse(DroneCAN::CanardRxTransfer* transfer)
 {
     uavcan_protocol_GetNodeInfoResponse response
     {
@@ -626,22 +1374,13 @@ void DroneCANProtocol::SendGetInfoResponse(DroneCAN::CanardRxTransfer* transfer)
     };
     const auto serial_number = HAL::GetSerialNumber();
     memcpy(response.hardware_version.unique_id, &serial_number, sizeof(serial_number));
-    response.name.len = strlen(IFOC_NODE_NAME);
-    memcpy(response.name.data, IFOC_NODE_NAME, response.name.len);
+    response.name.len = strnlen(node_name, sizeof(node_name));
+    memcpy(response.name.data, node_name, response.name.len);
 
     uint8_t buffer[UAVCAN_PROTOCOL_GETNODEINFO_RESPONSE_MAX_SIZE];
     const uint32_t len = uavcan_protocol_GetNodeInfoResponse_encode(&response, buffer);
 
-    canardReleaseRxTransferPayload(&canard, transfer);
-    canardRequestOrRespond(&canard,
-                           transfer->source_node_id,
-                           UAVCAN_PROTOCOL_GETNODEINFO_RESPONSE_SIGNATURE,
-                           UAVCAN_PROTOCOL_GETNODEINFO_RESPONSE_ID,
-                           &transfer->transfer_id,
-                           transfer->priority,
-                           CanardResponse,
-                           buffer,
-                           len);
+    _SendResponse(transfer, UAVCAN_PROTOCOL_GETNODEINFO_RESPONSE_SIGNATURE, UAVCAN_PROTOCOL_GETNODEINFO_RESPONSE_ID, buffer, len);
 }
 
 void DroneCANProtocol::SendGetTransportStatsResponse(DroneCAN::CanardRxTransfer* transfer)
@@ -662,17 +1401,7 @@ void DroneCANProtocol::SendGetTransportStatsResponse(DroneCAN::CanardRxTransfer*
     uint8_t buffer[UAVCAN_PROTOCOL_GETTRANSPORTSTATS_RESPONSE_MAX_SIZE];
     const uint32_t len = uavcan_protocol_GetTransportStatsResponse_encode(&response, buffer);
 
-    canardReleaseRxTransferPayload(&canard, transfer);
-    canardRequestOrRespond(&canard,
-                           transfer->source_node_id,
-                           UAVCAN_PROTOCOL_GETTRANSPORTSTATS_RESPONSE_SIGNATURE,
-                           UAVCAN_PROTOCOL_GETTRANSPORTSTATS_RESPONSE_ID,
-                           &transfer->transfer_id,
-                           transfer->priority,
-                           CanardResponse,
-                           buffer,
-                           len);
-
+    _SendResponse(transfer, UAVCAN_PROTOCOL_GETTRANSPORTSTATS_RESPONSE_SIGNATURE, UAVCAN_PROTOCOL_GETTRANSPORTSTATS_RESPONSE_ID, buffer, len);
 }
 
 void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* transfer)
@@ -683,17 +1412,19 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
     // #1: WRITE & READ, #2: READ ONLY
     // We can iterate through either name or index.
     // We will first check for request.name.
+    // Add a node_name field. index = 0, Blob key: "n" "internal_id"
+    const auto motor = GetMotor<FOCMotor>();
     MemberInfo info{};
     uint8_t* target_ptr = nullptr;
     char target_name[sizeof(uavcan_protocol_param_GetSetRequest::name.data) + 2 + 6]{};
-    if(request.name.len > 0)
+    if(request.name.len > 0) // len > 0, likely a WRITE request.
     {
         char buffer[sizeof(uavcan_protocol_param_GetSetRequest::name.data) + 2]{};
         if(request.name.len < sizeof(buffer))
         {
             memcpy(buffer, request.name.data, request.name.len);
             buffer[request.name.len] = '\0';
-            auto original_len = strlen(buffer);
+            auto original_len = strnlen(buffer, sizeof(buffer));
             if(original_len > 7)
             {
                 const ReflectMap* reflect = nullptr;
@@ -705,8 +1436,16 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
                 }
                 else if(strncmp(buffer, "motor.", 6) == 0)
                 {
-                    reflect = &(GetMotor<FOCMotor>()->GetConfig().GetReflectMap());
-                    start_ptr = (uint8_t*)&(GetMotor<FOCMotor>()->GetConfig());
+                    reflect = &(motor->GetConfig().GetReflectMap());
+                    start_ptr = (uint8_t*)&(motor->GetConfig());
+                }
+                else if(original_len >= strlen(DRONECAN_NODE_NAME) && strcmp(buffer, DRONECAN_NODE_NAME) == 0)
+                {
+                    info.first = Reflection::ProtoFieldType::STRING;
+                    info.second = sizeof(node_name);
+                    target_ptr = (uint8_t*)node_name;
+                    memcpy(target_name, DRONECAN_NODE_NAME, sizeof(DRONECAN_NODE_NAME));
+                    target_name[sizeof(DRONECAN_NODE_NAME)] = '\0';
                 }
                 if(reflect && start_ptr)
                 {
@@ -734,47 +1473,59 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
     }
     else // Then we will search for index.
     {
-        const auto index = request.index;
-        const auto& board_map = BoardConfig().GetConfig().GetReflectMap();
-        const auto& motor_map = GetMotor<FOCMotor>()->GetConfig().GetReflectMap();
-        const uint16_t total_registers = board_map.size() + motor_map.size();
-        // index: [0 - total_registers - 1]
-        if(index < total_registers)
+        auto index = request.index;
+        if(index == 0) // node_name
         {
-            uint16_t iter_index = 0;
-            if(index > board_map.size()) iter_index += board_map.size();
-            else
+            memcpy(target_name, DRONECAN_NODE_NAME, sizeof(DRONECAN_NODE_NAME));
+            target_name[sizeof(DRONECAN_NODE_NAME)] = '\0';
+            info.first = Reflection::ProtoFieldType::STRING;
+            info.second = sizeof(node_name);
+            target_ptr = (uint8_t*)node_name;
+        }
+        else
+        {
+            index--;
+            const auto& board_map = BoardConfig().GetConfig().GetReflectMap();
+            const auto& motor_map = motor->GetConfig().GetReflectMap();
+            const uint16_t total_registers = board_map.size() + motor_map.size();
+            // index: [0 - total_registers - 1]
+            if(index < total_registers)
             {
-                for(const auto& [n, i] : board_map)
+                uint16_t iter_index = 0;
+                if(index > board_map.size()) iter_index += board_map.size();
+                else
                 {
-                    if(iter_index == index)
+                    for(const auto& [n, i] : board_map)
                     {
-                        snprintf(target_name, sizeof(target_name), "board.%s", n);
-                        info = i;
-                        target_ptr = (uint8_t*)(&BoardConfig().GetConfig()) + info.second;
-                        break;
+                        if(iter_index == index)
+                        {
+                            snprintf(target_name, sizeof(target_name), "board.%s", n);
+                            info = i;
+                            target_ptr = (uint8_t*)(&BoardConfig().GetConfig()) + info.second;
+                            break;
+                        }
+                        iter_index++;
                     }
-                    iter_index++;
                 }
-            }
-            if(!target_ptr) // still can't find
-            {
-                for(const auto& [n, i] : motor_map)
+                if(!target_ptr) // still can't find
                 {
-                    if(iter_index == index)
+                    for(const auto& [n, i] : motor_map)
                     {
-                        snprintf(target_name, sizeof(target_name), "motor.%s", n);
-                        info = i;
-                        target_ptr = (uint8_t*)&(GetMotor<FOCMotor>()->GetConfig()) + info.second;
-                        break;
+                        if(iter_index == index)
+                        {
+                            snprintf(target_name, sizeof(target_name), "motor.%s", n);
+                            info = i;
+                            target_ptr = (uint8_t*)&(motor->GetConfig()) + info.second;
+                            break;
+                        }
+                        iter_index++;
                     }
-                    iter_index++;
                 }
             }
         }
     }
     // here we got both info, target_ptr, and target_name.
-    const auto target_name_len = strlen(target_name);
+    const auto target_name_len = strnlen(target_name, sizeof(target_name));
     if(target_ptr && target_name_len > 1)
     {
         // param exists, deciding WRITE + READ / READ ONLY.
@@ -784,7 +1535,7 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
             case UAVCAN_PROTOCOL_PARAM_VALUE_INTEGER_VALUE:
             {
                 // int64_t, suitable for: INT32, INT64, UINT32, UINT64(possibly overflow)
-                int64_t temp = request.value.integer_value;
+                const int64_t temp = request.value.integer_value;
                 switch(info.first)
                 {
                     case Reflection::ProtoFieldType::INT32:
@@ -814,7 +1565,7 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
             case UAVCAN_PROTOCOL_PARAM_VALUE_REAL_VALUE:
             {
                 // float, suitable for: FLOAT, DOUBLE
-                float temp = request.value.real_value;
+                const float temp = request.value.real_value;
                 switch(info.first)
                 {
                     case Reflection::ProtoFieldType::FLOAT:
@@ -835,8 +1586,18 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
             case UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE:
             {
                 // uint8_t, suitable for: BOOL
-                uint8_t temp = request.value.boolean_value;
+                const uint8_t temp = request.value.boolean_value;
                 if(info.first == Reflection::ProtoFieldType::BOOL) *(uint8_t*)target_ptr = (uint8_t)temp;
+                break;
+            }
+            case UAVCAN_PROTOCOL_PARAM_VALUE_STRING_VALUE:
+            {
+                const auto& str = request.value.string_value;
+                if(info.first == Reflection::ProtoFieldType::STRING && info.second > str.len + 1)
+                {
+                    memcpy(target_ptr, str.data, str.len);
+                    target_ptr[str.len] = '\0';
+                }
                 break;
             }
             default: break;
@@ -870,28 +1631,28 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
                 memcpy(&response.value.boolean_value, target_ptr, sizeof(uint8_t));
                 break;
             }
+            case Reflection::ProtoFieldType::STRING:
+            {
+                response.value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_STRING_VALUE;
+                const auto len = MIN(strnlen((char*)target_ptr, info.second), sizeof(response.value.string_value.data));
+                memcpy(response.value.string_value.data, target_ptr, len);
+                response.value.string_value.len = len;
+                break;
+            }
             default:
             {
-                return; // idk if this is correct
+                return;
             }
         }
-        response.name.len = target_name_len - 1; // we dont want underscore
+        if(target_name[target_name_len - 1] == '_') response.name.len = target_name_len - 1; // we dont want underscore
+        else response.name.len = target_name_len;
         memcpy(response.name.data, target_name, response.name.len);
     }
 
     uint8_t buffer[UAVCAN_PROTOCOL_PARAM_GETSET_RESPONSE_MAX_SIZE];
-    const uint32_t len = uavcan_protocol_param_GetSetResponse_encode(&response, buffer);
+    const uint16_t len = uavcan_protocol_param_GetSetResponse_encode(&response, buffer);
 
-    canardReleaseRxTransferPayload(&canard, transfer);
-    canardRequestOrRespond(&canard,
-                           transfer->source_node_id,
-                           UAVCAN_PROTOCOL_PARAM_GETSET_SIGNATURE,
-                           UAVCAN_PROTOCOL_PARAM_GETSET_ID,
-                           &transfer->transfer_id,
-                           transfer->priority,
-                           CanardResponse,
-                           buffer,
-                           len);
+    _SendResponse(transfer, UAVCAN_PROTOCOL_PARAM_GETSET_SIGNATURE, UAVCAN_PROTOCOL_PARAM_GETSET_ID, buffer, len);
 }
 
 void DroneCANProtocol::SendRestartNodeResponse(DroneCAN::CanardRxTransfer* transfer)
@@ -907,17 +1668,7 @@ void DroneCANProtocol::SendRestartNodeResponse(DroneCAN::CanardRxTransfer* trans
     uint8_t buffer[UAVCAN_PROTOCOL_RESTARTNODE_RESPONSE_MAX_SIZE];
     const uint32_t len = uavcan_protocol_RestartNodeResponse_encode(&response, buffer);
 
-    canardReleaseRxTransferPayload(&canard, transfer);
-    canardRequestOrRespond(&canard,
-                           transfer->source_node_id,
-                           UAVCAN_PROTOCOL_RESTARTNODE_RESPONSE_SIGNATURE,
-                           UAVCAN_PROTOCOL_RESTARTNODE_RESPONSE_ID,
-                           &transfer->transfer_id,
-                           transfer->priority,
-                           CanardResponse,
-                           buffer,
-                           len);
-
+    _SendResponse(transfer, UAVCAN_PROTOCOL_RESTARTNODE_RESPONSE_SIGNATURE, UAVCAN_PROTOCOL_RESTARTNODE_RESPONSE_ID, buffer, len);
     // if(is_restart_valid) // Send CAN frame immediately, then restart.
     // {
     //     DataType::Comm::CANMessage tx_message{};
@@ -996,10 +1747,23 @@ void DroneCANProtocol::SendExecuteOpcodeResponse(DroneCAN::CanardRxTransfer* tra
                 response.ok = false;   // save failed
                 break;
             }
+            // save motor config
             ret = motor->config.SaveNVMConfig();
             if(ret != FuncRetCode::OK)
             {
                 response.argument = 3; // motor config save failed
+                response.ok = false;
+                break;
+            }
+            // save node name
+            char key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) + 1];
+            memcpy(key, DRONECAN_NODE_NAME_DB_KEY_PREFIX, sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) - 1);
+            key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) - 1] = motor->GetInternalID() + '0';
+            key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX)] = '\0';
+            ret = BlobNVMStorage().SaveNVM(key, (uint8_t*)node_name, strnlen(node_name, sizeof(node_name)));
+            if(ret != FuncRetCode::OK)
+            {
+                response.argument = 4;
                 response.ok = false;
                 break;
             }
@@ -1044,16 +1808,7 @@ void DroneCANProtocol::SendExecuteOpcodeResponse(DroneCAN::CanardRxTransfer* tra
 
     const uint32_t len = uavcan_protocol_param_ExecuteOpcodeResponse_encode(&response, buffer);
 
-    canardReleaseRxTransferPayload(&canard, transfer);
-    canardRequestOrRespond(&canard,
-                           transfer->source_node_id,
-                           UAVCAN_PROTOCOL_PARAM_EXECUTEOPCODE_SIGNATURE,
-                           UAVCAN_PROTOCOL_PARAM_EXECUTEOPCODE_ID,
-                           &transfer->transfer_id,
-                           transfer->priority,
-                           CanardResponse,
-                           buffer,
-                           len);
+    _SendResponse(transfer, UAVCAN_PROTOCOL_PARAM_EXECUTEOPCODE_SIGNATURE, UAVCAN_PROTOCOL_PARAM_EXECUTEOPCODE_ID, buffer, len);
 }
 
 void DroneCANProtocol::SendFWUpdateResponse(DroneCAN::CanardRxTransfer* transfer)
@@ -1160,7 +1915,8 @@ void DroneCANProtocol::OnDNAAllocation(DroneCAN::CanardRxTransfer* transfer)
         // allocation complete
         const auto motor = GetMotor<FOCMotor>();
         motor->GetConfig().set_node_id(msg.node_id);
-        canard.node_id = msg.node_id;
+        // canard.node_id = msg.node_id;
+        SetNodeID(msg.node_id);
     }
 }
 
@@ -1171,5 +1927,24 @@ void DroneCANProtocol::OnRxEvent(const DataType::Comm::CANMessage& message)
     // xQueueSendFromISR(isr_msg_queue, &message, &xHigherPriorityTaskWoken);
     // if(xHigherPriorityTaskWoken) portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     isr_msg_fifo.put(&message, 1);
+}
+
+void DroneCANProtocol::SetNodeID(uint8_t node_id)
+{
+    canard.node_id = node_id;
+    const auto motor = GetMotor<FOCMotor>();
+    uint32_t id = 0, mask = 0;
+    BuildServiceFilter(canard.node_id, id, mask);
+    can->SetHWFilter(motor->GetInternalID(), id, mask, true, false); // accept ext only
+}
+
+void DroneCANProtocol::BuildServiceFilter(uint8_t self_id, uint32_t& ret_id, uint32_t& ret_mask)
+{
+    // Reference: https://dronecan.github.io/Specification/4.1_CAN_bus_transport_layer/#:~:text=the%20specification).-,CAN%20frame%20format,-DroneCAN%20uses%20only
+    ret_id = 0;
+    ret_mask = 0;
+    if(self_id == CANARD_BROADCAST_NODE_ID || self_id > CANARD_MAX_NODE_ID) return; // no filter will be built
+    ret_mask = (1 << 7) | (0x7F << 8); // match those fields
+    ret_id = (1 << 7) | (self_id << 8);
 }
 }

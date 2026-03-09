@@ -1,5 +1,5 @@
 #define CANARD_DSDLC_INTERNAL
-#include "RTOSTaskStatus.h"
+#include "TaskStatus.h"
 #include <string.h>
 
 using namespace DroneCAN;
@@ -8,14 +8,14 @@ using namespace DroneCAN;
 #include <test_helpers.h>
 #endif
 
-uint32_t ifoc_RTOSTaskStatus_encode(struct ifoc_RTOSTaskStatus* msg, uint8_t* buffer
+uint32_t ifoc_TaskStatus_encode(struct ifoc_TaskStatus* msg, uint8_t* buffer
 #if CANARD_ENABLE_TAO_OPTION
     , bool tao
 #endif
 ) {
     uint32_t bit_ofs = 0;
-    memset(buffer, 0, IFOC_RTOSTASKSTATUS_MAX_SIZE);
-    _ifoc_RTOSTaskStatus_encode(buffer, &bit_ofs, msg, 
+    memset(buffer, 0, IFOC_TASKSTATUS_MAX_SIZE);
+    _ifoc_TaskStatus_encode(buffer, &bit_ofs, msg, 
 #if CANARD_ENABLE_TAO_OPTION
     tao
 #else
@@ -28,14 +28,14 @@ uint32_t ifoc_RTOSTaskStatus_encode(struct ifoc_RTOSTaskStatus* msg, uint8_t* bu
 /*
   return true if the decode is invalid
  */
-bool ifoc_RTOSTaskStatus_decode(const CanardRxTransfer* transfer, struct ifoc_RTOSTaskStatus* msg) {
+bool ifoc_TaskStatus_decode(const CanardRxTransfer* transfer, struct ifoc_TaskStatus* msg) {
 #if CANARD_ENABLE_TAO_OPTION
-    if (transfer->tao && (transfer->payload_len > IFOC_RTOSTASKSTATUS_MAX_SIZE)) {
+    if (transfer->tao && (transfer->payload_len > IFOC_TASKSTATUS_MAX_SIZE)) {
         return true; /* invalid payload length */
     }
 #endif
     uint32_t bit_ofs = 0;
-    if (_ifoc_RTOSTaskStatus_decode(transfer, &bit_ofs, msg,
+    if (_ifoc_TaskStatus_decode(transfer, &bit_ofs, msg,
 #if CANARD_ENABLE_TAO_OPTION
     transfer->tao
 #else
@@ -57,14 +57,10 @@ bool ifoc_RTOSTaskStatus_decode(const CanardRxTransfer* transfer, struct ifoc_RT
 }
 
 #ifdef CANARD_DSDLC_TEST_BUILD
-struct ifoc_RTOSTaskStatus sample_ifoc_RTOSTaskStatus_msg(void) {
-    struct ifoc_RTOSTaskStatus msg;
+struct ifoc_TaskStatus sample_ifoc_TaskStatus_msg(void) {
+    struct ifoc_TaskStatus msg;
 
-    msg.task_state = (uint8_t)random_bitlen_unsigned_val(3);
-    msg.priority = (uint8_t)random_bitlen_unsigned_val(5);
-    msg.run_time_pct = (uint8_t)random_bitlen_unsigned_val(7);
-    msg.min_stack_remaining = (uint16_t)random_bitlen_unsigned_val(16);
-    msg.task_name.len = (uint8_t)random_range_unsigned_val(0, 16);
+    msg.task_name.len = (uint8_t)random_range_unsigned_val(0, 12);
     for (size_t i=0; i < msg.task_name.len; i++) {
         msg.task_name.data[i] = (uint8_t)random_bitlen_unsigned_val(8);
     }

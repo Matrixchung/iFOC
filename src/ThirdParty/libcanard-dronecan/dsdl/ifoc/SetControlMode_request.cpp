@@ -1,6 +1,6 @@
 #define CANARD_DSDLC_INTERNAL
-#include "ClearError_request.h"
-#include "ClearError_response.h"
+#include "SetControlMode_request.h"
+#include "SetControlMode_response.h"
 #include <string.h>
 
 using namespace DroneCAN;
@@ -9,14 +9,14 @@ using namespace DroneCAN;
 #include <test_helpers.h>
 #endif
 
-uint32_t ifoc_ClearErrorRequest_encode(struct ifoc_ClearErrorRequest* msg, uint8_t* buffer
+uint32_t ifoc_SetControlModeRequest_encode(struct ifoc_SetControlModeRequest* msg, uint8_t* buffer
 #if CANARD_ENABLE_TAO_OPTION
     , bool tao
 #endif
 ) {
     uint32_t bit_ofs = 0;
-    memset(buffer, 0, IFOC_CLEARERROR_REQUEST_MAX_SIZE);
-    _ifoc_ClearErrorRequest_encode(buffer, &bit_ofs, msg, 
+    memset(buffer, 0, IFOC_SETCONTROLMODE_REQUEST_MAX_SIZE);
+    _ifoc_SetControlModeRequest_encode(buffer, &bit_ofs, msg, 
 #if CANARD_ENABLE_TAO_OPTION
     tao
 #else
@@ -29,14 +29,14 @@ uint32_t ifoc_ClearErrorRequest_encode(struct ifoc_ClearErrorRequest* msg, uint8
 /*
   return true if the decode is invalid
  */
-bool ifoc_ClearErrorRequest_decode(const CanardRxTransfer* transfer, struct ifoc_ClearErrorRequest* msg) {
+bool ifoc_SetControlModeRequest_decode(const CanardRxTransfer* transfer, struct ifoc_SetControlModeRequest* msg) {
 #if CANARD_ENABLE_TAO_OPTION
-    if (transfer->tao && (transfer->payload_len > IFOC_CLEARERROR_REQUEST_MAX_SIZE)) {
+    if (transfer->tao && (transfer->payload_len > IFOC_SETCONTROLMODE_REQUEST_MAX_SIZE)) {
         return true; /* invalid payload length */
     }
 #endif
     uint32_t bit_ofs = 0;
-    if (_ifoc_ClearErrorRequest_decode(transfer, &bit_ofs, msg,
+    if (_ifoc_SetControlModeRequest_decode(transfer, &bit_ofs, msg,
 #if CANARD_ENABLE_TAO_OPTION
     transfer->tao
 #else
@@ -58,10 +58,10 @@ bool ifoc_ClearErrorRequest_decode(const CanardRxTransfer* transfer, struct ifoc
 }
 
 #ifdef CANARD_DSDLC_TEST_BUILD
-struct ifoc_ClearErrorRequest sample_ifoc_ClearErrorRequest_msg(void) {
-    struct ifoc_ClearErrorRequest msg;
+struct ifoc_SetControlModeRequest sample_ifoc_SetControlModeRequest_msg(void) {
+    struct ifoc_SetControlModeRequest msg;
 
-    msg.clear_mask = (uint64_t)random_bitlen_unsigned_val(64);
+    msg.set_mode = (uint8_t)random_bitlen_unsigned_val(2);
     return msg;
 }
 #endif

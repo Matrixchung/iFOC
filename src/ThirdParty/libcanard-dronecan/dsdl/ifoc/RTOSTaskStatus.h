@@ -4,8 +4,8 @@
 #include "canard_dronecan.h"
 
 
-#define IFOC_RTOSTASKSTATUS_MAX_SIZE 20
-#define IFOC_RTOSTASKSTATUS_SIGNATURE (0xBFCA42EF80E51CCULL)
+#define IFOC_RTOSTASKSTATUS_MAX_SIZE 21
+#define IFOC_RTOSTASKSTATUS_SIGNATURE (0xFCE361D1843151C0ULL)
 
 #define IFOC_RTOSTASKSTATUS_TASK_STATE_RUNNING 0
 #define IFOC_RTOSTASKSTATUS_TASK_STATE_READY 1
@@ -17,6 +17,7 @@
 struct ifoc_RTOSTaskStatus {
     uint8_t task_state;
     uint8_t priority;
+    uint8_t run_time_pct;
     uint16_t min_stack_remaining;
     struct { uint8_t len; uint8_t data[16]; }task_name;
 };
@@ -41,6 +42,8 @@ void _ifoc_RTOSTaskStatus_encode(uint8_t* buffer, uint32_t* bit_ofs, struct ifoc
     *bit_ofs += 3;
     DroneCAN::canardEncodeScalar(buffer, *bit_ofs, 5, &msg->priority);
     *bit_ofs += 5;
+    DroneCAN::canardEncodeScalar(buffer, *bit_ofs, 7, &msg->run_time_pct);
+    *bit_ofs += 7;
     DroneCAN::canardEncodeScalar(buffer, *bit_ofs, 16, &msg->min_stack_remaining);
     *bit_ofs += 16;
 #pragma GCC diagnostic push
@@ -70,6 +73,9 @@ bool _ifoc_RTOSTaskStatus_decode(const DroneCAN::CanardRxTransfer* transfer, uin
 
     DroneCAN::canardDecodeScalar(transfer, *bit_ofs, 5, false, &msg->priority);
     *bit_ofs += 5;
+
+    DroneCAN::canardDecodeScalar(transfer, *bit_ofs, 7, false, &msg->run_time_pct);
+    *bit_ofs += 7;
 
     DroneCAN::canardDecodeScalar(transfer, *bit_ofs, 16, false, &msg->min_stack_remaining);
     *bit_ofs += 16;

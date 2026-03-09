@@ -1,6 +1,6 @@
 #define CANARD_DSDLC_INTERNAL
-#include "GetError_request.h"
-#include "GetError_response.h"
+#include "GetTargetMotion_request.h"
+#include "GetTargetMotion_response.h"
 #include <string.h>
 
 using namespace DroneCAN;
@@ -9,14 +9,14 @@ using namespace DroneCAN;
 #include <test_helpers.h>
 #endif
 
-uint32_t ifoc_GetErrorRequest_encode(struct ifoc_GetErrorRequest* msg, uint8_t* buffer
+uint32_t ifoc_GetTargetMotionRequest_encode(struct ifoc_GetTargetMotionRequest* msg, uint8_t* buffer
 #if CANARD_ENABLE_TAO_OPTION
     , bool tao
 #endif
 ) {
     uint32_t bit_ofs = 0;
-    memset(buffer, 0, IFOC_GETERROR_REQUEST_MAX_SIZE);
-    _ifoc_GetErrorRequest_encode(buffer, &bit_ofs, msg, 
+    memset(buffer, 0, IFOC_GETTARGETMOTION_REQUEST_MAX_SIZE);
+    _ifoc_GetTargetMotionRequest_encode(buffer, &bit_ofs, msg, 
 #if CANARD_ENABLE_TAO_OPTION
     tao
 #else
@@ -29,14 +29,14 @@ uint32_t ifoc_GetErrorRequest_encode(struct ifoc_GetErrorRequest* msg, uint8_t* 
 /*
   return true if the decode is invalid
  */
-bool ifoc_GetErrorRequest_decode(const CanardRxTransfer* transfer, struct ifoc_GetErrorRequest* msg) {
+bool ifoc_GetTargetMotionRequest_decode(const CanardRxTransfer* transfer, struct ifoc_GetTargetMotionRequest* msg) {
 #if CANARD_ENABLE_TAO_OPTION
-    if (transfer->tao && (transfer->payload_len > IFOC_GETERROR_REQUEST_MAX_SIZE)) {
+    if (transfer->tao && (transfer->payload_len > IFOC_GETTARGETMOTION_REQUEST_MAX_SIZE)) {
         return true; /* invalid payload length */
     }
 #endif
     uint32_t bit_ofs = 0;
-    if (_ifoc_GetErrorRequest_decode(transfer, &bit_ofs, msg,
+    if (_ifoc_GetTargetMotionRequest_decode(transfer, &bit_ofs, msg,
 #if CANARD_ENABLE_TAO_OPTION
     transfer->tao
 #else
@@ -58,8 +58,8 @@ bool ifoc_GetErrorRequest_decode(const CanardRxTransfer* transfer, struct ifoc_G
 }
 
 #ifdef CANARD_DSDLC_TEST_BUILD
-struct ifoc_GetErrorRequest sample_ifoc_GetErrorRequest_msg(void) {
-    struct ifoc_GetErrorRequest msg;
+struct ifoc_GetTargetMotionRequest sample_ifoc_GetTargetMotionRequest_msg(void) {
+    struct ifoc_GetTargetMotionRequest msg;
 
     return msg;
 }

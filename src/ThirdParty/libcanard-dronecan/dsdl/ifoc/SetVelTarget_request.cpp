@@ -1,5 +1,6 @@
 #define CANARD_DSDLC_INTERNAL
-#include "GetError_response.h"
+#include "SetVelTarget_request.h"
+#include "SetVelTarget_response.h"
 #include <string.h>
 
 using namespace DroneCAN;
@@ -8,14 +9,14 @@ using namespace DroneCAN;
 #include <test_helpers.h>
 #endif
 
-uint32_t ifoc_GetErrorResponse_encode(struct ifoc_GetErrorResponse* msg, uint8_t* buffer
+uint32_t ifoc_SetVelTargetRequest_encode(struct ifoc_SetVelTargetRequest* msg, uint8_t* buffer
 #if CANARD_ENABLE_TAO_OPTION
     , bool tao
 #endif
 ) {
     uint32_t bit_ofs = 0;
-    memset(buffer, 0, IFOC_GETERROR_RESPONSE_MAX_SIZE);
-    _ifoc_GetErrorResponse_encode(buffer, &bit_ofs, msg, 
+    memset(buffer, 0, IFOC_SETVELTARGET_REQUEST_MAX_SIZE);
+    _ifoc_SetVelTargetRequest_encode(buffer, &bit_ofs, msg, 
 #if CANARD_ENABLE_TAO_OPTION
     tao
 #else
@@ -28,14 +29,14 @@ uint32_t ifoc_GetErrorResponse_encode(struct ifoc_GetErrorResponse* msg, uint8_t
 /*
   return true if the decode is invalid
  */
-bool ifoc_GetErrorResponse_decode(const CanardRxTransfer* transfer, struct ifoc_GetErrorResponse* msg) {
+bool ifoc_SetVelTargetRequest_decode(const CanardRxTransfer* transfer, struct ifoc_SetVelTargetRequest* msg) {
 #if CANARD_ENABLE_TAO_OPTION
-    if (transfer->tao && (transfer->payload_len > IFOC_GETERROR_RESPONSE_MAX_SIZE)) {
+    if (transfer->tao && (transfer->payload_len > IFOC_SETVELTARGET_REQUEST_MAX_SIZE)) {
         return true; /* invalid payload length */
     }
 #endif
     uint32_t bit_ofs = 0;
-    if (_ifoc_GetErrorResponse_decode(transfer, &bit_ofs, msg,
+    if (_ifoc_SetVelTargetRequest_decode(transfer, &bit_ofs, msg,
 #if CANARD_ENABLE_TAO_OPTION
     transfer->tao
 #else
@@ -57,10 +58,12 @@ bool ifoc_GetErrorResponse_decode(const CanardRxTransfer* transfer, struct ifoc_
 }
 
 #ifdef CANARD_DSDLC_TEST_BUILD
-struct ifoc_GetErrorResponse sample_ifoc_GetErrorResponse_msg(void) {
-    struct ifoc_GetErrorResponse msg;
+struct ifoc_SetVelTargetRequest sample_ifoc_SetVelTargetRequest_msg(void) {
+    struct ifoc_SetVelTargetRequest msg;
 
-    msg.error = (uint64_t)random_bitlen_unsigned_val(64);
+    msg.target = random_float_val();
+    msg.torque_pu = (int16_t)random_bitlen_signed_val(10);
+    msg.torque_ff = (bool)random_bitlen_unsigned_val(1);
     return msg;
 }
 #endif
