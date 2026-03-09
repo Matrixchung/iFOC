@@ -47,6 +47,11 @@ message FOCMotorConfig {
     float traj_output_accel_limit_rpm = 71;
     float traj_output_decel_limit_rpm = 72;
 
+    /// MIT CONTROLLER MAPPING PARAMETERS
+    float mit_output_pos_range_deg = 73;
+    float mit_output_vel_range_rpm = 74;
+    float mit_output_tor_range_nm  = 75;
+
     // COMMUNICATION CONFIGURATION
     uint32 can_heartbeat_interval_ms = 54;
     uint32 can_feedback_interval_ms = 55;

@@ -56,6 +56,9 @@ class FOCMotorConfig final: public ::EmbeddedProto::MessageInterface
         MEMBER_SIZE_OFFSET(FOCMotorConfig, traj_output_speed_limit_rpm_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, traj_output_accel_limit_rpm_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, traj_output_decel_limit_rpm_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, mit_output_pos_range_deg_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, mit_output_vel_range_rpm_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, mit_output_tor_range_nm_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, can_heartbeat_interval_ms_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, can_feedback_interval_ms_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, can_misc_fdbk_interval_ms_),
@@ -105,6 +108,9 @@ FOCMotorConfig() = default;
       set_traj_output_speed_limit_rpm(rhs.get_traj_output_speed_limit_rpm());
       set_traj_output_accel_limit_rpm(rhs.get_traj_output_accel_limit_rpm());
       set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
+      set_mit_output_pos_range_deg(rhs.get_mit_output_pos_range_deg());
+      set_mit_output_vel_range_rpm(rhs.get_mit_output_vel_range_rpm());
+      set_mit_output_tor_range_nm(rhs.get_mit_output_tor_range_nm());
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
       set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
@@ -154,6 +160,9 @@ FOCMotorConfig() = default;
       set_traj_output_speed_limit_rpm(rhs.get_traj_output_speed_limit_rpm());
       set_traj_output_accel_limit_rpm(rhs.get_traj_output_accel_limit_rpm());
       set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
+      set_mit_output_pos_range_deg(rhs.get_mit_output_pos_range_deg());
+      set_mit_output_vel_range_rpm(rhs.get_mit_output_vel_range_rpm());
+      set_mit_output_tor_range_nm(rhs.get_mit_output_tor_range_nm());
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
       set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
@@ -225,7 +234,10 @@ FOCMotorConfig() = default;
       ENABLE_HARMONIC_SUPPRESSION = 60,
       TRAJ_OUTPUT_SPEED_LIMIT_RPM = 70,
       TRAJ_OUTPUT_ACCEL_LIMIT_RPM = 71,
-      TRAJ_OUTPUT_DECEL_LIMIT_RPM = 72
+      TRAJ_OUTPUT_DECEL_LIMIT_RPM = 72,
+      MIT_OUTPUT_POS_RANGE_DEG = 73,
+      MIT_OUTPUT_VEL_RANGE_RPM = 74,
+      MIT_OUTPUT_TOR_RANGE_NM = 75
     };
 
     FOCMotorConfig& operator=(const FOCMotorConfig& rhs)
@@ -255,6 +267,9 @@ FOCMotorConfig() = default;
       set_traj_output_speed_limit_rpm(rhs.get_traj_output_speed_limit_rpm());
       set_traj_output_accel_limit_rpm(rhs.get_traj_output_accel_limit_rpm());
       set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
+      set_mit_output_pos_range_deg(rhs.get_mit_output_pos_range_deg());
+      set_mit_output_vel_range_rpm(rhs.get_mit_output_vel_range_rpm());
+      set_mit_output_tor_range_nm(rhs.get_mit_output_tor_range_nm());
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
       set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
@@ -305,6 +320,9 @@ FOCMotorConfig() = default;
       set_traj_output_speed_limit_rpm(rhs.get_traj_output_speed_limit_rpm());
       set_traj_output_accel_limit_rpm(rhs.get_traj_output_accel_limit_rpm());
       set_traj_output_decel_limit_rpm(rhs.get_traj_output_decel_limit_rpm());
+      set_mit_output_pos_range_deg(rhs.get_mit_output_pos_range_deg());
+      set_mit_output_vel_range_rpm(rhs.get_mit_output_vel_range_rpm());
+      set_mit_output_tor_range_nm(rhs.get_mit_output_tor_range_nm());
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
       set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
@@ -527,6 +545,30 @@ FOCMotorConfig() = default;
     inline float& mutable_traj_output_decel_limit_rpm() { return traj_output_decel_limit_rpm_.get(); }
     inline const float& get_traj_output_decel_limit_rpm() const { return traj_output_decel_limit_rpm_.get(); }
     inline float traj_output_decel_limit_rpm() const { return traj_output_decel_limit_rpm_.get(); }
+
+    static constexpr char const* MIT_OUTPUT_POS_RANGE_DEG_NAME = "mit_output_pos_range_deg";
+    inline void clear_mit_output_pos_range_deg() { mit_output_pos_range_deg_.clear(); }
+    inline void set_mit_output_pos_range_deg(const float& value) { mit_output_pos_range_deg_ = value; }
+    inline void set_mit_output_pos_range_deg(const float&& value) { mit_output_pos_range_deg_ = value; }
+    inline float& mutable_mit_output_pos_range_deg() { return mit_output_pos_range_deg_.get(); }
+    inline const float& get_mit_output_pos_range_deg() const { return mit_output_pos_range_deg_.get(); }
+    inline float mit_output_pos_range_deg() const { return mit_output_pos_range_deg_.get(); }
+
+    static constexpr char const* MIT_OUTPUT_VEL_RANGE_RPM_NAME = "mit_output_vel_range_rpm";
+    inline void clear_mit_output_vel_range_rpm() { mit_output_vel_range_rpm_.clear(); }
+    inline void set_mit_output_vel_range_rpm(const float& value) { mit_output_vel_range_rpm_ = value; }
+    inline void set_mit_output_vel_range_rpm(const float&& value) { mit_output_vel_range_rpm_ = value; }
+    inline float& mutable_mit_output_vel_range_rpm() { return mit_output_vel_range_rpm_.get(); }
+    inline const float& get_mit_output_vel_range_rpm() const { return mit_output_vel_range_rpm_.get(); }
+    inline float mit_output_vel_range_rpm() const { return mit_output_vel_range_rpm_.get(); }
+
+    static constexpr char const* MIT_OUTPUT_TOR_RANGE_NM_NAME = "mit_output_tor_range_nm";
+    inline void clear_mit_output_tor_range_nm() { mit_output_tor_range_nm_.clear(); }
+    inline void set_mit_output_tor_range_nm(const float& value) { mit_output_tor_range_nm_ = value; }
+    inline void set_mit_output_tor_range_nm(const float&& value) { mit_output_tor_range_nm_ = value; }
+    inline float& mutable_mit_output_tor_range_nm() { return mit_output_tor_range_nm_.get(); }
+    inline const float& get_mit_output_tor_range_nm() const { return mit_output_tor_range_nm_.get(); }
+    inline float mit_output_tor_range_nm() const { return mit_output_tor_range_nm_.get(); }
 
     static constexpr char const* CAN_HEARTBEAT_INTERVAL_MS_NAME = "can_heartbeat_interval_ms";
     inline void clear_can_heartbeat_interval_ms() { can_heartbeat_interval_ms_.clear(); }
@@ -818,6 +860,21 @@ FOCMotorConfig() = default;
         return_value = traj_output_decel_limit_rpm_.serialize_with_id(static_cast<uint32_t>(FieldNumber::TRAJ_OUTPUT_DECEL_LIMIT_RPM), buffer, false);
       }
 
+      if((0.0 != mit_output_pos_range_deg_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = mit_output_pos_range_deg_.serialize_with_id(static_cast<uint32_t>(FieldNumber::MIT_OUTPUT_POS_RANGE_DEG), buffer, false);
+      }
+
+      if((0.0 != mit_output_vel_range_rpm_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = mit_output_vel_range_rpm_.serialize_with_id(static_cast<uint32_t>(FieldNumber::MIT_OUTPUT_VEL_RANGE_RPM), buffer, false);
+      }
+
+      if((0.0 != mit_output_tor_range_nm_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = mit_output_tor_range_nm_.serialize_with_id(static_cast<uint32_t>(FieldNumber::MIT_OUTPUT_TOR_RANGE_NM), buffer, false);
+      }
+
       if((0U != can_heartbeat_interval_ms_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = can_heartbeat_interval_ms_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CAN_HEARTBEAT_INTERVAL_MS), buffer, false);
@@ -1034,6 +1091,18 @@ FOCMotorConfig() = default;
             return_value = traj_output_decel_limit_rpm_.deserialize_check_type(buffer, wire_type);
             break;
 
+          case FieldNumber::MIT_OUTPUT_POS_RANGE_DEG:
+            return_value = mit_output_pos_range_deg_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::MIT_OUTPUT_VEL_RANGE_RPM:
+            return_value = mit_output_vel_range_rpm_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::MIT_OUTPUT_TOR_RANGE_NM:
+            return_value = mit_output_tor_range_nm_.deserialize_check_type(buffer, wire_type);
+            break;
+
           case FieldNumber::CAN_HEARTBEAT_INTERVAL_MS:
             return_value = can_heartbeat_interval_ms_.deserialize_check_type(buffer, wire_type);
             break;
@@ -1168,6 +1237,9 @@ FOCMotorConfig() = default;
       clear_traj_output_speed_limit_rpm();
       clear_traj_output_accel_limit_rpm();
       clear_traj_output_decel_limit_rpm();
+      clear_mit_output_pos_range_deg();
+      clear_mit_output_vel_range_rpm();
+      clear_mit_output_tor_range_nm();
       clear_can_heartbeat_interval_ms();
       clear_can_feedback_interval_ms();
       clear_can_misc_fdbk_interval_ms();
@@ -1270,6 +1342,15 @@ FOCMotorConfig() = default;
           break;
         case FieldNumber::TRAJ_OUTPUT_DECEL_LIMIT_RPM:
           name = TRAJ_OUTPUT_DECEL_LIMIT_RPM_NAME;
+          break;
+        case FieldNumber::MIT_OUTPUT_POS_RANGE_DEG:
+          name = MIT_OUTPUT_POS_RANGE_DEG_NAME;
+          break;
+        case FieldNumber::MIT_OUTPUT_VEL_RANGE_RPM:
+          name = MIT_OUTPUT_VEL_RANGE_RPM_NAME;
+          break;
+        case FieldNumber::MIT_OUTPUT_TOR_RANGE_NM:
+          name = MIT_OUTPUT_TOR_RANGE_NM_NAME;
           break;
         case FieldNumber::CAN_HEARTBEAT_INTERVAL_MS:
           name = CAN_HEARTBEAT_INTERVAL_MS_NAME;
@@ -1416,6 +1497,9 @@ FOCMotorConfig() = default;
       left_chars = traj_output_speed_limit_rpm_.to_string(left_chars, indent_level + 2, TRAJ_OUTPUT_SPEED_LIMIT_RPM_NAME, false);
       left_chars = traj_output_accel_limit_rpm_.to_string(left_chars, indent_level + 2, TRAJ_OUTPUT_ACCEL_LIMIT_RPM_NAME, false);
       left_chars = traj_output_decel_limit_rpm_.to_string(left_chars, indent_level + 2, TRAJ_OUTPUT_DECEL_LIMIT_RPM_NAME, false);
+      left_chars = mit_output_pos_range_deg_.to_string(left_chars, indent_level + 2, MIT_OUTPUT_POS_RANGE_DEG_NAME, false);
+      left_chars = mit_output_vel_range_rpm_.to_string(left_chars, indent_level + 2, MIT_OUTPUT_VEL_RANGE_RPM_NAME, false);
+      left_chars = mit_output_tor_range_nm_.to_string(left_chars, indent_level + 2, MIT_OUTPUT_TOR_RANGE_NM_NAME, false);
       left_chars = can_heartbeat_interval_ms_.to_string(left_chars, indent_level + 2, CAN_HEARTBEAT_INTERVAL_MS_NAME, false);
       left_chars = can_feedback_interval_ms_.to_string(left_chars, indent_level + 2, CAN_FEEDBACK_INTERVAL_MS_NAME, false);
       left_chars = can_misc_fdbk_interval_ms_.to_string(left_chars, indent_level + 2, CAN_MISC_FDBK_INTERVAL_MS_NAME, false);
@@ -1485,6 +1569,9 @@ FOCMotorConfig() = default;
       EmbeddedProto::floatfixed traj_output_speed_limit_rpm_ = 0.0;
       EmbeddedProto::floatfixed traj_output_accel_limit_rpm_ = 0.0;
       EmbeddedProto::floatfixed traj_output_decel_limit_rpm_ = 0.0;
+      EmbeddedProto::floatfixed mit_output_pos_range_deg_ = 0.0;
+      EmbeddedProto::floatfixed mit_output_vel_range_rpm_ = 0.0;
+      EmbeddedProto::floatfixed mit_output_tor_range_nm_ = 0.0;
       EmbeddedProto::uint32 can_heartbeat_interval_ms_ = 0U;
       EmbeddedProto::uint32 can_feedback_interval_ms_ = 0U;
       EmbeddedProto::uint32 can_misc_fdbk_interval_ms_ = 0U;
