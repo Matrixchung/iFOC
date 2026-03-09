@@ -57,11 +57,11 @@ public:
 
     ///
     /// \param Ts
-    __fast_inline void RTTaskScheduler(float Ts);
+    __fast_inline void RTTaskScheduler(float Ts) const;
 
     ///
     /// \param Ts
-    __fast_inline void MidTaskScheduler(float Ts);
+    __fast_inline void MidTaskScheduler(float Ts) const;
 
     ///
     /// \param name
@@ -106,7 +106,7 @@ inline void TaskProcessor::InitializeTask(Task *task)
     if(task->IsTaskRegistered(Task::TaskType::NORMAL_TASK)) task->Start();
 }
 
-__fast_inline void TaskProcessor::RTTaskScheduler(float Ts)
+__fast_inline void TaskProcessor::RTTaskScheduler(const float Ts) const
 {
     auto it = tasks.cbegin();
     while(it != tasks.cend())
@@ -116,7 +116,7 @@ __fast_inline void TaskProcessor::RTTaskScheduler(float Ts)
     }
 }
 
-__fast_inline void TaskProcessor::MidTaskScheduler(float Ts)
+__fast_inline void TaskProcessor::MidTaskScheduler(const float Ts) const
 {
     auto it = tasks.cbegin();
     while(it != tasks.cend())

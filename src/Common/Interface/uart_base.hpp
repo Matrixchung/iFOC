@@ -32,7 +32,7 @@ protected:
         explicit RxEventHandlerTask(UARTBase* _uart);
         void InitNormal() override;
         void UpdateNormal() override;
-        void RegisterHandler(EventCallback cb);
+        void RegisterHandler(const EventCallback& cb);
     };
     friend class RxEventHandlerTask;
     RxEventHandlerTask event_handler;
@@ -82,4 +82,7 @@ public:
     [[nodiscard]] __fast_inline auto GetTxPending() const { return tx_fifo.used(); };
     [[nodiscard]] __fast_inline auto GetTxAvailable() const { return tx_fifo.available(); };
 };
+
+template<typename T>
+concept UARTImpl = std::is_base_of<UARTBase, T>::value;
 }

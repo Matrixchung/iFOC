@@ -16,11 +16,11 @@ public:
     FOCDriverDRV830x() = delete;
     void OnFaultIRQ();
     FuncRetCode Init(bool initCNT) override;
-    void SetOutput3CHRaw(uint32_t ch1, uint32_t ch2, uint32_t ch3) override { pwm_base->SetOutput3CHRaw(ch1, ch2, ch3); };
+    void SetOutput3CHRaw(const uint32_t ch1, const uint32_t ch2, const uint32_t ch3) override { pwm_base->SetOutput3CHRaw(ch1, ch2, ch3); };
     void EnableAllOutputs() override { pwm_base->EnableAllOutputs(); };
     void DisableAllOutputs() override { pwm_base->DisableAllOutputs(); };
-    void EnableBridge(Bridge bridge) override { pwm_base->EnableBridge(bridge); };
-    void DisableBridge(Bridge bridge) override { pwm_base->DisableBridge(bridge); };
+    void EnableBridge(const Bridge bridge) override { pwm_base->EnableBridge(bridge); };
+    void DisableBridge(const Bridge bridge) override { pwm_base->DisableBridge(bridge); };
     real_t GetDeadTime() override { return pwm_base->GetDeadTime(); };
 private:
     typedef union status_1

@@ -15,18 +15,18 @@ class ExternalBufferReader final : public ::EmbeddedProto::ReadBufferInterface
 {
     OVERRIDE_NEW();
 public:
-    ExternalBufferReader(uint8_t *ptr, size_t size) : buffer(ptr), BUFFER_SIZE(size) {};
+    ExternalBufferReader(uint8_t *ptr, const size_t size) : buffer(ptr), BUFFER_SIZE(size) {};
     explicit ExternalBufferReader(std::span<uint8_t> sp) : buffer(sp.data()), BUFFER_SIZE(sp.size()) {};
-    ~ExternalBufferReader() final = default;
-    [[nodiscard]] uint32_t get_size() const final
+    ~ExternalBufferReader() override = default;
+    [[nodiscard]] uint32_t get_size() const override
     {
         return write_index_;
     }
-    [[nodiscard]] uint32_t get_max_size() const final
+    [[nodiscard]] uint32_t get_max_size() const override
     {
         return BUFFER_SIZE;
     }
-    bool peek(uint8_t& byte) const final
+    bool peek(uint8_t& byte) const override
     {
         const bool return_value = write_index_ > read_index_;
         if(return_value)
@@ -35,7 +35,7 @@ public:
         }
         return return_value;
     }
-    bool advance() final
+    bool advance() override
     {
         const bool return_value = write_index_ > read_index_;
         if(return_value)
@@ -44,7 +44,7 @@ public:
         }
         return return_value;
     }
-    bool advance(const uint32_t N) final
+    bool advance(const uint32_t N) override
     {
         const uint32_t new_read_index = read_index_ + N;
         const bool return_value = write_index_ >= new_read_index;
@@ -54,7 +54,7 @@ public:
         }
         return return_value;
     }
-    bool pop(uint8_t& byte) final
+    bool pop(uint8_t& byte) override
     {
         const bool return_value = write_index_ > read_index_;
         if(return_value)
@@ -84,28 +84,28 @@ class ExternalBufferWriter final : public ::EmbeddedProto::WriteBufferInterface
 {
     OVERRIDE_NEW();
 public:
-    ExternalBufferWriter(uint8_t *ptr, size_t size) : buffer(ptr), BUFFER_SIZE(size) {};
+    ExternalBufferWriter(uint8_t *ptr, const size_t size) : buffer(ptr), BUFFER_SIZE(size) {};
     explicit ExternalBufferWriter(std::span<uint8_t> sp) : buffer(sp.data()), BUFFER_SIZE(sp.size()) {};
-    ~ExternalBufferWriter() final = default;
-    void clear() final
+    ~ExternalBufferWriter() override = default;
+    void clear() override
     {
         write_index_ = 0;
     }
-    uint32_t get_size() const final
+    [[nodiscard]] uint32_t get_size() const override
     {
         return write_index_;
     }
-    uint32_t get_max_size() const final
+    [[nodiscard]] uint32_t get_max_size() const override
     {
         return BUFFER_SIZE;
     }
-    uint32_t get_available_size() const final
+    [[nodiscard]] uint32_t get_available_size() const override
     {
         return BUFFER_SIZE - write_index_;
     }
-    bool push(const uint8_t byte) final
+    bool push(const uint8_t byte) override
     {
-        bool return_value = BUFFER_SIZE > write_index_;
+        const bool return_value = BUFFER_SIZE > write_index_;
         if(return_value)
         {
             buffer[write_index_] = byte;
@@ -113,9 +113,9 @@ public:
         }
         return return_value;
     }
-    bool push(const uint8_t* bytes, const uint32_t length) final
+    bool push(const uint8_t* bytes, const uint32_t length) override
     {
-        bool return_value = BUFFER_SIZE > (write_index_ + length);
+        const bool return_value = BUFFER_SIZE > (write_index_ + length);
         if(return_value)
         {
             memcpy(buffer + write_index_, bytes, length);

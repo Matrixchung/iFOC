@@ -21,4 +21,7 @@ public:
     [[nodiscard]] virtual uint32_t GetVrefRawValue() { return 0; }
     [[nodiscard]] virtual uint32_t GetFullRange() const { return 0; }
 };
+
+template<typename T>
+concept ADCPortImpl = std::is_base_of<ADCPortBase, T>::value;
 }

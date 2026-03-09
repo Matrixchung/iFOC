@@ -1,7 +1,7 @@
 #pragma once
 
 #include "encoder_base.hpp"
-#include "lowpass_filter.hpp"
+#include "../Common/Filter/lowpass_filter.hpp"
 
 namespace iFOC::Encoder
 {

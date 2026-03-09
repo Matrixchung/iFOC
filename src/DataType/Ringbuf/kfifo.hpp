@@ -17,7 +17,7 @@ public:
     ~kfifo_t();
     FuncRetCode init(uint32_t s);
     uint32_t put(const uint8_t *p, uint32_t len);
-    uint32_t peek(uint8_t *p, uint32_t len);
+    uint32_t peek(uint8_t *p, uint32_t len) const;
     uint32_t get(uint8_t *p, uint32_t len);
     void wipe_n(uint32_t len);
     [[nodiscard]] __fast_inline uint32_t used() const { return in - out; };

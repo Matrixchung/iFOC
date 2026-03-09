@@ -24,17 +24,17 @@ FuncRetCode kfifo_t::init(uint32_t s)
 uint32_t kfifo_t::put(const uint8_t *p, uint32_t len)
 {
     len = uint32_min(len, (size - in + out));
-    uint32_t l = uint32_min(len, (size - (in & (size - 1))));
+    const uint32_t l = uint32_min(len, (size - (in & (size - 1))));
     memcpy(buffer + (in & (size - 1)), p, l);
     memcpy(buffer, p + l, len - l);
     in += len;
     return len;
 }
 
-uint32_t kfifo_t::peek(uint8_t *p, uint32_t len)
+uint32_t kfifo_t::peek(uint8_t *p, uint32_t len) const
 {
     len = uint32_min(len, (in - out));
-    uint32_t l = uint32_min(len, (size - (out & (size - 1))));
+    const uint32_t l = uint32_min(len, (size - (out & (size - 1))));
     memcpy(p, buffer + (out & (size - 1)), l);
     memcpy(p + l, buffer, len - l);
     return len;
@@ -47,7 +47,7 @@ uint32_t kfifo_t::get(uint8_t *p, uint32_t len)
     return len;
 }
 
-void kfifo_t::wipe_n(uint32_t len)
+void kfifo_t::wipe_n(const uint32_t len)
 {
     out += len;
 }
