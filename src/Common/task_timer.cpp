@@ -8,6 +8,17 @@
 #pragma GCC optimize (3)
 #endif
 
+#if (configGENERATE_RUN_TIME_STATS == 1)
+extern "C"
+{
+void configureTimerForRunTimeStats(void) {}
+unsigned long getRunTimeCounterValue(void)
+{
+    return iFOC::HAL::PerfCounter::GetCounter();
+}
+}
+#endif
+
 namespace iFOC
 {
 #ifdef MEASURE_TASK_TIME_IN_MICROS
@@ -18,7 +29,7 @@ uint32_t TaskTimer::start()
 
 void TaskTimer::stop(uint32_t start_us)
 {
-    uint32_t end_time_us = HAL::PerfCounter::GetCounter() / HAL::PerfCounter::counter_to_us;
+    const uint32_t end_time_us = HAL::PerfCounter::GetCounter() / HAL::PerfCounter::counter_to_us;
     elapsed_time_us = end_time_us - start_us;
     if(end_time_us < start_us) elapsed_time_us += HAL::PerfCounter::max_counter_us;
     // max_elapsed_time_us = MAX(max_elapsed_time_us, elapsed_time_us);
