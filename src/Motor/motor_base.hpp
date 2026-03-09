@@ -12,6 +12,7 @@
 #include "../DataType/Headers/Base/motor_state.h"
 #include "../DataType/Headers/Base/motor_control_mode.h"
 #include "../DataType/board_config.hpp"
+#include "../DataType/blob_nvm_storage.hpp"
 #include "../Protocol/protocol_base.hpp"
 #include "../DataType/Headers/Base/motion.hpp"
 #include "../DataType/config_nvm_wrapper.hpp"
@@ -137,6 +138,15 @@ public:
     Motion GetRampedStartMotion() const;
     Motion GetRampedDiffMotion() const;
 protected:
+    /// \brief used to determine internal index in case of a CPU handling multiple motor instances \n
+    ///        used in following areas: NVM config R/W, updating BusSense, handling bus communication...
+    uint8_t internal_id = 0;
+    bool is_armed = false;
+    bool _is_ramping_motion = false;
+    bool _is_trajectory_motion = false;
+    /// \brief Primary Encoder index which has been selected as data source
+    uint8_t primary_encoder_idx = 0;
+
     TaskProcessor tasks{};
     TrajController traj_controller{};
     /// \brief used to store all associated encoders (primary encoder, auxiliary encoder, sensorless...)
@@ -168,14 +178,6 @@ protected:
     float _ramped_target_timer = 0.0f;
     float _ramped_target_Ts = 0.0f;
 
-    /// \brief used to determine internal index in case of a CPU handling multiple motor instances \n
-    ///        used in following areas: NVM config R/W, updating BusSense, handling bus communication...
-    uint8_t internal_id = 0;
-    bool is_armed = false;
-    bool _is_ramping_motion = false;
-    bool _is_trajectory_motion = false;
-    /// \brief Primary Encoder index which has been selected as data source
-    uint8_t primary_encoder_idx = 0;
     std::underlying_type_t<MotorError> error = to_underlying(MotorError::NONE);
     MotorControlMode control_mode = MotorControlMode::CTRL_MODE_POSITION;
 };
@@ -419,7 +421,7 @@ Sense::TempSenseBase* MotorBase<shunt_count>::GetMosfetTempSense() const
 template <uint8_t shunt_count>
 Sense::TempSenseBase* MotorBase<shunt_count>::GetMotorTempSense() const
 {
-    return mosfet_temp;
+    return motor_temp;
 }
 
 template <uint8_t shunt_count>
