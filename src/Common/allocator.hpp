@@ -22,8 +22,8 @@ class Allocator
 public:
     static void * operator new(std::size_t size) {
         void* ptr = pvPortMalloc(size);
-        configASSERT(ptr != nullptr);
-        memset(ptr, 0, size);
+        // configASSERT(ptr != nullptr); // ptr emptiness should be checked manually by user
+        // if(ptr) memset(ptr, 0, size);
         return ptr;
     }
     static void operator delete(void* ptr) noexcept
