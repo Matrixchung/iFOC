@@ -275,18 +275,23 @@ __fast_inline static float fast_inv_sqrt(const float x)
 #pragma GCC diagnostic pop
 #endif
 
-/// Normalize radian to [0, 2PI]
+/// Normalize radian to [0, 2PI)
 /// \param rad
-/// \return [0, 2PI]
+/// \return [0, 2PI)
 __fast_inline static constexpr real_t normalize_rad(const real_t rad)
 {
-    real_t a = std::fmodf(rad, PI2);
+    const real_t a = std::fmodf(rad, PI2);
     return a >= 0 ? a : (a + PI2);
 }
 
-__fast_inline static constexpr real_t normalize_rad_negPI2posPI(const real_t rad)
+/// Normalize radian to [-PI, PI)
+/// \param rad
+/// \return [-PI, PI)
+__fast_inline static constexpr real_t normalize_rad_pm_pi(const real_t rad)
 {
-    return normalize_rad(rad) - PI;
+    real_t a = std::fmodf(rad + PI, PI2);
+    if(a < 0) a += PI2;
+    return a - PI;
 }
 
 __fast_inline static constexpr real_t DEG2RAD(real_t x)
