@@ -40,7 +40,8 @@ enum class ProtoFieldType : uint8_t
     UINT32 = 4,
     UINT64 = 5,
     BOOL = 6,
-    UNKNOWN = 7
+    STRING = 7,
+    UNKNOWN = 8
 };
 
 template<typename T>
@@ -85,6 +86,7 @@ constexpr const char* GetFieldName(const ProtoFieldType field)
         case ProtoFieldType::UINT32: return "uint32";
         case ProtoFieldType::UINT64: return "uint64";
         case ProtoFieldType::BOOL: return "bool";
+        case ProtoFieldType::STRING: return "string";
         default: return "unknown";
     }
 }
