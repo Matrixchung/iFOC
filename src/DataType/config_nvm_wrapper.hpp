@@ -1,56 +1,33 @@
 #pragma once
 
 #include "proto_wrapper.hpp"
-#include "../HAL/hal_impl.hpp"
-
-#if defined (USE_EASYFLASH)
-#include "../ThirdParty/EasyFlash/inc/easyflash.h"
-#elif defined (USE_FLASHDB)
-#include "../ThirdParty/FlashDB/inc/flashdb.h"
-#endif
+#include "blob_nvm_storage.hpp"
 
 namespace iFOC::DataType
 {
-#if !defined(USE_EASYFLASH) && !defined(USE_FLASHDB)
-namespace _const
-{
-    static constexpr uint8_t NVM_ALIGN_BYTES = FLASH_WRITE_GRAN_BITS / 8;
-}
-static FuncRetCode Write(uint8_t sector, const uint8_t *buffer, uint16_t size)
-{
-    uint32_t addr = FLASH_USER_START_ADDR + sector * FLASH_SECTOR_SIZE_BYTES;
-    auto ret = iFOC::HAL::NVM::Erase(addr, size);
-    if(ret != FuncRetCode::OK) return ret;
-    return iFOC::HAL::NVM::Write_NoErase(addr, buffer, size);
-}
-#elif defined(USE_FLASHDB)
-namespace _internal
-{
-    extern fdb_kvdb config_kvdb;
-    fdb_err_t kvdb_init();
-    size_t get_kvdb_used_size();
-    size_t get_kvdb_total_size();
-}
-#endif
-
 template<ProtoMessage msg_t>
 class ConfigNVMWrapper
 {
     OVERRIDE_NEW();
 private:
-    DataType::ProtoWrapper<msg_t>* wrapper = nullptr;
-    Base::ProtoHeader header;
-    uint8_t nvm_sector;
+    ProtoWrapper<msg_t>* wrapper = nullptr;
+    ProtoHeader header;
 #if defined(USE_EASYFLASH) || defined(USE_FLASHDB)
     char db_key[2]{};
 public:
-    static size_t GetNVMUsedSize() { return _internal::get_kvdb_used_size(); }
-    static size_t GetNVMTotalSize() { return _internal::get_kvdb_total_size(); }
+    static size_t GetNVMUsedSize() { return BlobNVMStorage().GetNVMUsedSize(); }
+    static size_t GetNVMTotalSize() { return BlobNVMStorage().GetNVMTotalSize(); }
+#else
+    uint8_t nvm_sector;
 #endif
 public:
-    ConfigNVMWrapper(Base::ProtoHeader h, uint8_t s) : header(h), nvm_sector(s)
+#if defined(USE_EASYFLASH) || defined(USE_FLASHDB)
+    ConfigNVMWrapper(ProtoHeader h, uint8_t s) : header(h)
+#else
+    ConfigNVMWrapper(ProtoHeader h, uint8_t s) : header(h), nvm_sector(s)
+#endif
     {
-        wrapper = new DataType::ProtoWrapper<msg_t>(header);
+        wrapper = new ProtoWrapper<msg_t>(header);
 #if defined(USE_EASYFLASH) || defined(USE_FLASHDB)
         // Use (uint16_t)header as key
         db_key[0] = (char)(to_underlying(header));
@@ -75,16 +52,12 @@ template<ProtoMessage msg_t>
 FuncRetCode ConfigNVMWrapper<msg_t>::ReadNVMConfig()
 {
     // if(xPortIsInsideInterrupt()) return FuncRetCode::ACCESS_VIOLATION; // can't be running inside isr
+    uint16_t buffer_in_out_size = wrapper->GetBufferSize();
 #if defined(USE_EASYFLASH)
     auto ret = FuncRetCode::NOT_SUPPORTED;
 #elif defined(USE_FLASHDB)
     auto ret = FuncRetCode::PARAM_NOT_EXIST;
-    auto flashdb_ret = _internal::kvdb_init();
-    if(flashdb_ret != fdb_err_t::FDB_NO_ERR) return FuncRetCode::INVALID_RESULT;
-    fdb_blob blob{};
-    HAL::NVM::fdb_kv_get_blob(&_internal::config_kvdb, db_key, HAL::NVM::fdb_blob_make(&blob, wrapper->GetBuffer(), wrapper->GetBufferSize()));
-    if(blob.saved.len > 0) ret = FuncRetCode::OK;
-    else ret = FuncRetCode::PARAM_NOT_EXIST;
+    ret = BlobNVMStorage().ReadNVM(db_key, wrapper->GetBuffer(), &buffer_in_out_size);
 #else
     // calculate sector address
     uint32_t addr = FLASH_USER_START_ADDR + nvm_sector * FLASH_SECTOR_SIZE_BYTES;
@@ -93,7 +66,7 @@ FuncRetCode ConfigNVMWrapper<msg_t>::ReadNVMConfig()
                             ALIGN_TO(wrapper->GetBufferSize(), _const::NVM_ALIGN_BYTES));
 #endif
     if(ret != FuncRetCode::OK) return ret;
-    auto result = wrapper->Deserialize(wrapper->GetBufferSize());
+    auto result = wrapper->Deserialize(buffer_in_out_size);
     if(result == EmbeddedProto::Error::NO_ERRORS) return FuncRetCode::OK;
     if(result == EmbeddedProto::Error::END_OF_BUFFER) return FuncRetCode::BUFFER_FULL;
     if(result == EmbeddedProto::Error::INVALID_FIELD_ID) return FuncRetCode::CRC_MISMATCH;
@@ -111,12 +84,7 @@ FuncRetCode ConfigNVMWrapper<msg_t>::SaveNVMConfig()
 #if defined(USE_EASYFLASH)
 
 #elif defined(USE_FLASHDB)
-        auto flashdb_ret = _internal::kvdb_init();
-        if(flashdb_ret != fdb_err_t::FDB_NO_ERR) return FuncRetCode::INVALID_RESULT;
-        fdb_blob blob{};
-        flashdb_ret = HAL::NVM::fdb_kv_set_blob(&_internal::config_kvdb, db_key, HAL::NVM::fdb_blob_make(&blob, wrapper->GetBuffer(), len));
-        if(flashdb_ret == fdb_err_t::FDB_NO_ERR) return FuncRetCode::OK;
-        return FuncRetCode::HARDWARE_ERROR;
+        return BlobNVMStorage().SaveNVM(db_key, wrapper->GetBuffer(), len);
 #else
         return Write(nvm_sector,
                      wrapper->GetBuffer(),
@@ -134,11 +102,7 @@ FuncRetCode ConfigNVMWrapper<msg_t>::ClearNVMConfig()
 #if defined(USE_EASYFLASH)
     return FuncRetCode::NOT_SUPPORTED;
 #elif defined(USE_FLASHDB)
-    auto flashdb_ret = _internal::kvdb_init();
-    if(flashdb_ret != fdb_err_t::FDB_NO_ERR) return FuncRetCode::HARDWARE_ERROR;
-    flashdb_ret = HAL::NVM::fdb_kv_del(&_internal::config_kvdb, db_key);
-    if(flashdb_ret != fdb_err_t::FDB_NO_ERR) return FuncRetCode::INVALID_RESULT;
-    return FuncRetCode::OK;
+    return BlobNVMStorage().ClearNVM(db_key);
 #else
     uint32_t addr = FLASH_USER_START_ADDR + nvm_sector * FLASH_SECTOR_SIZE_BYTES;
     return HAL::NVM::Erase(addr, FLASH_SECTOR_SIZE_BYTES);
