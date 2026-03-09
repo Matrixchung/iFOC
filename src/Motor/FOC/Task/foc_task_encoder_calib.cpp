@@ -1,19 +1,17 @@
 #include "foc_task_encoder_calib.hpp"
-#include "foc_curr_loop_pi.hpp"
+#include "../Controller/foc_curr_loop_pi.hpp"
+#include "../../../DataType/lookup_table.hpp"
 
-// Encoder-related calibration
-#include "encoder_mt6835.hpp"
-#include "trajectory_controller.hpp"
-
-// #define foc GetMotor<FOCMotor>()
+#define SAMPLES_PER_POLE_PAIR (128U)
+#define ZERO_EST_PHASE_OMEGA_RADS (10.0f)
 
 namespace iFOC::FOC
 {
 EncoderCalibTask::EncoderCalibTask() : Task("EncCalib")
 {
-    RegisterTask(TaskType::NORMAL_TASK);
+    RegisterTask(TaskType::NORMAL_TASK, TaskType::MID_TASK);
     config.rtos_priority = configMAX_PRIORITIES - 5;
-    config.stack_depth = 256;
+    config.stack_depth = 512;
 }
 
 static constexpr float MIN_ANGLE_DETECT_MOVEMENT = PI2 / 101.0f;
@@ -76,19 +74,24 @@ void EncoderCalibTask::UpdateNormal()
             if(!foc->GetConfig().sensor_zero_offset_valid())
             {
                 foc->Arm();
-                stage = EstStage::SENSOR_ZERO_OFFSET_TESTING;
+                stage = EstStage::SENSOR_ZERO_OFFSET_TEST_START;
                 break;
             }
-            if(!is_sensor_custom_calibrated && stage_passed > 0)
-            {
-                foc->Arm();
-                stage = EstStage::SENSOR_CUSTOM_CALIBRATING;
-                break;
-            }
+            // if(!is_sensor_custom_calibrated && stage_passed > 0)
+            // {
+            //     foc->Arm();
+            //     stage = EstStage::SENSOR_CUSTOM_CALIBRATING;
+            //     break;
+            // }
             foc->Disarm();
             foc->RemoveTaskByName("CurrLoop");
             foc->UnbypassTaskByName("EncArbiter");
             foc->state_machine.BackToLastState();
+            if(temp_map)
+            {
+                vPortFree(temp_map);
+                temp_map = nullptr;
+            }
             foc->RemoveTaskByName(GetName());
             break;
         }
@@ -210,7 +213,7 @@ void EncoderCalibTask::UpdateNormal()
             stage_passed++;
             break;
         }
-        case EstStage::SENSOR_ZERO_OFFSET_TESTING:
+        case EstStage::SENSOR_ZERO_OFFSET_TEST_START:
         {
             const auto encoder = foc->GetPrimaryEncoder();
             if(!encoder)
@@ -219,181 +222,191 @@ void EncoderCalibTask::UpdateNormal()
                 foc->RemoveTaskByName(GetName());
                 break;
             }
+            if(!foc->GetConfig().pole_pairs_valid() || foc->GetConfig().pole_pairs() > 30)
+            {
+                foc->GetConfig().set_pole_pairs(0);
+                foc->GetConfig().set_pole_pairs_valid(false);
+                stage = EstStage::NONE;
+                break;
+            }
+
+            temp_map = (float*)pvPortMalloc(SAMPLES_PER_POLE_PAIR * foc->GetConfig().pole_pairs() * sizeof(float));
+            if(!temp_map)
+            {
+                foc->DisarmWithError(MotorError::SYSTEM_MEM_ALLOCATION_FAILED);
+                foc->RemoveTaskByName(GetName());
+                break;
+            }
+
+            zero_est.sample_count = 0;
+            zero_est.timer = 0.0f;
+            zero_est.next_sample_time = 0.0f;
+            zero_est.elec_angle_rad = 0.0;
+
             foc->GetConfig().set_sensor_zero_offset_rad(0.0f);
             foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
             foc->elec_angle_rad = 0.0f;
             sleep(1000); // move motor to elec angle 0
 
-            float sensor_zero_offset_rad = normalize_rad(encoder->single_round_angle_rad * foc->GetConfig().pole_pairs());
+            stage = EstStage::SENSOR_ZERO_OFFSET_TESTING_CW;
 
-            foc->GetConfig().set_sensor_zero_offset_rad(sensor_zero_offset_rad);
+            break;
+        }
+        case EstStage::SENSOR_ZERO_OFFSET_TESTED:
+        {
+            const uint32_t M  = foc->GetConfig().pole_pairs() * SAMPLES_PER_POLE_PAIR;
+            double moving_average = 0.0;
+            for(uint16_t i = 0; i < (uint16_t)M; i++)
+            {
+                // moving_average += (double)temp_map[i];
+                moving_average += (double)normalize_rad_pm_pi(temp_map[i]);
+            }
+            moving_average /= ((double)SAMPLES_PER_POLE_PAIR);
+
+            const float zero_offset_mech = moving_average / (float)foc->GetConfig().pole_pairs();
+            constexpr size_t LUT_SEGMENTS = NONLINEAR_LUT_POINTS - 1;
+            DataType::LookupTable lut(NONLINEAR_LUT_POINTS, 0.0f, PI2);
+
+            // calculate rotation offset
+            // temp_map (based on 0-elec rad reference axis) -> lut (based on 0-sensor rad reference axis)
+            const float raw0 = normalize_rad(temp_map[0]);
+            const size_t lut_offset = (size_t)std::lroundf(raw0 * (float)LUT_SEGMENTS * divPI2) % LUT_SEGMENTS;
+
+            // resampling (SAMPLES_PER_POLE_PAIR * pp -> NONLINEAR_LUT_POINTS) && FIR smoothing to LUT
+            constexpr int window = (int)SAMPLES_PER_POLE_PAIR / 2U;
+            for(size_t i = 0; i < LUT_SEGMENTS; i++)
+            {
+                // LUT 第 i 个周期分段在原始样本序列中的中心位置
+                const int center = (int)((uint64_t)i * (uint64_t)M / (uint64_t)LUT_SEGMENTS);
+                double accmulate = 0.0;
+                int count = 0;
+                for(int j = -window / 2; j < window / 2; ++j)
+                {
+                    int idx = center + j;
+                    while(idx < 0) idx += (int)M;
+                    while(idx >= (int)M) idx -= (int)M;
+                    const float residual = normalize_rad_pm_pi(temp_map[(uint32_t)idx] - zero_offset_mech);
+                    accmulate += residual;
+                    ++count;
+                }
+                const float lut_value = (count > 0) ? (accmulate / (double)count) : 0.0f;
+                const size_t lut_index = (lut_offset + i) % LUT_SEGMENTS;
+                lut.setValueByIndex(lut_index, lut_value);
+            }
+            lut.setValueByIndex(LUT_SEGMENTS, lut.getValueByIndex(0)); // wrap around
+
+            if(temp_map)
+            {
+                vPortFree(temp_map);
+                temp_map = nullptr;
+            }
+
+            char key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
+            memcpy(key, NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
+            key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';
+            key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
+            BlobNVMStorage().ClearNVM(key);
+
+            auto lut_serialized_size = lut.getSerializedSize();
+            uint8_t* serialize_buffer = (uint8_t*)pvPortMalloc(lut_serialized_size * sizeof(uint8_t));
+            if(serialize_buffer)
+            {
+                if(lut.serialize(serialize_buffer, lut_serialized_size))
+                {
+                    // By changing FDB_KVDB_CTRL_SET_SEC_SIZE using fdb_kvdb_control(), larger KV is allowed.
+                    BlobNVMStorage().SaveNVM(key, serialize_buffer, lut_serialized_size);
+                }
+                vPortFree(serialize_buffer);
+                serialize_buffer = nullptr;
+            }
+
+            foc->GetConfig().set_sensor_zero_offset_rad(normalize_rad(moving_average));
             foc->GetConfig().set_sensor_zero_offset_valid(true);
-
-            // calculate error between given elec_angle_rad
-            // with calculated encoder elec_angle_rad
-            // float total_offset = 0.0f;
-            // int sample_count = 0;
-            // // omega: 4pi rad/s, forward: 16pi rad, backward: 16pi rad, average: encoder_rad when: elec_angle_rad = 8PI
-            // // maybe spin for a whole round?
-            // // const float total_distance = PI2 * 8;
-            // const float total_distance = PI2 * foc->GetConfig().pole_pairs();
-            // const int total_ms = 1000 * (float)(total_distance / (2 * PI2));
-            // for(int i = 0; i <= total_ms; i++)
-            // {
-            //     float angle_rad = total_distance * (float)i / (float)total_ms;
-            //     foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
-            //     foc->elec_angle_rad = normalize_rad(angle_rad);
-            //     // measured elec angle
-            //     float meas_elec_angle = normalize_rad(encoder->single_round_angle_rad * foc->GetConfig().pole_pairs());
-            //
-            //     // #1
-            //     float offset = meas_elec_angle - foc->elec_angle_rad;
-            //     if(offset >= PI2) offset -= PI2;
-            //     else if(offset <= -PI2) offset += PI2;
-            //     total_offset += offset;
-            //
-            //     // #2
-            //     // total_offset += normalize_rad(meas_elec_angle - foc->elec_angle_rad);
-            //
-            //     // #3
-            //     // total_offset += meas_elec_angle;
-            //
-            //     sample_count++;
-            //     sleep(1);
-            // }
-            // sleep(500);
-            // for(int i = total_ms; i >= 0; i--)
-            // {
-            //     float angle_rad = total_distance * (float)i / (float)total_ms;
-            //     foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
-            //     foc->elec_angle_rad = normalize_rad(angle_rad);
-            //     float meas_elec_angle = normalize_rad(encoder->single_round_angle_rad * foc->GetConfig().pole_pairs());
-            //
-            //     float offset = meas_elec_angle - foc->elec_angle_rad;
-            //     if(offset >= PI2) offset -= PI2;
-            //     else if(offset <= -PI2) offset += PI2;
-            //     total_offset += offset;
-            //
-            //     // total_offset += normalize_rad(meas_elec_angle - foc->elec_angle_rad);
-            //
-            //     // total_offset += meas_elec_angle;
-            //
-            //     sample_count++;
-            //     sleep(1);
-            // }
-            // foc->Iqd_target = {0.0f, 0.0f}; // stop the motor
-            // total_offset /= (float)sample_count;
-            // total_offset = normalize_rad(total_offset);
-            // foc->GetConfig().set_sensor_zero_offset_rad(total_offset);
-            // foc->GetConfig().set_sensor_zero_offset_valid(true);
 
             stage = EstStage::NONE;
             stage_passed++;
             break;
         }
-        case EstStage::SENSOR_CUSTOM_CALIBRATING:
+    default: sleep(100);
+        break;
+    }
+}
+
+void EncoderCalibTask::UpdateMid(float Ts)
+{
+    const auto foc = GetMotor<FOCMotor>();
+    switch(stage)
+    {
+        case EstStage::SENSOR_ZERO_OFFSET_TESTING_CW:
         {
             const auto encoder = foc->GetPrimaryEncoder();
             if(!encoder)
             {
-                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_COMPONENT_MISSING);
-                foc->RemoveTaskByName(GetName());
+                stage = EstStage::SENSOR_ZERO_OFFSET_TEST_START;
                 break;
             }
-            if(*encoder == "MT6835") // MT6835 Custom Calibration: See Datasheet 9.2, Client Self-Calibration
+            zero_est.timer += Ts;
+            // total elec angle: PI2 * foc->GetConfig().pole_pairs()
+            if(zero_est.sample_count < (int16_t)(foc->GetConfig().pole_pairs() * SAMPLES_PER_POLE_PAIR))
             {
-                if(foc->GetConfig().sensor_direction_valid() &&
-                    (foc->GetConfig().pole_pairs() > 0 && foc->GetConfig().pole_pairs_valid()))
+                if(zero_est.timer > zero_est.next_sample_time)
                 {
-                    // cast the pointer to mt6835 instance
-                    const auto mt6835 = reinterpret_cast<Encoder::EncoderMT6835*>(encoder);
-                    if(mt6835->cal_gpio) // we have a CAL_EN gpio pin set
-                    {
-                        if(Encoder::EncoderMT6835::SelfCalibState state{}; mt6835->GetSelfCalibrationState(state) == FuncRetCode::OK)
-                        {
-                            if(state == Encoder::EncoderMT6835::SelfCalibState::NO_CALIB)
-                            {
-                                constexpr float calib_speed_rpm = 300.0f;
-                                constexpr float calib_max_accel_rpm_s = 12.0f;
-                                constexpr float calib_max_decel_rpm_s = 20.0f;
-                                constexpr float calib_total_distance_rev = 512.0f;
-                                // Step #1, Write AUTOCAL_FREQ
-                                if(const auto ret = mt6835->SetSelfCalibrationRPM(calib_speed_rpm); ret != FuncRetCode::OK)
-                                {
-                                    foc->DisarmWithError(MotorError::PRIMARY_SENSOR_CALIBRATION_FAILED);
-                                    foc->RemoveTaskByName(GetName());
-                                    break;
-                                }
-                                // Step #2, Pre-locating, Uq = u, theta = 270 ~ Ud = u, theta = 0
-                                foc->Iqd_target = {0.0f, 0.0f};
-                                foc->elec_angle_rad = 0.0f;
-                                sleep(500);
-                                foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
-                                sleep(500);
-                                // foc->Iqd_target = {0.0f, 0.0f};
-                                // sleep(200);
-                                // Step #3, Plan a trajectory
-                                // Requirements: 1) BASE speed = 150 RPM 2) Cruise distance > 64 rounds
-                                // BASE RPM -> ELEC RAD/S
-                                const float target_pos = REV2RAD(calib_total_distance_rev * foc->GetConfig().pole_pairs());
-                                const float target_speed = RPM2RAD(calib_speed_rpm, foc->GetConfig().pole_pairs());
-                                const float max_accel = RPM2RAD(calib_max_accel_rpm_s, foc->GetConfig().pole_pairs());
-                                const float max_decel = RPM2RAD(calib_max_decel_rpm_s, foc->GetConfig().pole_pairs());
-                                TrajController traj{};
-                                // Unit: ELEC, Speed: RADS, Pos: RAD
-                                traj.PlanTrajectory(target_pos, 0.0f, 0.0f, target_speed, max_accel, max_decel);
-                                uint8_t temp_counter = 0;
-                                bool is_set_pin_high = false;
-                                while(!traj.GetState())
-                                {
-                                    traj.Update(0.005f);
-                                    foc->elec_angle_rad = normalize_rad(traj.GetCurrPos());
-                                    foc->elec_omega_rad_s = traj.GetCurrSpeed();
-                                    if(traj.GetTrajStage() == TrajController::TrajStage::CRUISING)
-                                    {
-                                        if(temp_counter >= 10)
-                                        {
-                                            if(!is_set_pin_high)
-                                            {
-                                                // Set CAL_EN pin High
-                                                mt6835->cal_gpio->Set();
-                                                is_set_pin_high = true;
-                                            }
-                                            else // continue to check the calibration state, if success, we can decelerate in advance.
-                                            {
-                                                mt6835->GetSelfCalibrationState(state);
-                                                if(state == Encoder::EncoderMT6835::SelfCalibState::CALIB_FAILED ||
-                                                    state == Encoder::EncoderMT6835::SelfCalibState::CALIB_SUCCESS)
-                                                {
-                                                    traj.DecelerateInAdvance();
-                                                }
-                                            }
-                                            temp_counter = 0;
-                                        }
-                                        else temp_counter++;
-                                    }
-                                    sleep(5);
-                                }
-                                if(state != Encoder::EncoderMT6835::SelfCalibState::CALIB_SUCCESS) mt6835->GetSelfCalibrationState(state);
-                                sleep(10);
-                                mt6835->cal_gpio->Clear();
-                                if(state != Encoder::EncoderMT6835::SelfCalibState::CALIB_SUCCESS)
-                                {
-                                    foc->DisarmWithError(MotorError::PRIMARY_SENSOR_CALIBRATION_FAILED);
-                                    foc->RemoveTaskByName(GetName());
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    zero_est.next_sample_time += PI2 / ((float)SAMPLES_PER_POLE_PAIR * ZERO_EST_PHASE_OMEGA_RADS);
+                    const float ref_enc_single_round_rad = zero_est.elec_angle_rad / (float)foc->GetConfig().pole_pairs(); // elec -> motor
+                    float error = encoder->single_round_angle_rad - ref_enc_single_round_rad;
+                    error = normalize_rad(error);
+                    temp_map[zero_est.sample_count] = error;
+                    zero_est.sample_count++;
                 }
+                zero_est.elec_angle_rad += ZERO_EST_PHASE_OMEGA_RADS * Ts;
             }
-            stage = EstStage::NONE;
-            is_sensor_custom_calibrated = true;
+            else
+            {
+                zero_est.elec_angle_rad -= ZERO_EST_PHASE_OMEGA_RADS * Ts;
+                zero_est.timer = 0.0f;
+                zero_est.sample_count--;
+                zero_est.next_sample_time = 0.0f;
+                stage = EstStage::SENSOR_ZERO_OFFSET_TESTING_CCW;
+                break;
+            }
+            foc->elec_angle_rad = normalize_rad(zero_est.elec_angle_rad);
+            foc->elec_omega_rad_s = ZERO_EST_PHASE_OMEGA_RADS;
             break;
         }
-    default: sleep(100);
-        break;
+        case EstStage::SENSOR_ZERO_OFFSET_TESTING_CCW:
+        {
+            const auto encoder = foc->GetPrimaryEncoder();
+            if(!encoder)
+            {
+                stage = EstStage::SENSOR_ZERO_OFFSET_TEST_START;
+                break;
+            }
+            zero_est.timer += Ts;
+            if(zero_est.sample_count >= 0)
+            {
+                if(zero_est.timer > zero_est.next_sample_time)
+                {
+                    zero_est.next_sample_time += PI2 / ((float)SAMPLES_PER_POLE_PAIR * ZERO_EST_PHASE_OMEGA_RADS);
+                    const float ref_enc_single_round_rad = zero_est.elec_angle_rad / (float)foc->GetConfig().pole_pairs(); // elec -> motor
+                    float error = encoder->single_round_angle_rad - ref_enc_single_round_rad;
+                    error = normalize_rad(error);
+                    // temp_map[zero_est.sample_count] = (temp_map[zero_est.sample_count] + error) * 0.5f; // fixed: given a 0.01(CW) & (2PI - 0.01)(CCW) error
+                    // circular mean
+                    temp_map[zero_est.sample_count] = normalize_rad(temp_map[zero_est.sample_count] + 0.5f * normalize_rad_pm_pi(error - temp_map[zero_est.sample_count]));
+                    zero_est.sample_count--;
+                }
+                zero_est.elec_angle_rad -= ZERO_EST_PHASE_OMEGA_RADS * Ts;
+            }
+            else
+            {
+                stage = EstStage::SENSOR_ZERO_OFFSET_TESTED;
+                break;
+            }
+            foc->elec_angle_rad = normalize_rad(zero_est.elec_angle_rad);
+            foc->elec_omega_rad_s = ZERO_EST_PHASE_OMEGA_RADS;
+            break;
+        }
+        default: break;
     }
 }
 }

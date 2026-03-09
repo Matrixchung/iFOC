@@ -34,14 +34,17 @@ namespace FOC
         TaskTimer rt_remaining_task{};        // Low side on -> main task -> task ended -> low side off -> |remaining task|
         TaskTimer mid_interval_task{};        // |medium interval task|
     };
-    struct Anticogging_t
-    {
-
-    };
+    constexpr char NONLINEAR_LUT_DB_KEY_PREFIX[] = "nl";
+    constexpr uint16_t NONLINEAR_LUT_POINTS = 1025;
+    // Cross-sector huge KV pair is not allowed in FlashDB, so we split it into N pages.
+    // By changing FDB_KVDB_CTRL_SET_SEC_SIZE using fdb_kvdb_control(), larger KV is allowed.
+    // constexpr uint16_t NONLINEAR_LUT_KV_PAGES = (sizeof(uint32_t) + sizeof(float) * 2 + NONLINEAR_LUT_POINTS * sizeof(float) + sizeof(uint16_t) + FLASH_SECTOR_SIZE_BYTES - 1) / FLASH_SECTOR_SIZE_BYTES;
 }
-
+#pragma pack(push, 4)
 class FOCMotor final : public MotorBase<3>
 {
+    OVERRIDE_NEW();
+    DELETE_COPY_CONSTRUCTOR(FOCMotor);
 public:
     using MotorBase::MotorBase;
     /// Initialize the FOCMotor instance. You must have THREE processes completed before: \n
@@ -89,4 +92,5 @@ public:
 private:
     Motion current_target{.ref = Motion::Ref::BASE};
 };
+#pragma pack(pop)
 }
