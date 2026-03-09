@@ -15,7 +15,10 @@
 
 #define KILO 1000L
 #define MEGA ((int64_t) KILO * KILO)
-#define NODE_NAME ("com.ifoc.driver") // TODO: Replace with compile-time -D or other definitions
+
+#ifndef IFOC_NODE_NAME
+#define IFOC_NODE_NAME ("com.ifoc.driver")
+#endif
 
 static void _fill_subscriptions_to_subject_list(const CanardTreeNode* const tree, uavcan_node_port_SubjectIDList_1_0* const obj)
 {
@@ -48,6 +51,7 @@ CyphalProtocol::CyphalProtocol(HAL::CANBase* base) : polling_task(this), can(bas
 
 CyphalProtocol::~CyphalProtocol()
 {
+    polling_task.Stop();
     vQueueDelete(isr_msg_queue);
 }
 
@@ -56,11 +60,18 @@ void CyphalProtocol::Init()
     const auto motor = GetMotor<FOCMotor>();
     const CanardMemoryResource memory = {nullptr, canard_mem_free, canard_mem_alloc};
     canard = canardInit(memory);
-    canard.node_id = motor->GetConfig().node_id();
+    // canard.node_id = motor->GetConfig().node_id();
+    auto target_node_id = motor->GetConfig().node_id();
+    if(target_node_id > CANARD_NODE_ID_MAX)
+    {
+        target_node_id = CANARD_NODE_ID_UNSET;
+        motor->GetConfig().set_node_id(target_node_id);
+    }
+    canard.node_id = target_node_id;
     if(canard.node_id <= CANARD_NODE_ID_MAX) // set HW filter
     {
         CanardFilter filter = canardMakeFilterForServices(canard.node_id);
-        can->SetHWFilter(motor->GetInternalID(), filter.extended_can_id, filter.extended_mask);
+        can->SetHWFilter(motor->GetInternalID(), filter.extended_can_id, filter.extended_mask, true, false);
     }
     tx_queue = canardTxInit(128, CANARD_MTU_CAN_CLASSIC, memory); // TODO: For CAN FD, the MTU is 64.
     polling_task.Start();
@@ -228,13 +239,13 @@ void CyphalProtocol::SendGetInfoResponse(const CanardRxTransfer& transfer)
         .software_vcs_revision_id = 0, // TODO: PLACEHOLDER HERE
         .unique_id = {},
         .name = {},
-        .software_image_crc = {},
+        .software_image_crc = {{HAL::GetFirmwareCRC64()}, 1},
         .certificate_of_authenticity = {},
     };
     auto serial_number = HAL::GetSerialNumber();
     memcpy(response.unique_id, &serial_number, sizeof(serial_number));
-    response.name.count = strlen(NODE_NAME);
-    memcpy(&response.name.elements, NODE_NAME, response.name.count);
+    response.name.count = strlen(IFOC_NODE_NAME);
+    memcpy(&response.name.elements, IFOC_NODE_NAME, response.name.count);
 
     CanardPayload payload{};
     constexpr size_t original_max_size = uavcan_node_GetInfo_Response_1_0_SERIALIZATION_BUFFER_SIZE_BYTES_;
@@ -417,14 +428,21 @@ void CyphalProtocol::GetRegisterNameByGlobalIndex(char* dst, uint16_t max_size, 
     // index: [0 - total_registers - 1]
     if(index >= total_registers) return;
     uint16_t iter_index = 0;
-    for(const auto& [name, info] : board_map)
+    if(index > board_map.size())
     {
-        if(iter_index == index)
+        iter_index += board_map.size();
+    }
+    else
+    {
+        for(const auto& [name, info] : board_map)
         {
-            snprintf(dst, max_size, "board.%s", name);
-            return;
+            if(iter_index == index)
+            {
+                snprintf(dst, max_size, "board.%s", name);
+                return;
+            }
+            iter_index++;
         }
-        iter_index++;
     }
     for(const auto& [name, info] : motor_map)
     {
@@ -435,7 +453,6 @@ void CyphalProtocol::GetRegisterNameByGlobalIndex(char* dst, uint16_t max_size, 
         }
         iter_index++;
     }
-    return;
 }
 
 bool CyphalProtocol::ReadRegisterByName(const uavcan_register_Name_1_0& name, uavcan_register_Value_1_0& dst_value)
@@ -741,7 +758,7 @@ bool CyphalProtocol::WriteRegisterByName(const uavcan_register_Name_1_0& name, c
     return false;
 }
 
-CyphalProtocol::PollingTask::PollingTask(CyphalProtocol* p) : Task("UAVCANPoll"), parent(p)
+CyphalProtocol::PollingTask::PollingTask(CyphalProtocol* p) : Task("Cyphal"), parent(p)
 {
     RegisterTask(TaskType::NORMAL_TASK);
     config.rtos_priority = configMAX_PRIORITIES - 4;
@@ -752,14 +769,21 @@ void CyphalProtocol::PollingTask::UpdateNormal()
 {
     const auto motor = parent->GetMotor<FOCMotor>();
     const auto new_node_id = motor->GetConfig().node_id();
-    if(new_node_id != parent->canard.node_id)
+    if(new_node_id > CANARD_NODE_ID_MAX)
+    {
+        auto fallback_node_id = parent->canard.node_id;
+        if(fallback_node_id > CANARD_NODE_ID_MAX)
+        {
+            fallback_node_id = CANARD_NODE_ID_UNSET;
+            parent->canard.node_id = fallback_node_id;
+        }
+        motor->GetConfig().set_node_id(fallback_node_id);
+    }
+    else if(new_node_id != parent->canard.node_id)
     {
         parent->canard.node_id = new_node_id;
-        if(new_node_id <= CANARD_NODE_ID_MAX)
-        {
-            CanardFilter filter = canardMakeFilterForServices(new_node_id);
-            parent->can->SetHWFilter(motor->GetInternalID(), filter.extended_can_id, filter.extended_mask);
-        }
+        auto [extended_can_id, extended_mask] = canardMakeFilterForServices(new_node_id);
+        parent->can->SetHWFilter(motor->GetInternalID(), extended_can_id, extended_mask, true, false);
     }
     // #1: Response received transfer first
     DataType::Comm::CANMessage message{};
@@ -771,7 +795,7 @@ void CyphalProtocol::PollingTask::UpdateNormal()
         rx_frame.payload.data = message.data;
         CanardRxTransfer transfer{};
         const auto result = canardRxAccept(&parent->canard,
-                                           xTaskGetTickCountFromISR() * 1000,
+                                           xTaskGetTickCount() * 1000,
                                            &rx_frame,
                                            0,
                                            &transfer,
