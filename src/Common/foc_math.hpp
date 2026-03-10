@@ -2,7 +2,6 @@
 
 #include "foc_types.hpp"
 #include "../HAL/hal_impl.hpp"
-#include "Math/math_concepts.hpp"
 #include <array>
 
 #ifdef __GNUC__

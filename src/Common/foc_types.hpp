@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstring>
-#include <optional>
 #include <functional>
+#include <cmath>
 
 #include "Math/real_t.hpp"
 #include "FreeRTOS.h"
@@ -20,19 +20,6 @@ struct qd_t
     real_t q = 0;
     real_t d = 0;
 };
-
-// struct ab_t
-// {
-//     real_t a = 0;
-//     real_t b = 0;
-// };
-//
-// struct abc_t
-// {
-//     real_t a = 0;
-//     real_t b = 0;
-//     real_t c = 0;
-// };
 
 struct alphabeta_t
 {
