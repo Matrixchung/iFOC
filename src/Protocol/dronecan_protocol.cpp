@@ -423,6 +423,11 @@ void DroneCANProtocol::ProcessTransfer(DroneCAN::CanardInstance* ins, DroneCAN::
                     SendFOCSetTorqueTargetResponse(transfer);
                     break;
                 }
+                case IFOC_SETDEBUGCMD_ID:
+                {
+                    SendFOCSetDebugCmdResponse(transfer);
+                    break;
+                }
                 default: break;
             }
             break;
@@ -571,6 +576,11 @@ bool DroneCANProtocol::ShouldAccept(const DroneCAN::CanardInstance* ins, uint64_
                 case IFOC_SETTORQUETARGET_ID:
                 {
                     *out = IFOC_SETTORQUETARGET_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_SETDEBUGCMD_ID:
+                {
+                    *out = IFOC_SETDEBUGCMD_SIGNATURE_OVERRIDE;
                     return true;
                 }
                 default: break;
@@ -885,7 +895,7 @@ void DroneCANProtocol::SendFOCGetEncodersResponse(DroneCAN::CanardRxTransfer* tr
         target.type = (uint8_t)enc->GetEncoderType();
         target.primary = motor->GetPrimaryEncoderIndex() == i;
         target.result_valid = enc->IsResultValid();
-        target.single_round_angle_rad = enc->single_round_angle_rad;
+        target.single_round_angle_rad = enc->compensated_single_round_angle_rad;
         target.multi_round_angle_rad = enc->multi_round_angle_rad;
         target.angular_speed_rad_s = enc->angular_speed_rad_s;
         target.full_rotations = enc->full_rotations;
@@ -968,72 +978,6 @@ void DroneCANProtocol::SendFOCSetRefFrameResponse(DroneCAN::CanardRxTransfer* tr
 
     _SendResponse(transfer, IFOC_SETREFFRAME_SIGNATURE_OVERRIDE, IFOC_SETREFFRAME_ID, buffer, len);
 }
-
-// void DroneCANProtocol::SendFOCGetBlobStorageResponse(DroneCAN::CanardRxTransfer* transfer)
-// {
-//     ifoc_GetBlobStorageRequest request{};
-//     if(ifoc_GetBlobStorageRequest_decode(transfer, &request)) return;
-//
-//     char key[sizeof(request.key.data) + 1]{};
-//     memcpy(key, request.key.data, request.key.len);
-//     key[request.key.len] = '\0';
-//     auto* response = new ifoc_GetBlobStorageResponse();
-//     response->data.len = sizeof(response->data.data);
-//     response->ok = BlobNVMStorage().ReadNVM(key, response->data.data, &response->data.len) == FuncRetCode::OK;
-//
-//     auto* buffer = new uint8_t[IFOC_GETBLOBSTORAGE_RESPONSE_MAX_SIZE];
-//     const uint32_t len = ifoc_GetBlobStorageResponse_encode(response, buffer);
-//     delete response;
-//
-//     _SendResponse(transfer, IFOC_GETBLOBSTORAGE_SIGNATURE_OVERRIDE, IFOC_GETBLOBSTORAGE_ID, buffer, len);
-//     delete[] buffer;
-// }
-//
-// void DroneCANProtocol::SendFOCSetBlobStorageResponse(DroneCAN::CanardRxTransfer* transfer)
-// {
-//     auto* request = new ifoc_SetBlobStorageRequest();
-//     if(ifoc_SetBlobStorageRequest_decode(transfer, request))
-//     {
-//         delete request;
-//         return;
-//     }
-//
-//     char key[sizeof(request->key.data) + 1]{};
-//     memcpy(key, request->key.data, request->key.len);
-//     key[request->key.len] = '\0';
-//
-//     ifoc_SetBlobStorageResponse response
-//     {
-//         .ok = BlobNVMStorage().SaveNVM(key, request->data.data, request->data.len) == FuncRetCode::OK
-//     };
-//
-//     delete request;
-//
-//     uint8_t buffer[IFOC_SETBLOBSTORAGE_RESPONSE_MAX_SIZE];
-//     const uint16_t len = ifoc_SetBlobStorageResponse_encode(&response, buffer);
-//
-//     _SendResponse(transfer, IFOC_SETBLOBSTORAGE_SIGNATURE_OVERRIDE, IFOC_SETBLOBSTORAGE_ID, buffer, len);
-// }
-//
-// void DroneCANProtocol::SendFOCClearBlobStorageResponse(DroneCAN::CanardRxTransfer* transfer)
-// {
-//     ifoc_ClearBlobStorageRequest request{};
-//     if(ifoc_ClearBlobStorageRequest_decode(transfer, &request)) return;
-//
-//     char key[sizeof(request.key.data) + 1]{};
-//     memcpy(key, request.key.data, request.key.len);
-//     key[request.key.len] = '\0';
-//
-//     ifoc_ClearBlobStorageResponse response
-//     {
-//         .ok = BlobNVMStorage().ClearNVM(key) == FuncRetCode::OK
-//     };
-//
-//     uint8_t buffer[IFOC_CLEARBLOBSTORAGE_RESPONSE_MAX_SIZE];
-//     const uint16_t len = ifoc_ClearBlobStorageResponse_encode(&response, buffer);
-//
-//     _SendResponse(transfer, IFOC_CLEARBLOBSTORAGE_SIGNATURE_OVERRIDE, IFOC_CLEARBLOBSTORAGE_ID, buffer, len);
-// }
 
 void DroneCANProtocol::SendFOCSetMotorStateResponse(DroneCAN::CanardRxTransfer* transfer)
 {

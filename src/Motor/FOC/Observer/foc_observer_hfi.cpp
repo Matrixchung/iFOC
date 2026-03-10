@@ -81,12 +81,12 @@ void ObserverHFI::UpdateRT(const float Ts)
         pll.GetOutput(Iab_envelope.alpha, Iab_envelope.beta, Ts);
 
         // apply pll output to encoder
-        encoder->single_round_angle_rad = pll.angle_rad;
-        const auto delta = encoder->single_round_angle_rad - encoder->last_single_round_angle_rad;
+        encoder->raw_single_round_angle_rad = encoder->compensated_single_round_angle_rad = pll.angle_rad;
+        const auto delta = encoder->compensated_single_round_angle_rad - encoder->last_single_round_angle_rad;
         if(delta > PI) encoder->full_rotations--;
         else if(delta < -PI) encoder->full_rotations++;
-        encoder->multi_round_angle_rad = encoder->full_rotations * PI2 + encoder->single_round_angle_rad;
-        encoder->last_single_round_angle_rad = encoder->single_round_angle_rad;
+        encoder->multi_round_angle_rad = encoder->full_rotations * PI2 + encoder->compensated_single_round_angle_rad;
+        encoder->last_single_round_angle_rad = encoder->compensated_single_round_angle_rad;
         // encoder->angular_speed_rad_s = encoder->speed_lpf.GetOutput(pll.omega_rad_s, Ts);
         encoder->pll_omega_rad_s = pll.omega_rad_s;
     }
@@ -100,7 +100,8 @@ void ObserverHFI::UpdateRT(const float Ts)
         Uinject_set = 0.0f;
         inject_sign = 0.0f; // 0.0f means no injection
         injector->inject_voltage = 0.0f;
-        encoder->single_round_angle_rad = 0.0f;
+        encoder->compensated_single_round_angle_rad = 0.0f;
+        encoder->raw_single_round_angle_rad = 0.0f;
         encoder->angular_speed_rad_s = 0.0f;
         encoder->last_single_round_angle_rad = 0.0f;
         encoder->multi_round_angle_rad = 0.0f;

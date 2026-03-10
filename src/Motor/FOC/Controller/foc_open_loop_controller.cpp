@@ -61,12 +61,13 @@ void OpenLoopController::UpdateMid(const float Ts)
                 // we have velocity as target.speed.value
                 // imitating encoder
                 encoder->angular_speed_rad_s = target.speed.value;
-                const auto last_single_round_rad = encoder->single_round_angle_rad;
-                encoder->single_round_angle_rad = normalize_rad(encoder->single_round_angle_rad + target.speed.value * Ts);
-                const auto delta = encoder->single_round_angle_rad - last_single_round_rad;
+                const auto last_single_round_rad = encoder->compensated_single_round_angle_rad;
+                encoder->compensated_single_round_angle_rad = normalize_rad(encoder->compensated_single_round_angle_rad + target.speed.value * Ts);
+                encoder->raw_single_round_angle_rad = encoder->compensated_single_round_angle_rad;
+                const auto delta = encoder->compensated_single_round_angle_rad - last_single_round_rad;
                 if(delta > PI) encoder->full_rotations--;
                 else if(delta < -PI) encoder->full_rotations++;
-                encoder->multi_round_angle_rad = encoder->full_rotations * PI2 + encoder->single_round_angle_rad;
+                encoder->multi_round_angle_rad = encoder->full_rotations * PI2 + encoder->compensated_single_round_angle_rad;
 
                 foc->Iqd_target = {target.torque.value, 0.0f};
                 break;

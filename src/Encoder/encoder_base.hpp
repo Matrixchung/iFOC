@@ -58,7 +58,8 @@ public:
     bool operator==(const EncoderBase& other) const noexcept { return (*this == other.GetName()); }
     bool operator!=(const EncoderBase& other) const noexcept { return !(*this == other); };
 public:
-    real_t single_round_angle_rad = 0.0f;
+    real_t raw_single_round_angle_rad = 0.0f; // only used in raw readings or calibration
+    real_t compensated_single_round_angle_rad = 0.0f; // used in most situations
     real_t multi_round_angle_rad = 0.0f;
     real_t angular_speed_rad_s = 0.0f;
     long long full_rotations = 0;

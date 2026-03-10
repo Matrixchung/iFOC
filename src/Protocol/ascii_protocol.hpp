@@ -1009,7 +1009,7 @@ void ASCIIProtocol<Motor>::CmdMotorInfo(uint8_t* data, uint16_t len, bool use_ch
                 GenerateResponse(use_checksum, true, "FOCMotor %c (node_id:%d) Info: ", dst, motor->GetConfig().node_id());
                 GenerateResponse(use_checksum, true, " - Vbus: %.1f", motor->GetBusSense()->voltage);
                 GenerateResponse(use_checksum, true, " - Ibus: %.1f", motor->GetBusSense()->current);
-                GenerateResponse(use_checksum, true, " - curr_state: %s", to_string(motor->state_machine.GetState()));
+                GenerateResponse(use_checksum, true, " - curr_state: %s", to_string(motor->GetCurrentState()));
             }
             else if constexpr(std::is_same_v<Motor, DCMotor>)
             {
@@ -1058,7 +1058,7 @@ void ASCIIProtocol<Motor>::CmdMotorInfo(uint8_t* data, uint16_t len, bool use_ch
                         case Encoder::Type::SENSORLESS_ENCODER: GenerateResponse(use_checksum, true, "    - #%d (Est.) %d", i + 1, enc->IsResultValid()); break;
                         default: GenerateResponse(use_checksum, true, "    - #%d (N/A) %d", i + 1, enc->IsResultValid()); break;
                     }
-                    GenerateResponse(use_checksum, true, "    - sing_rad: %.5f", enc->single_round_angle_rad);
+                    GenerateResponse(use_checksum, true, "    - sing_rad: %.5f", enc->compensated_single_round_angle_rad);
                     GenerateResponse(use_checksum, false, "    - mult_rad: %.5f", enc->multi_round_angle_rad);
                 }
             }
@@ -1176,7 +1176,7 @@ void ASCIIProtocol<Motor>::CmdSystem(uint8_t* data, uint16_t len, bool use_check
             }
             if constexpr(std::is_same_v<Motor, FOCMotor>)
             {
-                if(motor->state_machine.GetState() != MotorState::IDLE) // must in IDLE state to save the config
+                if(motor->GetCurrentState() != MotorState::IDLE) // must in IDLE state to save the config
                 {
                     GenerateResponse(use_checksum, false, "state not in IDLE");
                     return;
@@ -1210,7 +1210,7 @@ void ASCIIProtocol<Motor>::CmdSystem(uint8_t* data, uint16_t len, bool use_check
             }
             if constexpr(std::is_same_v<Motor, FOCMotor>)
             {
-                if(motor->state_machine.GetState() != MotorState::IDLE) // must in IDLE state to erase the config
+                if(motor->GetCurrentState() != MotorState::IDLE) // must in IDLE state to erase the config
                 {
                     GenerateResponse(use_checksum, false, "state not in IDLE");
                     return;

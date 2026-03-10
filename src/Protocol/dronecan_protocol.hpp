@@ -98,9 +98,6 @@ private:
     void SendFOCGetCurrentMotionResponse(DroneCAN::CanardRxTransfer* transfer);
     void SendFOCGetTargetMotionResponse(DroneCAN::CanardRxTransfer* transfer);
     void SendFOCSetRefFrameResponse(DroneCAN::CanardRxTransfer* transfer);
-    // void SendFOCGetBlobStorageResponse(DroneCAN::CanardRxTransfer* transfer);
-    // void SendFOCSetBlobStorageResponse(DroneCAN::CanardRxTransfer* transfer);
-    // void SendFOCClearBlobStorageResponse(DroneCAN::CanardRxTransfer* transfer);
     void SendFOCSetMotorStateResponse(DroneCAN::CanardRxTransfer* transfer);
     void SendFOCSetControlModeResponse(DroneCAN::CanardRxTransfer* transfer);
     void SendFOCSetMITTargetResponse(DroneCAN::CanardRxTransfer* transfer);

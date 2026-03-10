@@ -113,7 +113,7 @@ void EncoderCalibTask::UpdateNormal()
                 sleep(2);
             }
             float mid_angle = 0.0f;
-            mid_angle = encoder->single_round_angle_rad;
+            mid_angle = encoder->raw_single_round_angle_rad;
             for(int i = 499; i >= 0; i--)
             {
                 float angle_rad = PI2 * (float)i / 500.0f;
@@ -124,7 +124,7 @@ void EncoderCalibTask::UpdateNormal()
             foc->Iqd_target = {0.0f, 0.0f};
             sleep(200);
             float end_angle = 0.0f;
-            end_angle = encoder->single_round_angle_rad;
+            end_angle = encoder->raw_single_round_angle_rad;
             float moved = std::fabsf(mid_angle - end_angle);
             if(moved < MIN_ANGLE_DETECT_MOVEMENT)
             {
@@ -230,6 +230,12 @@ void EncoderCalibTask::UpdateNormal()
                 break;
             }
 
+            char key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
+            memcpy(key, Encoder::NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
+            key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';
+            key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
+            BlobNVMStorage().ClearNVM(key); // clear lut first
+
             temp_map = (float*)pvPortMalloc(SAMPLES_PER_POLE_PAIR * foc->GetConfig().pole_pairs() * sizeof(float));
             if(!temp_map)
             {
@@ -314,7 +320,6 @@ void EncoderCalibTask::UpdateNormal()
                 memcpy(key, Encoder::NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
                 key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';
                 key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
-                BlobNVMStorage().ClearNVM(key);
 
                 auto lut_serialized_size = lut.getSerializedSize();
                 uint8_t* serialize_buffer = (uint8_t*)pvPortMalloc(lut_serialized_size * sizeof(uint8_t));
@@ -369,7 +374,7 @@ void EncoderCalibTask::UpdateMid(float Ts)
                 {
                     zero_est.next_sample_time += PI2 / ((float)SAMPLES_PER_POLE_PAIR * ZERO_EST_PHASE_OMEGA_RADS);
                     const float ref_enc_single_round_rad = zero_est.elec_angle_rad / (float)foc->GetConfig().pole_pairs(); // elec -> motor
-                    float error = encoder->single_round_angle_rad - ref_enc_single_round_rad;
+                    float error = encoder->raw_single_round_angle_rad - ref_enc_single_round_rad;
                     error = normalize_rad(error);
                     temp_map[zero_est.sample_count] = error;
                     zero_est.sample_count++;
@@ -404,7 +409,7 @@ void EncoderCalibTask::UpdateMid(float Ts)
                 {
                     zero_est.next_sample_time += PI2 / ((float)SAMPLES_PER_POLE_PAIR * ZERO_EST_PHASE_OMEGA_RADS);
                     const float ref_enc_single_round_rad = zero_est.elec_angle_rad / (float)foc->GetConfig().pole_pairs(); // elec -> motor
-                    float error = encoder->single_round_angle_rad - ref_enc_single_round_rad;
+                    float error = encoder->raw_single_round_angle_rad - ref_enc_single_round_rad;
                     error = normalize_rad(error);
                     // temp_map[zero_est.sample_count] = (temp_map[zero_est.sample_count] + error) * 0.5f; // fixed: given a 0.01(CW) & (2PI - 0.01)(CCW) error
                     // circular mean
