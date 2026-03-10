@@ -26,13 +26,20 @@ protected:
         DELETE_COPY_CONSTRUCTOR(RxEventHandlerTask);
     private:
         UARTBase* uart = nullptr;
+        struct EventCallbackItem
+        {
+            uint8_t id;
+            EventCallback callback;
+        };
+        uint8_t next_id = 0;
     public:
-        Vector<EventCallback> event_list{};
+        Vector<EventCallbackItem> event_list{};
         std::array<uint8_t, 256> buffer{};
         explicit RxEventHandlerTask(UARTBase* _uart);
         void InitNormal() override;
         void UpdateNormal() override;
-        void RegisterHandler(const EventCallback& cb);
+        uint8_t RegisterHandler(const EventCallback& cb);
+        void RemoveHandler(uint8_t id);
     };
     friend class RxEventHandlerTask;
     RxEventHandlerTask event_handler;
@@ -76,7 +83,8 @@ public:
 
     void Print(bool transmit, const char *fmt, ...);
 
-    __fast_inline void RegisterRxHandler(const EventCallback& cb) { event_handler.RegisterHandler(cb); };
+    __fast_inline uint8_t RegisterRxHandler(const EventCallback& cb) { return event_handler.RegisterHandler(cb); };
+    __fast_inline void RemoveRxHandler(const uint8_t id) { event_handler.RemoveHandler(id); };
 
     [[nodiscard]] __fast_inline auto GetRxLen() const { return rx_fifo.used(); };
     [[nodiscard]] __fast_inline auto GetTxPending() const { return tx_fifo.used(); };

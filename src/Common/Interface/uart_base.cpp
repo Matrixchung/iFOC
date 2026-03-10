@@ -1,4 +1,7 @@
 #include "uart_base.hpp"
+
+#include <algorithm>
+
 #include "../../Protocol/ascii_tiny_printf.hpp"
 
 namespace iFOC::HAL
@@ -81,15 +84,21 @@ void UARTBase::RxEventHandlerTask::UpdateNormal()
         MEASURE_TIME(timer)
         {
             auto len = uart->ReadBytes(buffer.data(), buffer.max_size(), false);
-            if(len > 0) for(const auto& cb : event_list) if(cb(buffer.data(), len)) break;
+            if(len > 0) for(const auto& cb : event_list) if(cb.callback(buffer.data(), len)) break;
         }
         // uart->Print(1, "Time:%d\n", timer.elapsed_time_us);
     }
 }
 
-void UARTBase::RxEventHandlerTask::RegisterHandler(const UARTBase::EventCallback& cb)
+uint8_t UARTBase::RxEventHandlerTask::RegisterHandler(const UARTBase::EventCallback& cb)
 {
-    event_list.push_back(cb);
+    const uint8_t id = next_id++;
+    event_list.push_back({id, cb});
+    return id;
 }
 
+void UARTBase::RxEventHandlerTask::RemoveHandler(uint8_t id)
+{
+    std::erase_if(event_list, [id](const auto& item) { return item.id == id; });
+}
 }
