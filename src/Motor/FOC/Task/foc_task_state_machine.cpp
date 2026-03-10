@@ -5,9 +5,13 @@
 #include "../Controller/foc_speed_loop_pi.hpp"
 #include "../Controller/foc_open_loop_controller.hpp"
 #include "../Task/foc_task_basic_param_calib.hpp"
+#include "../Task/foc_task_extend_param_calib.hpp"
 #include "../Task/foc_task_encoder_calib.hpp"
 #include "../Task/foc_task_tone_player.hpp"
 #include "../Observer/foc_observer_hfi.hpp"
+#include "../../../Encoder/encoder_off_axis_base.hpp"
+
+constexpr float OFF_AXIS_ENCODER_VALID_TIMEOUT = 0.5f;
 
 /*
  * TASK LINE: SenseTask -> Encoders... -> EncArbiter -> Park -> ...
@@ -43,6 +47,49 @@ void StateMachineTask::InitNormal()
     // foc->AppendTask(new ParkTransformTask); // "Park"
     // sleep(50);
     // foc->AppendTask(new WaveGenSVPWM);    // "WaveGen"
+
+    sleep(50); // we will wait for possible auxiliary encoder to boot up correctly.
+    // Off axis encoder
+    if(const auto enc = foc->GetPrimaryEncoder())
+    {
+        if(foc->GetConfig().deduction_ratio() > 1.0f)
+        {
+            if(enc->GetEncoderType() != Encoder::Type::SENSORLESS_ENCODER &&
+            foc->GetConfig().pole_pairs_valid() && foc->GetConfig().sensor_zero_offset_valid())
+            {
+                if(const auto off_axis = foc->GetEncoderByName("EncOffAxis"))
+                {
+                    float off_axis_encoder_valid_timer = 0.0f;
+                    while(!off_axis->IsResultValid() || !enc->IsResultValid())
+                    {
+                        off_axis_encoder_valid_timer += 0.01f;
+                        if(off_axis_encoder_valid_timer >= OFF_AXIS_ENCODER_VALID_TIMEOUT) break;
+                        sleep(10);
+                    }
+                    if(off_axis->IsResultValid() && enc->IsResultValid())
+                    {
+                        float min_error = std::numeric_limits<float>::infinity();
+                        int target_full_rotations = 0;
+                        const int k_max = (int)ceilf(foc->GetConfig().deduction_ratio()) - 1;
+                        for(int k = 0; k <= k_max; ++k)
+                        {
+                            // get candidate output_single_round_rad
+                            const float candidate = normalize_rad(((float)k * PI2 + enc->compensated_single_round_angle_rad) / foc->GetConfig().deduction_ratio());
+                            const float abs_error = ABS(normalize_rad_pm_pi(candidate - off_axis->compensated_single_round_angle_rad));
+                            if(abs_error < min_error)
+                            {
+                                min_error = abs_error;
+                                target_full_rotations = k;
+                            }
+                        }
+                        enc->full_rotations = target_full_rotations;
+                    }
+                }
+            }
+        }
+        else foc->RemoveEncoderByName("EncOffAxis");
+    }
+
     // Here we are in IDLE.
     // Play the beep first, but with a proper basic parameter set to avoid electrical misconfiguration
     if(!CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
@@ -148,7 +195,10 @@ void StateMachineTask::UpdateNormal()
         }
         case MotorState::EXTEND_PARAM_CALIBRATION:
         {
-            RequestState(MotorState::IDLE); // TODO
+            if(!foc->GetTaskByName("ExtCalib") &&
+               CheckStateRequirement(MotorState::EXTEND_PARAM_CALIBRATION))
+                foc->InsertTaskBeforeName("WaveGen", new ExtendParamCalibTask);
+            sleep(100);
             break;
         }
         case MotorState::SENSORED_CLOSED_LOOP_CONTROL:
@@ -201,12 +251,13 @@ bool StateMachineTask::CheckStateRequirement(const MotorState new_state)
         }
         case MotorState::EXTEND_PARAM_CALIBRATION:
         {
-            while(foc->GetTaskByName("ExtParamCalib")) sleep(10);
-            // return !CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
-            //         !CheckStateRequirement(MotorState::ENCODER_INDEX_SEARCH) &&
-            //         !CheckStateRequirement(MotorState::ENCODER_CALIBRATION) &&
-            //         (!foc->GetConfig().flux_linkage_valid());
-            return false;
+            while(foc->GetTaskByName("ExtCalib")) sleep(10);
+            const auto enc = foc->GetEncoderByName("EncOffAxis");
+            return !CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
+                    !CheckStateRequirement(MotorState::ENCODER_INDEX_SEARCH) &&
+                    !CheckStateRequirement(MotorState::ENCODER_CALIBRATION) &&
+                    (enc && ((Encoder::EncoderOffAxisBase*)enc)->IsConnected() && foc->GetPrimaryEncoder() && foc->GetConfig().deduction_ratio() > 1.0f);
+            // return false;
         }
         case MotorState::SENSORED_CLOSED_LOOP_CONTROL:
         {
