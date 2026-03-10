@@ -36,10 +36,34 @@ FuncRetCode EncoderMT6835::Init(uint8_t motor_id)
     temp &= 0xF8;     // Clear [2:0] to 0x0
     temp |= (1 << 1); // Set PWM_SEL[2:0] to 0x2
     if(const auto r = WriteReg(0x00C, temp); r != FuncRetCode::OK) return r;
+
+    // try to read nonlinear compensation lut
+    char key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
+    memcpy(key, NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
+    key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = motor_id + '0';
+    key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
+
+    auto buffer_size = BlobNVMStorage().GetKVSize(key);
+    if(buffer_size > 0)
+    {
+        uint8_t* deserialize_buffer = (uint8_t*)pvPortMalloc(buffer_size * sizeof(uint8_t));
+        if(deserialize_buffer)
+        {
+            if(BlobNVMStorage().ReadNVM(key, deserialize_buffer, &buffer_size) == FuncRetCode::OK)
+            {
+                nonlinear_lut.deserialize(deserialize_buffer, buffer_size);
+            }
+            vPortFree(deserialize_buffer);
+            deserialize_buffer = nullptr;
+        }
+    }
+
     // Step #5: Try to read angle
     if(const auto r = ReadAbsAngleRad(); r != FuncRetCode::OK) return r;
-    last_angle_cnt = now_angle_cnt;
-    multi_round_angle_rad = single_round_angle_rad;
+
+    // last_angle_cnt = now_angle_cnt;
+    last_compensated_angle_rad = compensated_single_round_angle_rad;
+    multi_round_angle_rad = compensated_single_round_angle_rad;
     result_valid = true;
     return FuncRetCode::OK;
 }
@@ -53,20 +77,22 @@ void EncoderMT6835::UpdateRT(const float Ts)
 void EncoderMT6835::UpdateMid(const float Ts)
 {
     // Step #2: Calculate delta
-    int delta = (int)now_angle_cnt - (int)last_angle_cnt;
-    last_angle_cnt = now_angle_cnt;
+    // int delta = (int)now_angle_cnt - (int)last_angle_cnt;
+    // last_angle_cnt = now_angle_cnt;
+    real_t delta = compensated_single_round_angle_rad - last_compensated_angle_rad;
+    last_compensated_angle_rad = compensated_single_round_angle_rad;
     // Step #3: Calculate full_rotations and multi_round_angle_rad
-    if(delta > CPRdiv2)
+    if(delta > PI)
     {
         full_rotations--;
-        delta -= CPR;
+        delta -= PI2;
     }
-    else if(delta < -CPRdiv2)
+    else if(delta < -PI)
     {
         full_rotations++;
-        delta += CPR;
+        delta += PI2;
     }
-    multi_round_angle_rad = full_rotations * PI2 + single_round_angle_rad;
+    multi_round_angle_rad = full_rotations * PI2 + compensated_single_round_angle_rad;
     if(startup_timer <= 10)
     {
         startup_timer++;
@@ -75,7 +101,8 @@ void EncoderMT6835::UpdateMid(const float Ts)
     {
         // Step #4: Calculate velocity
         // real_t vel = (multi_round_angle_rad - last_multi_round_angle_rad) / Ts;
-        const real_t vel = ((real_t)delta * PI2divCPR_f) / Ts;
+        // const real_t vel = ((real_t)delta * PI2divCPR_f) / Ts;
+        const real_t vel = delta / Ts;
         angular_speed_rad_s = speed_lpf.GetOutput(vel, Ts);
     }
 }
@@ -87,17 +114,23 @@ FuncRetCode EncoderMT6835::ReadAbsAngleRad()
     // {
     //     if(auto r = ReadReg(0x003 + i, &ret[i + 2]); r != FuncRetCode::OK) return r;
     // }
-    uint8_t rx_buf[6]{};
+    uint8_t rx_buf[6];
     ReadAngleRegBurst(rx_buf);
-    uint8_t _get_crc = get_crc8(rx_buf + 2, 3);
+    const uint8_t _get_crc = get_crc8(rx_buf + 2, 3);
     if(_get_crc == rx_buf[5])
     {
         device_error &= ~(to_underlying(DeviceError::CRC_ERROR)); // CRC passed
-        now_angle_cnt = (uint32_t)(rx_buf[2] << 13) | (uint32_t)(rx_buf[3] << 5) | (uint32_t)(rx_buf[4] >> 3); // 21 bit angle
+        uint32_t now_angle_cnt = (uint32_t)(rx_buf[2] << 13) | (uint32_t)(rx_buf[3] << 5) | (uint32_t)(rx_buf[4] >> 3); // 21 bit angle
         if(sign_and_deduction_ratio < 0.0f) now_angle_cnt = CPR - now_angle_cnt;
         // single_round_angle_rad = (float)angle / CPR_f;
         // single_round_angle_rad *= PI2;
-        single_round_angle_rad = (float)now_angle_cnt * PI2divCPR_f;
+        raw_single_round_angle_rad = (float)now_angle_cnt * PI2divCPR_f;
+        if(nonlinear_lut.getTableSize() > 0)
+        {
+            const float nl_err = nonlinear_lut.lookupPeriodic(raw_single_round_angle_rad);
+            compensated_single_round_angle_rad = normalize_rad(raw_single_round_angle_rad - nl_err);
+        }
+        else compensated_single_round_angle_rad = raw_single_round_angle_rad;
         device_error = (device_error & 0xF8) | (rx_buf[4] & 0x07);
         result_valid = true;
         return FuncRetCode::OK;
@@ -108,7 +141,7 @@ FuncRetCode EncoderMT6835::ReadAbsAngleRad()
 
 FuncRetCode EncoderMT6835::WriteReg(uint16_t reg, uint8_t data) const
 {
-    uint8_t tx_buf[3]{};
+    uint8_t tx_buf[3];
     tx_buf[0] = (0x06 << 4) | (uint8_t)(reg >> 12);
     tx_buf[1] = (uint8_t)reg;
     tx_buf[2] = data;
@@ -117,8 +150,8 @@ FuncRetCode EncoderMT6835::WriteReg(uint16_t reg, uint8_t data) const
 
 FuncRetCode EncoderMT6835::ReadReg(uint16_t reg, uint8_t* data) const
 {
-    uint8_t tx_buf[3]{};
-    uint8_t rx_buf[3]{};
+    uint8_t tx_buf[3];
+    uint8_t rx_buf[3];
     tx_buf[0] = (0x03 << 4) | (uint8_t)(reg >> 12);
     tx_buf[1] = (uint8_t)reg;
     tx_buf[2] = 0x00;

@@ -33,12 +33,14 @@ public:
     FuncRetCode BurnEEPROM() const;
 // private:
     static constexpr uint32_t CPR = 2097151; // 2^21 = 2097152, 2^21 - 1 = 2097151
-    static constexpr int CPRdiv2 = (CPR >> 1);
+    // static constexpr int CPRdiv2 = (CPR >> 1);
     static constexpr real_t CPR_f = (real_t)CPR;
     static constexpr real_t PI2divCPR_f = PI2 / CPR_f;
+    DataType::LookupTable nonlinear_lut;
     SPIBase *spi = nullptr;
-    uint32_t now_angle_cnt = 0;
-    uint32_t last_angle_cnt = 0;
+    real_t last_compensated_angle_rad = 0.0f;
+    // uint32_t now_angle_cnt = 0;
+    // uint32_t last_angle_cnt = 0;
     // uint8_t tx_buf[6] = {0x00};
     // uint8_t rx_buf[6] = {0x00};
     uint8_t startup_timer = 0;
