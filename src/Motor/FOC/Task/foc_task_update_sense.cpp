@@ -18,7 +18,7 @@ void UpdateSenseTask::UpdateRT(const float Ts)
     const auto foc = GetMotor<FOCMotor>();
     foc->GetCurrSense()->Update(Ts);
     // only enable leakage current detection after basic param calibration (Rs/Ld calibration will disconnect one of three phases)
-    if(to_underlying(foc->state_machine.GetState()) > to_underlying(MotorState::BASIC_PARAM_CALIBRATION))
+    if(to_underlying(foc->GetCurrentState()) > to_underlying(MotorState::BASIC_PARAM_CALIBRATION))
     {
         // Typically, we have Ia + Ib + Ic == 0. For three-shunt detection methods, leakage current can be detected.
         const real_t leakage_current = foc->GetCurrSense()->shunt_values[0] + foc->GetCurrSense()->shunt_values[1] + foc->GetCurrSense()->shunt_values[2];
