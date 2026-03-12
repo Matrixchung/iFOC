@@ -44,7 +44,7 @@ FuncRetCode EncoderMT6835::Init(uint8_t motor_id)
     key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
 
     auto buffer_size = BlobNVMStorage().GetKVSize(key);
-    if(buffer_size > 0)
+    if(DataType::LookupTable::getTableSizeBySerializedSize(buffer_size) == NONLINEAR_LUT_POINTS)
     {
         uint8_t* deserialize_buffer = (uint8_t*)pvPortMalloc(buffer_size * sizeof(uint8_t));
         if(deserialize_buffer)
@@ -56,6 +56,10 @@ FuncRetCode EncoderMT6835::Init(uint8_t motor_id)
             vPortFree(deserialize_buffer);
             deserialize_buffer = nullptr;
         }
+    }
+    else // incorrect size, delete KV
+    {
+        BlobNVMStorage().ClearNVM(key);
     }
 
     // Step #5: Try to read angle
@@ -125,7 +129,7 @@ FuncRetCode EncoderMT6835::ReadAbsAngleRad()
         // single_round_angle_rad = (float)angle / CPR_f;
         // single_round_angle_rad *= PI2;
         raw_single_round_angle_rad = (float)now_angle_cnt * PI2divCPR_f;
-        if(nonlinear_lut.getTableSize() > 0)
+        if(nonlinear_lut.getTableSize() == NONLINEAR_LUT_POINTS)
         {
             const float nl_err = nonlinear_lut.lookupPeriodic(raw_single_round_angle_rad);
             compensated_single_round_angle_rad = normalize_rad(raw_single_round_angle_rad - nl_err);

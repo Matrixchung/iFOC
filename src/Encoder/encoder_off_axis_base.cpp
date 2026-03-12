@@ -36,7 +36,7 @@ FuncRetCode EncoderOffAxisBase::Init(uint8_t motor_id)
     key[sizeof(OFF_AXIS_LUT_DB_KEY_PREFIX)] = '\0';
 
     auto buffer_size = BlobNVMStorage().GetKVSize(key);
-    if(buffer_size > 0)
+    if(DataType::LookupTable::getTableSizeBySerializedSize(buffer_size) == OFF_AXIS_LUT_POINTS)
     {
         uint8_t* deserialize_buffer = (uint8_t*)pvPortMalloc(buffer_size * sizeof(uint8_t));
         if(deserialize_buffer)
@@ -48,6 +48,10 @@ FuncRetCode EncoderOffAxisBase::Init(uint8_t motor_id)
             vPortFree(deserialize_buffer);
             deserialize_buffer = nullptr;
         }
+    }
+    else // incorrect size, delete KV
+    {
+        BlobNVMStorage().ClearNVM(key);
     }
 
     return FuncRetCode::OK;
@@ -127,7 +131,7 @@ void EncoderOffAxisBase::SaveConfig(uint8_t motor_id)
     BlobNVMStorage().SaveNVM(key, buffer, sizeof(buffer));
 
     // try to save LUT calibration result, "ofl0", "ofl1"...
-    if(offset_lut.getTableSize() > 0)
+    if(offset_lut.getTableSize() == OFF_AXIS_LUT_POINTS)
     {
         memcpy(key, OFF_AXIS_LUT_DB_KEY_PREFIX, sizeof(OFF_AXIS_LUT_DB_KEY_PREFIX) - 1);
         key[sizeof(OFF_AXIS_LUT_DB_KEY_PREFIX) - 1] = motor_id + '0';
@@ -203,7 +207,7 @@ bool EncoderOffAxisBase::IsPeakCalibrated() const
 
 bool EncoderOffAxisBase::IsLUTCalibrated() const
 {
-    return offset_lut.getTableSize() > 0;
+    return offset_lut.getTableSize() == OFF_AXIS_LUT_POINTS;
 }
 
 }

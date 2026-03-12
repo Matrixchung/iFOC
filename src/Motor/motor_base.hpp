@@ -89,7 +89,7 @@ public:
     [[nodiscard]] Motion GetTargetMotionStruct(Motion::Ref ref_frame, Motion::TorqueUnit torque_unit, Motion::SpeedUnit speed_unit, Motion::PosUnit pos_unit);
     [[nodiscard]] Motion GetTargetMotionStruct(const Motion& ref);
 
-    __fast_inline void DispatchRTTasks(float Ts);
+    __fast_inline void DispatchRTTasks(float Ts) const;
     __fast_inline void DispatchMidTasks(float Ts);
     FuncRetCode AppendTask(Task* task);
     FuncRetCode PushFrontTask(Task* task);
@@ -276,7 +276,7 @@ Motion MotorBase<shunt_count>::GetTargetMotionStruct(const Motion& ref)
 }
 
 template<uint8_t shunt_count>
-__fast_inline void MotorBase<shunt_count>::DispatchRTTasks(const float Ts)
+__fast_inline void MotorBase<shunt_count>::DispatchRTTasks(const float Ts) const
 {
     tasks.RTTaskScheduler(Ts);
 }
@@ -456,7 +456,7 @@ void MotorBase<shunt_count>::ClearError(const MotorError e)
 }
 
 template <uint8_t shunt_count>
-void MotorBase<shunt_count>::ClearError(std::underlying_type_t<MotorError> e)
+void MotorBase<shunt_count>::ClearError(const std::underlying_type_t<MotorError> e)
 {
     error &= ~e;
 }

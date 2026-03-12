@@ -63,7 +63,7 @@ public:
 
     [[nodiscard]] __fast_inline bool IsTaskRegistered(const TaskType type) const { return config.task_register_states & (1 << to_underlying(type)); }
 
-    inline void SetBypass(bool bypass)
+    inline void SetBypass(const bool bypass)
     {
         if(bypass)
         {
@@ -91,10 +91,10 @@ public:
 protected:
     friend class TaskProcessor;
     template <uint8_t> friend class MotorBase;
-    static inline void sleep(int time_ms) { vTaskDelay(pdMS_TO_TICKS(time_ms)); }
+    static inline void sleep(const int time_ms) { vTaskDelay(pdMS_TO_TICKS(time_ms)); }
     TaskHandle_t xHandle = nullptr;
     TaskConfig config;
-    void* _motor;
+    void* _motor{};
     template<class T>
     T* GetMotor() { return reinterpret_cast<T*>(_motor); };
 private:
@@ -105,7 +105,7 @@ private:
     virtual void InitNormal() {};
     virtual void UpdateNormal() {};
     volatile uint8_t _task_bypassed_flags = 0;
-    void _register_task(TaskType type)
+    void _register_task(const TaskType type)
     {
         config.task_register_states |= (1 << to_underlying(type));
         _task_bypassed_flags = config.task_register_states;
