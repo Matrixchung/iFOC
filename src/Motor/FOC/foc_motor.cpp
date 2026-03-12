@@ -19,6 +19,8 @@
 #define DEFAULT_PARAM_MOTOR_MAX_CURRENT (10.0f)
 #define DEFAULT_PARAM_MOTOR_MAX_OUTPUT_SPEED_RPM (1000.0f)
 #define DEFAULT_PARAM_MOTOR_SENSOR_SPEED_F_LP (200.0f)
+#define DEFAULT_PARAM_ANTICOGGING_VEL_THRESHOLD_RPM (0.5f)
+#define DEFAULT_PARAM_ANTICOGGING_POS_THRESHOLD_DEG (0.1f)
 
 using namespace iFOC::FOC;
 
@@ -113,6 +115,35 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
         goto error;
     }
     if(const auto ind = GetIndicator()) ind->Init();
+
+    // read anticogging lut, only if enable_anticogging is defined in config
+    if(GetConfig().enable_anticogging())
+    {
+        char key[sizeof(ANTICOGGING_LUT_DB_KEY_PREFIX) + 1];
+        memcpy(key, ANTICOGGING_LUT_DB_KEY_PREFIX, sizeof(ANTICOGGING_LUT_DB_KEY_PREFIX) - 1);
+        key[sizeof(ANTICOGGING_LUT_DB_KEY_PREFIX) - 1] = GetInternalID() + '0';
+        key[sizeof(ANTICOGGING_LUT_DB_KEY_PREFIX)] = '\0';
+
+        auto buffer_size = BlobNVMStorage().GetKVSize(key);
+        if(DataType::LookupTable::getTableSizeBySerializedSize(buffer_size) == ANTICOGGING_LUT_POINTS)
+        {
+            uint8_t* deserialize_buffer = (uint8_t*)pvPortMalloc(buffer_size * sizeof(uint8_t));
+            if(deserialize_buffer)
+            {
+                if(BlobNVMStorage().ReadNVM(key, deserialize_buffer, &buffer_size) == FuncRetCode::OK)
+                {
+                    anticogging_lut.deserialize(deserialize_buffer, buffer_size);
+                }
+                vPortFree(deserialize_buffer);
+                deserialize_buffer = nullptr;
+            }
+        }
+        else // incorrect size, delete KV
+        {
+            BlobNVMStorage().ClearNVM(key);
+        }
+    }
+
     AppendTask(&this->state_machine);
     AppendTask(new UpdateSenseTask); // "SenseTask"
     AppendTask(new EncoderArbiterTask); // "EncArbiter"
@@ -393,6 +424,8 @@ void FOCMotor::ResetDefaultConfig()
     cfg.set_max_current(DEFAULT_PARAM_MOTOR_MAX_CURRENT);
     cfg.set_max_output_speed_rpm(DEFAULT_PARAM_MOTOR_MAX_OUTPUT_SPEED_RPM);
     cfg.set_sensor_speed_f_lp(DEFAULT_PARAM_MOTOR_SENSOR_SPEED_F_LP);
+    cfg.set_anticogging_base_pos_err_deg(DEFAULT_PARAM_ANTICOGGING_POS_THRESHOLD_DEG);
+    cfg.set_anticogging_base_vel_err_rpm(DEFAULT_PARAM_ANTICOGGING_VEL_THRESHOLD_RPM);
     cfg.set_enable_harmonic_suppression(false);
     cfg.set_deduction_ratio(1.0f);
     cfg.set_startup_basic_param_calibration(true);

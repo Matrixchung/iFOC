@@ -22,8 +22,7 @@ void EncoderArbiterTask::UpdateRT(const float Ts)
             foc->elec_omega_rad_s = 0.0f;
             return;
         }
-        if(foc->GetCurrentState() != MotorState::ENCODER_CALIBRATION &&
-            foc->GetCurrentState() != MotorState::EXTEND_PARAM_CALIBRATION)
+        if(foc->GetCurrentState() != MotorState::ENCODER_CALIBRATION)
         {
             if(foc->GetConfig().sensor_speed_f_lp() > 0.0f) enc->SetSpeedFilterFreq(foc->GetConfig().sensor_speed_f_lp());
             foc->elec_angle_rad = enc->compensated_single_round_angle_rad;

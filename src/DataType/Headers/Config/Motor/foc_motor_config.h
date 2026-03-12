@@ -62,7 +62,10 @@ class FOCMotorConfig final: public ::EmbeddedProto::MessageInterface
         MEMBER_SIZE_OFFSET(FOCMotorConfig, can_heartbeat_interval_ms_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, can_feedback_interval_ms_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, can_misc_fdbk_interval_ms_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, anticogging_base_pos_err_deg_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, anticogging_base_vel_err_rpm_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, enable_harmonic_suppression_),
+        MEMBER_SIZE_OFFSET(FOCMotorConfig, enable_anticogging_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_resistance_valid_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, phase_inductance_valid_),
         MEMBER_SIZE_OFFSET(FOCMotorConfig, sensor_direction_clockwise_),
@@ -114,7 +117,10 @@ FOCMotorConfig() = default;
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
       set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
+      set_anticogging_base_pos_err_deg(rhs.get_anticogging_base_pos_err_deg());
+      set_anticogging_base_vel_err_rpm(rhs.get_anticogging_base_vel_err_rpm());
       set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
+      set_enable_anticogging(rhs.get_enable_anticogging());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -166,7 +172,10 @@ FOCMotorConfig() = default;
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
       set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
+      set_anticogging_base_pos_err_deg(rhs.get_anticogging_base_pos_err_deg());
+      set_anticogging_base_vel_err_rpm(rhs.get_anticogging_base_vel_err_rpm());
       set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
+      set_enable_anticogging(rhs.get_enable_anticogging());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -232,6 +241,9 @@ FOCMotorConfig() = default;
       CAN_FEEDBACK_INTERVAL_MS = 55,
       CAN_MISC_FDBK_INTERVAL_MS = 56,
       ENABLE_HARMONIC_SUPPRESSION = 60,
+      ENABLE_ANTICOGGING = 61,
+      ANTICOGGING_BASE_POS_ERR_DEG = 62,
+      ANTICOGGING_BASE_VEL_ERR_RPM = 63,
       TRAJ_OUTPUT_SPEED_LIMIT_RPM = 70,
       TRAJ_OUTPUT_ACCEL_LIMIT_RPM = 71,
       TRAJ_OUTPUT_DECEL_LIMIT_RPM = 72,
@@ -273,7 +285,10 @@ FOCMotorConfig() = default;
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
       set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
+      set_anticogging_base_pos_err_deg(rhs.get_anticogging_base_pos_err_deg());
+      set_anticogging_base_vel_err_rpm(rhs.get_anticogging_base_vel_err_rpm());
       set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
+      set_enable_anticogging(rhs.get_enable_anticogging());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -326,7 +341,10 @@ FOCMotorConfig() = default;
       set_can_heartbeat_interval_ms(rhs.get_can_heartbeat_interval_ms());
       set_can_feedback_interval_ms(rhs.get_can_feedback_interval_ms());
       set_can_misc_fdbk_interval_ms(rhs.get_can_misc_fdbk_interval_ms());
+      set_anticogging_base_pos_err_deg(rhs.get_anticogging_base_pos_err_deg());
+      set_anticogging_base_vel_err_rpm(rhs.get_anticogging_base_vel_err_rpm());
       set_enable_harmonic_suppression(rhs.get_enable_harmonic_suppression());
+      set_enable_anticogging(rhs.get_enable_anticogging());
       set_phase_resistance_valid(rhs.get_phase_resistance_valid());
       set_phase_inductance_valid(rhs.get_phase_inductance_valid());
       set_sensor_direction_clockwise(rhs.get_sensor_direction_clockwise());
@@ -594,6 +612,22 @@ FOCMotorConfig() = default;
     inline const uint32_t& get_can_misc_fdbk_interval_ms() const { return can_misc_fdbk_interval_ms_.get(); }
     inline uint32_t can_misc_fdbk_interval_ms() const { return can_misc_fdbk_interval_ms_.get(); }
 
+    static constexpr char const* ANTICOGGING_BASE_POS_ERR_DEG_NAME = "anticogging_base_pos_err_deg";
+    inline void clear_anticogging_base_pos_err_deg() { anticogging_base_pos_err_deg_.clear(); }
+    inline void set_anticogging_base_pos_err_deg(const float& value) { anticogging_base_pos_err_deg_ = value; }
+    inline void set_anticogging_base_pos_err_deg(const float&& value) { anticogging_base_pos_err_deg_ = value; }
+    inline float& mutable_anticogging_base_pos_err_deg() { return anticogging_base_pos_err_deg_.get(); }
+    inline const float& get_anticogging_base_pos_err_deg() const { return anticogging_base_pos_err_deg_.get(); }
+    inline float anticogging_base_pos_err_deg() const { return anticogging_base_pos_err_deg_.get(); }
+
+    static constexpr char const* ANTICOGGING_BASE_VEL_ERR_RPM_NAME = "anticogging_base_vel_err_rpm";
+    inline void clear_anticogging_base_vel_err_rpm() { anticogging_base_vel_err_rpm_.clear(); }
+    inline void set_anticogging_base_vel_err_rpm(const float& value) { anticogging_base_vel_err_rpm_ = value; }
+    inline void set_anticogging_base_vel_err_rpm(const float&& value) { anticogging_base_vel_err_rpm_ = value; }
+    inline float& mutable_anticogging_base_vel_err_rpm() { return anticogging_base_vel_err_rpm_.get(); }
+    inline const float& get_anticogging_base_vel_err_rpm() const { return anticogging_base_vel_err_rpm_.get(); }
+    inline float anticogging_base_vel_err_rpm() const { return anticogging_base_vel_err_rpm_.get(); }
+
     static constexpr char const* ENABLE_HARMONIC_SUPPRESSION_NAME = "enable_harmonic_suppression";
     inline void clear_enable_harmonic_suppression() { enable_harmonic_suppression_.clear(); }
     inline void set_enable_harmonic_suppression(const bool& value) { enable_harmonic_suppression_ = value; }
@@ -601,6 +635,14 @@ FOCMotorConfig() = default;
     inline bool& mutable_enable_harmonic_suppression() { return enable_harmonic_suppression_.get(); }
     inline const bool& get_enable_harmonic_suppression() const { return enable_harmonic_suppression_.get(); }
     inline bool enable_harmonic_suppression() const { return enable_harmonic_suppression_.get(); }
+
+    static constexpr char const* ENABLE_ANTICOGGING_NAME = "enable_anticogging";
+    inline void clear_enable_anticogging() { enable_anticogging_.clear(); }
+    inline void set_enable_anticogging(const bool& value) { enable_anticogging_ = value; }
+    inline void set_enable_anticogging(const bool&& value) { enable_anticogging_ = value; }
+    inline bool& mutable_enable_anticogging() { return enable_anticogging_.get(); }
+    inline const bool& get_enable_anticogging() const { return enable_anticogging_.get(); }
+    inline bool enable_anticogging() const { return enable_anticogging_.get(); }
 
     static constexpr char const* PHASE_RESISTANCE_VALID_NAME = "phase_resistance_valid";
     inline void clear_phase_resistance_valid() { phase_resistance_valid_.clear(); }
@@ -890,9 +932,24 @@ FOCMotorConfig() = default;
         return_value = can_misc_fdbk_interval_ms_.serialize_with_id(static_cast<uint32_t>(FieldNumber::CAN_MISC_FDBK_INTERVAL_MS), buffer, false);
       }
 
+      if((0.0 != anticogging_base_pos_err_deg_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = anticogging_base_pos_err_deg_.serialize_with_id(static_cast<uint32_t>(FieldNumber::ANTICOGGING_BASE_POS_ERR_DEG), buffer, false);
+      }
+
+      if((0.0 != anticogging_base_vel_err_rpm_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = anticogging_base_vel_err_rpm_.serialize_with_id(static_cast<uint32_t>(FieldNumber::ANTICOGGING_BASE_VEL_ERR_RPM), buffer, false);
+      }
+
       if((false != enable_harmonic_suppression_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
       {
         return_value = enable_harmonic_suppression_.serialize_with_id(static_cast<uint32_t>(FieldNumber::ENABLE_HARMONIC_SUPPRESSION), buffer, false);
+      }
+
+      if((false != enable_anticogging_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
+      {
+        return_value = enable_anticogging_.serialize_with_id(static_cast<uint32_t>(FieldNumber::ENABLE_ANTICOGGING), buffer, false);
       }
 
       if((false != phase_resistance_valid_.get()) && (::EmbeddedProto::Error::NO_ERRORS == return_value))
@@ -1115,8 +1172,20 @@ FOCMotorConfig() = default;
             return_value = can_misc_fdbk_interval_ms_.deserialize_check_type(buffer, wire_type);
             break;
 
+          case FieldNumber::ANTICOGGING_BASE_POS_ERR_DEG:
+            return_value = anticogging_base_pos_err_deg_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::ANTICOGGING_BASE_VEL_ERR_RPM:
+            return_value = anticogging_base_vel_err_rpm_.deserialize_check_type(buffer, wire_type);
+            break;
+
           case FieldNumber::ENABLE_HARMONIC_SUPPRESSION:
             return_value = enable_harmonic_suppression_.deserialize_check_type(buffer, wire_type);
+            break;
+
+          case FieldNumber::ENABLE_ANTICOGGING:
+            return_value = enable_anticogging_.deserialize_check_type(buffer, wire_type);
             break;
 
           case FieldNumber::PHASE_RESISTANCE_VALID:
@@ -1243,7 +1312,10 @@ FOCMotorConfig() = default;
       clear_can_heartbeat_interval_ms();
       clear_can_feedback_interval_ms();
       clear_can_misc_fdbk_interval_ms();
+      clear_anticogging_base_pos_err_deg();
+      clear_anticogging_base_vel_err_rpm();
       clear_enable_harmonic_suppression();
+      clear_enable_anticogging();
       clear_phase_resistance_valid();
       clear_phase_inductance_valid();
       clear_sensor_direction_clockwise();
@@ -1361,8 +1433,17 @@ FOCMotorConfig() = default;
         case FieldNumber::CAN_MISC_FDBK_INTERVAL_MS:
           name = CAN_MISC_FDBK_INTERVAL_MS_NAME;
           break;
+        case FieldNumber::ANTICOGGING_BASE_POS_ERR_DEG:
+          name = ANTICOGGING_BASE_POS_ERR_DEG_NAME;
+          break;
+        case FieldNumber::ANTICOGGING_BASE_VEL_ERR_RPM:
+          name = ANTICOGGING_BASE_VEL_ERR_RPM_NAME;
+          break;
         case FieldNumber::ENABLE_HARMONIC_SUPPRESSION:
           name = ENABLE_HARMONIC_SUPPRESSION_NAME;
+          break;
+        case FieldNumber::ENABLE_ANTICOGGING:
+          name = ENABLE_ANTICOGGING_NAME;
           break;
         case FieldNumber::PHASE_RESISTANCE_VALID:
           name = PHASE_RESISTANCE_VALID_NAME;
@@ -1503,7 +1584,10 @@ FOCMotorConfig() = default;
       left_chars = can_heartbeat_interval_ms_.to_string(left_chars, indent_level + 2, CAN_HEARTBEAT_INTERVAL_MS_NAME, false);
       left_chars = can_feedback_interval_ms_.to_string(left_chars, indent_level + 2, CAN_FEEDBACK_INTERVAL_MS_NAME, false);
       left_chars = can_misc_fdbk_interval_ms_.to_string(left_chars, indent_level + 2, CAN_MISC_FDBK_INTERVAL_MS_NAME, false);
+      left_chars = anticogging_base_pos_err_deg_.to_string(left_chars, indent_level + 2, ANTICOGGING_BASE_POS_ERR_DEG_NAME, false);
+      left_chars = anticogging_base_vel_err_rpm_.to_string(left_chars, indent_level + 2, ANTICOGGING_BASE_VEL_ERR_RPM_NAME, false);
       left_chars = enable_harmonic_suppression_.to_string(left_chars, indent_level + 2, ENABLE_HARMONIC_SUPPRESSION_NAME, false);
+      left_chars = enable_anticogging_.to_string(left_chars, indent_level + 2, ENABLE_ANTICOGGING_NAME, false);
       left_chars = phase_resistance_valid_.to_string(left_chars, indent_level + 2, PHASE_RESISTANCE_VALID_NAME, false);
       left_chars = phase_inductance_valid_.to_string(left_chars, indent_level + 2, PHASE_INDUCTANCE_VALID_NAME, false);
       left_chars = sensor_direction_clockwise_.to_string(left_chars, indent_level + 2, SENSOR_DIRECTION_CLOCKWISE_NAME, false);
@@ -1575,7 +1659,10 @@ FOCMotorConfig() = default;
       EmbeddedProto::uint32 can_heartbeat_interval_ms_ = 0U;
       EmbeddedProto::uint32 can_feedback_interval_ms_ = 0U;
       EmbeddedProto::uint32 can_misc_fdbk_interval_ms_ = 0U;
+      EmbeddedProto::floatfixed anticogging_base_pos_err_deg_ = 0.0;
+      EmbeddedProto::floatfixed anticogging_base_vel_err_rpm_ = 0.0;
       EmbeddedProto::boolean enable_harmonic_suppression_ = false;
+      EmbeddedProto::boolean enable_anticogging_ = false;
       EmbeddedProto::boolean phase_resistance_valid_ = false;
       EmbeddedProto::boolean phase_inductance_valid_ = false;
       EmbeddedProto::boolean sensor_direction_clockwise_ = false;

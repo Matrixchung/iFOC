@@ -77,6 +77,8 @@ enum class MotorError : uint64_t
   DRIVER_OVERVOLTAGE_LOCKOUT           = (1LL << 48),
   DRIVER_OVERTEMP_PROTECTION           = (1LL << 49),
 
+  // Anticogging stuffs
+  ANTICOGGING_POS_UNSTABLE             = (1LL << 51),
 };
 
 } // End of namespace Base

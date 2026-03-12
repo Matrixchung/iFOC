@@ -1,5 +1,6 @@
 #include "foc_task_extend_param_calib.hpp"
 #include "../Controller/foc_curr_loop_pi.hpp"
+#include "../Controller/foc_speed_loop_pi.hpp"
 
 #include "../../../Encoder/encoder_off_axis_base.hpp"
 
@@ -8,11 +9,37 @@
 
 namespace iFOC::FOC
 {
+constexpr size_t ANTICOGGING_LUT_SEGMENTS       = ANTICOGGING_LUT_POINTS - 1;
+constexpr float ANTICOGGING_STEP_RAD            = PI2 / (float)ANTICOGGING_LUT_SEGMENTS;
+// constexpr float ANTICOGGING_POS_ERR_TH_RAD      = ANTICOGGING_STEP_RAD * 0.5f;
+// constexpr float ANTICOGGING_VEL_TH_RAD_S        = ANTICOGGING_STEP_RAD * 20.0f;
+constexpr float ANTICOGGING_STABLE_HOLD_S       = 0.01f;
+constexpr uint16_t ANTICOGGING_AVG_SAMPLES      = 8;
+// If insufficient samples were collected for a single step during the following time,
+// a motor error will be raised (ANTICOGGING_POS_UNSTABLE) and the process will be stopped.
+constexpr float ANTICOGGING_MAX_TIME_PER_STEP_S = 10.0f;
+
 ExtendParamCalibTask::ExtendParamCalibTask() : Task("ExtCalib")
 {
-    RegisterTask(TaskType::NORMAL_TASK);
+    RegisterTask(TaskType::NORMAL_TASK, TaskType::MID_TASK);
     config.rtos_priority = configMAX_PRIORITIES - 5;
-    config.stack_depth = 256;
+    config.stack_depth = 512;
+}
+
+ExtendParamCalibTask::~ExtendParamCalibTask()
+{
+    const auto foc = GetMotor<FOCMotor>();
+    if(anticogging_cw_map)
+    {
+        vPortFree(anticogging_cw_map);
+        anticogging_cw_map = nullptr;
+    }
+    if(anticogging_ccw_map)
+    {
+        vPortFree(anticogging_ccw_map);
+        anticogging_ccw_map = nullptr;
+    }
+    foc->state_machine.RequestState(MotorState::IDLE);
 }
 
 void ExtendParamCalibTask::InitNormal()
@@ -37,16 +64,16 @@ void ExtendParamCalibTask::InitNormal()
     foc->elec_omega_rad_s = 0.0f;
     foc->Uqd_target = {0.0f, 0.0f};
     foc->Iqd_target = {0.0f, 0.0f};
-    foc->Arm();
-    sleep(100);
+    // foc->Arm();
+    // sleep(100);
     // Because we've finished basic parameter calibration,
     // we are going to add current loop here
     foc->InsertTaskBeforeName("WaveGen", new CurrLoopPI);
     // Pre-locating, Uq = u, theta = 270 ~ Ud = u, theta = 0
-    foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
-    sleep(500);
-    foc->Iqd_target = {0.0f, 0.0f};
-    sleep(200);
+    // foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
+    // sleep(500);
+    // foc->Iqd_target = {0.0f, 0.0f};
+    // sleep(200);
     stage = EstStage::NONE;
 }
 
@@ -57,25 +84,58 @@ void ExtendParamCalibTask::UpdateNormal()
     {
         case EstStage::NONE:
         {
-            foc->Iqd_target = {0.0f, 0.0f};
             if(const auto enc = foc->GetEncoderByName("EncOffAxis"); enc && foc->GetPrimaryEncoder())
             {
                 if(!((Encoder::EncoderOffAxisBase*)enc)->IsPeakCalibrated())
                 {
+                    foc->BypassTaskByName("EncArbiter", "SpeedLoop");
+                    foc->elec_angle_rad = 0.0f;
+                    foc->elec_omega_rad_s = 0.0f;
+                    foc->Uqd_target = {0.0f, 0.0f};
+                    foc->Iqd_target = {0.0f, 0.0f};
                     foc->Arm();
                     stage = EstStage::ENCODER_OFF_AXIS_PEAK_FINDING;
                     break;
                 }
                 if(!((Encoder::EncoderOffAxisBase*)enc)->IsLUTCalibrated())
                 {
+                    foc->BypassTaskByName("EncArbiter", "SpeedLoop");
+                    foc->elec_angle_rad = 0.0f;
+                    foc->elec_omega_rad_s = 0.0f;
+                    foc->Uqd_target = {0.0f, 0.0f};
+                    foc->Iqd_target = {0.0f, 0.0f};
                     foc->Arm();
                     stage = EstStage::ENCODER_OFF_AXIS_LUT_CALIBRATING;
                     break;
                 }
             }
+            if(const auto enc = foc->GetPrimaryEncoder();
+                enc && enc->GetEncoderType() == Encoder::Type::ABSOLUTE_ENCODER &&
+                foc->anticogging_lut.getTableSize() != ANTICOGGING_LUT_POINTS &&
+                foc->GetConfig().vel_kp() > 0.0f &&
+                foc->GetConfig().vel_ki() > 0.0f &&
+                foc->GetConfig().pos_kp() > 0.0f &&
+                foc->GetConfig().anticogging_base_pos_err_deg() > 0.0f &&
+                foc->GetConfig().anticogging_base_vel_err_rpm() > 0.0f &&
+                foc->GetError() == 0) // a correct-tuned position loop is required for anticogging calibration
+            {
+                stage = EstStage::ANTICOGGING_INIT;
+                break;
+            }
+            if(anticogging_cw_map)
+            {
+                vPortFree(anticogging_cw_map);
+                anticogging_cw_map = nullptr;
+            }
+            if(anticogging_ccw_map)
+            {
+                vPortFree(anticogging_ccw_map);
+                anticogging_ccw_map = nullptr;
+            }
             foc->Disarm();
-            foc->RemoveTaskByName("CurrLoop");
-            foc->UnbypassTaskByName("EncArbiter");
+            // foc->RemoveTaskByName("CurrLoop");
+            // foc->RemoveTaskByName("SpeedLoop");
+            // foc->UnbypassTaskByName("EncArbiter");
             foc->state_machine.BackToLastState();
             foc->RemoveTaskByName(GetName());
             break;
@@ -263,11 +323,289 @@ void ExtendParamCalibTask::UpdateNormal()
             foc->RemoveTaskByName(GetName());
             break;
         }
+        case EstStage::ANTICOGGING_INIT:
+        {
+            const auto encoder = foc->GetPrimaryEncoder();
+            if(!encoder)
+            {
+                foc->DisarmWithError(MotorError::PRIMARY_SENSOR_COMPONENT_MISSING);
+                foc->RemoveTaskByName(GetName());
+                break;
+            }
+
+            anticogging.index = 0;
+            anticogging.stable_timer = 0.0f;
+            anticogging.per_step_timer = 0.0f;
+            anticogging.start_single_round_rad = 0.0f;
+            anticogging.start_multi_round_rad = 0.0f;
+            anticogging.iq_meas_acc = 0.0f;
+            anticogging.iq_count = 0;
+            anticogging.prev_anticogging_enabled = foc->GetConfig().enable_anticogging();
+            foc->GetConfig().set_enable_anticogging(false);
+
+            if(anticogging_cw_map)
+            {
+                vPortFree(anticogging_cw_map);
+                anticogging_cw_map = nullptr;
+            }
+            if(anticogging_ccw_map)
+            {
+                vPortFree(anticogging_ccw_map);
+                anticogging_ccw_map = nullptr;
+            }
+
+            anticogging_cw_map = (float*)pvPortMalloc(ANTICOGGING_LUT_SEGMENTS * sizeof(float));
+            anticogging_ccw_map = (float*)pvPortMalloc(ANTICOGGING_LUT_SEGMENTS * sizeof(float));
+
+            if(!anticogging_cw_map || !anticogging_ccw_map)
+            {
+                foc->DisarmWithError(MotorError::SYSTEM_MEM_ALLOCATION_FAILED);
+                foc->RemoveTaskByName(GetName());
+                break;
+            }
+
+            foc->UnbypassTaskByName("EncArbiter", "CurrLoop");
+            if(!foc->GetTaskByName("SpeedLoop")) foc->InsertTaskBeforeName("CurrLoop", new SpeedLoopPI);
+            foc->UnbypassTaskByName("SpeedLoop");
+            sleep(100);
+            auto current_target = foc->GetTargetMotionStruct(Motion::Ref::BASE, Motion::TorqueUnit::AMP, Motion::SpeedUnit::RADS, Motion::PosUnit::RAD);
+            const auto current_motion = foc->GetCurrentMotionStruct(current_target);
+            current_target.torque.value = 0.0f;
+            current_target.speed.value = 0.0f;
+            current_target.pos.value = current_motion.pos.value;
+            foc->SetControlMode(MotorControlMode::CTRL_MODE_POSITION);
+            foc->SetTargetMotion(current_target);
+            foc->Arm();
+
+            sleep(500); // wait for the initial state to steady
+            anticogging.start_single_round_rad = encoder->compensated_single_round_angle_rad;
+            anticogging.start_multi_round_rad = encoder->multi_round_angle_rad;
+
+            stage = EstStage::ANTICOGGING_TESTING_CW;
+            break;
+        }
+        case EstStage::ANTICOGGING_TESTED:
+        {
+            sleep(100);
+            foc->Disarm();
+
+            foc->anticogging_lut = DataType::LookupTable(ANTICOGGING_LUT_POINTS, 0.0f, PI2);
+            const size_t lut_offset =
+                (size_t)std::lroundf(normalize_rad(anticogging.start_single_round_rad) *
+                             (float)ANTICOGGING_LUT_SEGMENTS * divPI2) % ANTICOGGING_LUT_SEGMENTS;
+            constexpr int window = ANTICOGGING_AVG_SAMPLES / 2;
+            for(size_t i = 0; i < ANTICOGGING_LUT_SEGMENTS; ++i)
+            {
+                float Icogging_filtered = 0.0f;
+                {
+                    double acc = 0.0;
+                    int cnt = 0;
+                    constexpr int half = window / 2;
+                    for(int k = -half; k <= half; ++k)
+                    {
+                        int idx = i + k;
+                        while(idx < 0) idx += (int)ANTICOGGING_LUT_SEGMENTS;
+                        while(idx >= (int)ANTICOGGING_LUT_SEGMENTS) idx -= (int)ANTICOGGING_LUT_SEGMENTS;
+                        const float Icogging = 0.5f * (anticogging_cw_map[idx] + anticogging_ccw_map[idx]);
+                        acc += (double)Icogging;
+                        ++cnt;
+                    }
+                    Icogging_filtered = (cnt > 0) ? (float)(acc / (double)cnt) : 0.0f;
+                }
+                const size_t lut_index = (lut_offset + i) % ANTICOGGING_LUT_SEGMENTS;
+                foc->anticogging_lut.setValueByIndex(lut_index, Icogging_filtered);
+            }
+            foc->anticogging_lut.setValueByIndex(ANTICOGGING_LUT_SEGMENTS, foc->anticogging_lut.getValueByIndex(0));
+
+            if(anticogging_cw_map)
+            {
+                vPortFree(anticogging_cw_map);
+                anticogging_cw_map = nullptr;
+            }
+            if(anticogging_ccw_map)
+            {
+                vPortFree(anticogging_ccw_map);
+                anticogging_ccw_map = nullptr;
+            }
+
+            char key[sizeof(ANTICOGGING_LUT_DB_KEY_PREFIX) + 1];
+            memcpy(key, ANTICOGGING_LUT_DB_KEY_PREFIX, sizeof(ANTICOGGING_LUT_DB_KEY_PREFIX) - 1);
+            key[sizeof(ANTICOGGING_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';
+            key[sizeof(ANTICOGGING_LUT_DB_KEY_PREFIX)] = '\0';
+            BlobNVMStorage().ClearNVM(key); // clear lut first
+
+            auto lut_serialized_size = foc->anticogging_lut.getSerializedSize();
+            uint8_t* serialize_buffer = (uint8_t*)pvPortMalloc(lut_serialized_size * sizeof(uint8_t));
+            if(serialize_buffer)
+            {
+                if(foc->anticogging_lut.serialize(serialize_buffer, lut_serialized_size))
+                {
+                    BlobNVMStorage().SaveNVM(key, serialize_buffer, lut_serialized_size);
+                }
+                vPortFree(serialize_buffer);
+                serialize_buffer = nullptr;
+                foc->GetConfig().set_enable_anticogging(anticogging.prev_anticogging_enabled);
+            }
+            stage_passed++;
+            stage = EstStage::NONE;
+            break;
+        }
         default:
         {
             sleep(100);
             break;
         }
+    }
+}
+
+void ExtendParamCalibTask::UpdateMid(float Ts)
+{
+    const auto foc = GetMotor<FOCMotor>();
+    const auto encoder = foc->GetPrimaryEncoder();
+    if(!encoder)
+    {
+        stage = EstStage::NONE;
+        return;
+    }
+    switch(stage)
+    {
+        case EstStage::ANTICOGGING_TESTING_CW:
+        {
+            if(!anticogging_cw_map || !anticogging_ccw_map)
+            {
+                stage = EstStage::NONE;
+                break;
+            }
+            if(anticogging.index < (int32_t)ANTICOGGING_LUT_SEGMENTS)
+            {
+                anticogging.per_step_timer += Ts;
+                if(anticogging.per_step_timer > ANTICOGGING_MAX_TIME_PER_STEP_S)
+                {
+                    foc->DisarmWithError(MotorError::ANTICOGGING_POS_UNSTABLE);
+                    stage = EstStage::NONE;
+                    break;
+                }
+                const float target_multi_round_rad = anticogging.start_multi_round_rad + (float)anticogging.index * ANTICOGGING_STEP_RAD;
+                Motion target_motion
+                {
+                    .ref = Motion::Ref::BASE,
+                    .torque = {},
+                    .speed = {},
+                    .pos = {target_multi_round_rad, 0.0f, Motion::PosUnit::RAD}
+                };
+                foc->SetControlMode(MotorControlMode::CTRL_MODE_POSITION);
+                foc->SetTargetMotion(target_motion);
+                const float pos_err = std::fabsf(target_multi_round_rad - encoder->multi_round_angle_rad);
+                const float rad = DEG2RAD(foc->GetConfig().anticogging_base_pos_err_deg());
+                const float rad_s = RPM2RAD(foc->GetConfig().anticogging_base_vel_err_rpm(), 1);
+                const bool stable =
+                    (pos_err < rad) &&
+                    (std::fabsf(encoder->angular_speed_rad_s) < rad_s);
+                if(stable)
+                {
+                    anticogging.stable_timer += Ts;
+                    if(anticogging.stable_timer >= ANTICOGGING_STABLE_HOLD_S)
+                    {
+                        anticogging.iq_meas_acc += foc->Iqd_measured.q;
+                        ++anticogging.iq_count;
+                        if(anticogging.iq_count >= ANTICOGGING_AVG_SAMPLES)
+                        {
+                            anticogging_cw_map[anticogging.index] = anticogging.iq_meas_acc / (float)anticogging.iq_count;
+                            ++anticogging.index;
+                            anticogging.stable_timer = 0.0f;
+                            anticogging.per_step_timer = 0.0f;
+                            anticogging.iq_meas_acc = 0.0f;
+                            anticogging.iq_count = 0;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    anticogging.stable_timer = 0.0f;
+                }
+            }
+            else // CW finished, start CCW
+            {
+                anticogging.index = (int32_t)ANTICOGGING_LUT_SEGMENTS - 1;
+                anticogging.stable_timer = 0.0f;
+                anticogging.per_step_timer = 0.0f;
+                anticogging.iq_meas_acc = 0.0f;
+                anticogging.iq_count = 0;
+                stage = EstStage::ANTICOGGING_TESTING_CCW;
+                break;
+            }
+            break;
+        }
+        case EstStage::ANTICOGGING_TESTING_CCW:
+        {
+            if(!anticogging_cw_map || !anticogging_ccw_map)
+            {
+                stage = EstStage::NONE;
+                break;
+            }
+            if(anticogging.index >= 0)
+            {
+                anticogging.per_step_timer += Ts;
+                if(anticogging.per_step_timer > ANTICOGGING_MAX_TIME_PER_STEP_S)
+                {
+                    foc->DisarmWithError(MotorError::ANTICOGGING_POS_UNSTABLE);
+                    stage = EstStage::NONE;
+                    break;
+                }
+                const float target_multi_round_rad = anticogging.start_multi_round_rad + (float)anticogging.index * ANTICOGGING_STEP_RAD;
+                Motion target_motion
+                {
+                    .ref = Motion::Ref::BASE,
+                    .torque = {},
+                    .speed = {},
+                    .pos = {target_multi_round_rad, 0.0f, Motion::PosUnit::RAD}
+                };
+                foc->SetControlMode(MotorControlMode::CTRL_MODE_POSITION);
+                foc->SetTargetMotion(target_motion);
+                const float pos_err = std::fabsf(target_multi_round_rad - encoder->multi_round_angle_rad);
+                const float rad = DEG2RAD(foc->GetConfig().anticogging_base_pos_err_deg());
+                const float rad_s = RPM2RAD(foc->GetConfig().anticogging_base_vel_err_rpm(), 1);
+                const bool stable =
+                    (pos_err < rad) &&
+                    (std::fabsf(encoder->angular_speed_rad_s) < rad_s);
+                if(stable)
+                {
+                    anticogging.stable_timer += Ts;
+                    if(anticogging.stable_timer >= ANTICOGGING_STABLE_HOLD_S)
+                    {
+                        anticogging.iq_meas_acc += foc->Iqd_measured.q;
+                        ++anticogging.iq_count;
+                        if(anticogging.iq_count >= ANTICOGGING_AVG_SAMPLES)
+                        {
+                            anticogging_ccw_map[anticogging.index] = anticogging.iq_meas_acc / (float)anticogging.iq_count;
+                            --anticogging.index;
+                            anticogging.stable_timer = 0.0f;
+                            anticogging.per_step_timer = 0.0f;
+                            anticogging.iq_meas_acc = 0.0f;
+                            anticogging.iq_count = 0;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    anticogging.stable_timer = 0.0f;
+                }
+            }
+            else
+            {
+                anticogging.index = 0;
+                anticogging.stable_timer = 0.0f;
+                anticogging.per_step_timer = 0.0f;
+                anticogging.iq_meas_acc = 0.0f;
+                anticogging.iq_count = 0;
+                stage = EstStage::ANTICOGGING_TESTED;
+                break;
+            }
+            break;
+        }
+        default: break;
     }
 }
 }

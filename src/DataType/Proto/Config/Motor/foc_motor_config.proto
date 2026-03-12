@@ -57,7 +57,12 @@ message FOCMotorConfig {
     uint32 can_feedback_interval_ms = 55;
     uint32 can_misc_fdbk_interval_ms = 56;
 
+    // ANTICOGGING THRESHOLD
+    float anticogging_base_pos_err_deg = 62;
+    float anticogging_base_vel_err_rpm = 63;
+
     bool enable_harmonic_suppression = 60;  // Default set to false. Will worsen performance @ low speed.
+    bool enable_anticogging = 61;           // Default set to false. Enable after LUT calibrated.
 
     /// MOTOR PARAMETERS VALIDATION, PLACED HERE TO AVOID PADDING
     bool phase_resistance_valid = 12;

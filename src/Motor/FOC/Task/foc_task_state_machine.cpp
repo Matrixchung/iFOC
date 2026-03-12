@@ -256,8 +256,18 @@ bool StateMachineTask::CheckStateRequirement(const MotorState new_state)
             return !CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
                     !CheckStateRequirement(MotorState::ENCODER_INDEX_SEARCH) &&
                     !CheckStateRequirement(MotorState::ENCODER_CALIBRATION) &&
-                    (enc && ((Encoder::EncoderOffAxisBase*)enc)->IsConnected() && foc->GetPrimaryEncoder() && foc->GetConfig().deduction_ratio() > 1.0f);
-            // return false;
+                    ((enc &&
+                        ((Encoder::EncoderOffAxisBase*)enc)->IsConnected() &&
+                        !((Encoder::EncoderOffAxisBase*)enc)->IsCalibrated() &&
+                        foc->GetPrimaryEncoder() &&
+                        foc->GetConfig().deduction_ratio() > 1.0f)
+#if FOC_ANTICOGGING_AVAILABLE
+                        || (true && CheckStateRequirement(MotorState::SENSORED_CLOSED_LOOP_CONTROL)
+                            && foc->GetConfig().anticogging_base_pos_err_deg() > 0.0f &&
+                            foc->GetConfig().anticogging_base_vel_err_rpm() > 0.0f &&
+                            foc->anticogging_lut.getTableSize() != ANTICOGGING_LUT_POINTS)
+#endif
+                     );
         }
         case MotorState::SENSORED_CLOSED_LOOP_CONTROL:
         {
@@ -354,9 +364,9 @@ MotorState StateMachineTask::RequestState(const MotorState new_state)
                     foc->InsertTaskBeforeName("CurrLoop", new SpeedLoopPI);
                     auto current_target = foc->GetTargetMotionStruct(Motion::Ref::BASE,
                                                              Motion::TorqueUnit::AMP,
-                                                             Motion::SpeedUnit::RPM,
-                                                             Motion::PosUnit::DEG);
-                    auto current_motion = foc->GetCurrentMotionStruct(current_target);
+                                                             Motion::SpeedUnit::RADS,
+                                                             Motion::PosUnit::RAD);
+                    const auto current_motion = foc->GetCurrentMotionStruct(current_target);
                     // reset current torque & speed target, and sync pos target with current state.
                     // (to avoid unexpected movement during IDLE -> CLOSED_LOOP)
                     current_target.torque.value = 0.0f;

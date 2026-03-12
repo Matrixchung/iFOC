@@ -46,14 +46,26 @@ void CurrLoopPI::UpdateRT(float Ts)
     const auto foc = GetMotor<FOCMotor>();
     if(foc->IsArmed())
     {
+        // anticogging here
+        float Iq_cogging = 0.0f;
+        if(foc->GetConfig().enable_anticogging() &&
+            foc->GetCurrentState() == MotorState::SENSORED_CLOSED_LOOP_CONTROL &&
+            foc->anticogging_lut.getTableSize() == ANTICOGGING_LUT_POINTS)
+        {
+            if(const auto enc = foc->GetPrimaryEncoder(); enc && enc->GetEncoderType() == Encoder::Type::ABSOLUTE_ENCODER)
+            {
+                Iq_cogging = foc->anticogging_lut.lookupPeriodic(enc->compensated_single_round_angle_rad);
+            }
+        }
+
         // Q-Axis
-        float iq_error = foc->Iqd_target.q - foc->Iqd_measured.q;
+        const float iq_error = Iq_cogging + foc->Iqd_target.q - foc->Iqd_measured.q;
         float Uq_total_feedforward = 0.0f;
-        float curr_Udc = MIN(foc->GetConfig().max_voltage(), foc->GetBusSense()->voltage);
+        const float curr_Udc = MIN(foc->GetConfig().max_voltage(), foc->GetBusSense()->voltage);
         q_pi.limit = curr_Udc * divSQRT_3;
 
         // D-Axis
-        float id_error = foc->Iqd_target.d - foc->Iqd_measured.d;
+        const float id_error = foc->Iqd_target.d - foc->Iqd_measured.d;
         float Ud_total_feedforward = 0.0f;
         d_pi.limit = q_pi.limit;
 
@@ -85,14 +97,14 @@ void CurrLoopPI::UpdateRT(float Ts)
             q_harmonic_reg_6.output_limit = q_pi.limit;
             q_harmonic_reg_12.wc = wc;
             q_harmonic_reg_12.output_limit = q_pi.limit;
-            float uq_6_output = q_harmonic_reg_6.GetOutputWithSinCos(iq_error,
+            const float uq_6_output = q_harmonic_reg_6.GetOutputWithSinCos(iq_error,
                                                                      w0_6,
                                                                      sin_w0_6_Ts,
                                                                      cos_w0_6_Ts,
                                                                      sin_comp_6,
                                                                      cos_comp_6,
                                                                      Ts);
-            float uq_12_output = q_harmonic_reg_12.GetOutputWithSinCos(iq_error,
+            const float uq_12_output = q_harmonic_reg_12.GetOutputWithSinCos(iq_error,
                                                                        w0_12,
                                                                        sin_w0_12_Ts,
                                                                        cos_w0_12_Ts,
@@ -105,14 +117,14 @@ void CurrLoopPI::UpdateRT(float Ts)
             d_harmonic_reg_6.output_limit = q_pi.limit;
             d_harmonic_reg_12.wc = wc;
             d_harmonic_reg_12.output_limit = q_pi.limit;
-            float ud_6_output = d_harmonic_reg_6.GetOutputWithSinCos(id_error,
+            const float ud_6_output = d_harmonic_reg_6.GetOutputWithSinCos(id_error,
                                                                      w0_6,
                                                                      sin_w0_6_Ts,
                                                                      cos_w0_6_Ts,
                                                                      sin_comp_6,
                                                                      cos_comp_6,
                                                                      Ts);
-            float ud_12_output = d_harmonic_reg_12.GetOutputWithSinCos(id_error,
+            const float ud_12_output = d_harmonic_reg_12.GetOutputWithSinCos(id_error,
                                                                        w0_12,
                                                                        sin_w0_12_Ts,
                                                                        cos_w0_12_Ts,

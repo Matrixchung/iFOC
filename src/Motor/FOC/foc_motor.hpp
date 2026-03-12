@@ -2,6 +2,7 @@
 
 #include "../motor_base.hpp"
 #include "foc_driver_base.hpp"
+#include "../../DataType/lookup_table.hpp"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -17,7 +18,9 @@
 #include "Task/foc_task_state_machine.hpp"
 
 #if (FLASH_USER_AREA_SIZE) >= (32 * 1024) && (defined (USE_FLASHDB) || defined (USE_EASYFLASH)) // also requires configTOTAL_HEAP_SIZE >= 64K
-#define FOC_ANTICOGGING_AVAILABLE
+#define FOC_ANTICOGGING_AVAILABLE (true)
+#else
+#define FOC_ANTICOGGING_AVAILABLE (false)
 #endif
 
 namespace iFOC
@@ -33,6 +36,9 @@ namespace FOC
         TaskTimer rt_remaining_task{};        // Low side on -> main task -> task ended -> low side off -> |remaining task|
         TaskTimer mid_interval_task{};        // |medium interval task|
     };
+    constexpr char ANTICOGGING_LUT_DB_KEY_PREFIX[] = "atc";
+    constexpr char ANTICOGGING_FRICTION_DB_KEY_PREFIX[] = "atf";
+    constexpr uint16_t ANTICOGGING_LUT_POINTS = 1801; // segments = 1801 - 1, 0.2°/LSB
 }
 #pragma pack(push, 4)
 class FOCMotor final : public MotorBase<3>
@@ -61,8 +67,8 @@ public:
     [[nodiscard]] __fast_inline MotorState GetCurrentState() const override { return state_machine.GetState(); }
     __fast_inline void LinkDriver(Driver::FOCDriverImpl auto *drv) { driver = drv; }
     __fast_inline void LinkCurrSense(Sense::FOCCurrSenseImpl auto *curr) { curr_sense = curr; }
-    __fast_inline Driver::FOCDriverBase *GetDriver() { return static_cast<Driver::FOCDriverBase *>(driver); };
-    __fast_inline Sense::CurrSenseBase<3> *GetCurrSense() { return static_cast<Sense::CurrSenseBase<3> *>(curr_sense); };
+    __fast_inline Driver::FOCDriverBase *GetDriver() const { return static_cast<Driver::FOCDriverBase *>(driver); };
+    __fast_inline Sense::CurrSenseBase<3> *GetCurrSense() const { return static_cast<Sense::CurrSenseBase<3> *>(curr_sense); };
     __fast_inline auto& GetConfig() { return config.GetConfig(); };
     void ResetDefaultConfig();
     FOC::CurrLoopBase* GetCurrLoop();
@@ -74,6 +80,10 @@ public:
     DataType::ConfigNVMWrapper<DataType::Config::Motor::FOCMotorConfig> config{(ProtoHeader)(to_underlying(ProtoHeader::FOC_MOTOR_CONFIG_M1) + GetInternalID()),
                                                                                (uint8_t)(internal_id + _const::MOTOR_CONFIG_STORE_SECTOR_BEGIN)};
     /// READ_ONLY ///
+#if FOC_ANTICOGGING_AVAILABLE
+    DataType::LookupTable anticogging_lut{};
+    // DataType::LookupTable anticogging_friction_lut{}; // currently we're not using friction compensation
+#endif
     alphabeta_t Ialphabeta_measured{}; // [A], Given by: UpdateSenseTask
     qd_t Iqd_measured{}; // [A], Given by: EncoderArbiter
     qd_t Iqd_target{};   // [A], Given by: Speed Loop
