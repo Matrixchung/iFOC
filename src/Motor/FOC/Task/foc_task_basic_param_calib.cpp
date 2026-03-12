@@ -2,8 +2,6 @@
 #include "foc_curr_loop_pi.hpp"
 #include <cfloat>
 
-// #define foc GetMotor<FOCMotor>()
-
 static constexpr float G9 = 2.0f;
 static constexpr size_t AVG_WINDOW_SIZE = 10000;
 
@@ -33,6 +31,12 @@ BasicParamCalibTask::BasicParamCalibTask() : Task("BasicParam")
 {
     RegisterTask(TaskType::RT_TASK, TaskType::NORMAL_TASK);
     config.rtos_priority = configMAX_PRIORITIES - 3;
+}
+
+BasicParamCalibTask::~BasicParamCalibTask()
+{
+    const auto foc = GetMotor<FOCMotor>();
+    foc->state_machine.RequestState(MotorState::IDLE);
 }
 
 void BasicParamCalibTask::InitNormal()

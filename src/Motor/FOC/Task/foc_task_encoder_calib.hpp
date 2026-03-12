@@ -32,6 +32,7 @@ private:
     // bool is_sensor_custom_calibrated = false;
 public:
     EncoderCalibTask();
+    ~EncoderCalibTask() override;
     void InitNormal() override;
     void UpdateNormal() override;
     void UpdateMid(float Ts) override;

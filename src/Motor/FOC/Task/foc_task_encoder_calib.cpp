@@ -14,6 +14,17 @@ EncoderCalibTask::EncoderCalibTask() : Task("EncCalib")
     config.stack_depth = 512;
 }
 
+EncoderCalibTask::~EncoderCalibTask()
+{
+    const auto foc = GetMotor<FOCMotor>();
+    if(temp_map)
+    {
+        vPortFree(temp_map);
+        temp_map = nullptr;
+    }
+    foc->state_machine.RequestState(MotorState::IDLE);
+}
+
 static constexpr float MIN_ANGLE_DETECT_MOVEMENT = PI2 / 101.0f;
 
 void EncoderCalibTask::InitNormal()
@@ -235,6 +246,12 @@ void EncoderCalibTask::UpdateNormal()
             key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';
             key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
             BlobNVMStorage().ClearNVM(key); // clear lut first
+
+            if(temp_map)
+            {
+                vPortFree(temp_map);
+                temp_map = nullptr;
+            }
 
             temp_map = (float*)pvPortMalloc(SAMPLES_PER_POLE_PAIR * foc->GetConfig().pole_pairs() * sizeof(float));
             if(!temp_map)

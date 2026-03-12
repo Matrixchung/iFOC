@@ -94,8 +94,9 @@ public:
     WaveInjector wave{WaveInjector::WaveType::SINUSOIDAL};
 public:
     BasicParamCalibTask();
-    void UpdateRT(float Ts) final;
-    void InitNormal() final;
-    void UpdateNormal() final;
+    ~BasicParamCalibTask() override;
+    void UpdateRT(float Ts) override;
+    void InitNormal() override;
+    void UpdateNormal() override;
 };
 }
