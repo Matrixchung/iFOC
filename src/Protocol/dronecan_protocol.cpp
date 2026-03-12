@@ -17,6 +17,7 @@ using namespace DroneCAN;
 #include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/file/Delete.h"
 #include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/file/Read.h"
 #include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/file/Write.h"
+#include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/debug/LogMessage.h"
 
 // iFOC custom definitions below
 #include "../ThirdParty/libcanard-dronecan/dsdl/ifoc/CompactFeedback.h"
@@ -43,6 +44,12 @@ using namespace DroneCAN;
 #ifndef IFOC_NODE_NAME
 #define IFOC_NODE_NAME ("com.ifoc.driver")
 #endif
+
+#define LOG_MESSAGE_MAX_SIZE (90U)
+#define DEBUG   (UAVCAN_PROTOCOL_DEBUG_LOGLEVEL_DEBUG)
+#define INFO    (UAVCAN_PROTOCOL_DEBUG_LOGLEVEL_INFO)
+#define WARNING (UAVCAN_PROTOCOL_DEBUG_LOGLEVEL_WARNING)
+#define ERROR   (UAVCAN_PROTOCOL_DEBUG_LOGLEVEL_ERROR)
 
 static constexpr char DRONECAN_NODE_NAME_DB_KEY_PREFIX[] = "nn";
 static constexpr char DRONECAN_NODE_NAME[] = "node_name";
@@ -159,13 +166,13 @@ void DroneCANProtocol::PollingTask::UpdateNormal()
         parent->SetNodeID(new_node_id);
     }
     // #1: Response received transfer first
-    DataType::Comm::CANMessage message{};
+    DataType::Comm::CANMessage message;
     if(parent->isr_msg_fifo.used())
     {
         // if(parent->isr_msg_fifo.get(&message, 1)) // get one single frame stored in fifo?
         while(parent->isr_msg_fifo.get(&message, 1)) // get all the frames stored in fifo?
         {
-            CanardCANFrame frame{};
+            CanardCANFrame frame;
             frame.id = message.cob_id;
             memcpy(frame.data, message.data, message.len);
             frame.data_len = message.len;
@@ -185,6 +192,73 @@ void DroneCANProtocol::PollingTask::UpdateNormal()
     const bool anonymous = parent->canard.node_id == CANARD_BROADCAST_NODE_ID || parent->canard.node_id > CANARD_MAX_NODE_ID;
     if(!anonymous)
     {
+        // monitor here
+        if(!monitor.is_init_send)
+        {
+            // initialize here
+            monitor.last_motor_arm_state = motor->IsArmed();
+            monitor.last_motor_state = motor->GetCurrentState();
+            monitor.last_motor_mode = motor->GetControlMode();
+            monitor.last_error = motor->GetError();
+            parent->SendLogMessage(INFO, "INIT", 4);
+            monitor.is_init_send = true;
+        }
+        else
+        {
+            const bool armed = motor->IsArmed();
+            if(monitor.last_motor_arm_state != armed)
+            {
+                if(armed) parent->SendLogMessage(INFO, "ARMED", 5);
+                else parent->SendLogMessage(INFO, "DISARM", 6);
+                monitor.last_motor_arm_state = armed;
+            }
+            const uint64_t error = motor->GetError();
+            if(monitor.last_error != error)
+            {
+                if(error > 0)
+                {
+                    uint8_t error_index = 0;
+                    char buffer[LOG_MESSAGE_MAX_SIZE];
+                    uint16_t offset = snprintf(buffer, sizeof(buffer), "ER");
+                    uint64_t temp = error;
+                    while(temp && offset < sizeof(buffer))
+                    {
+                        if(temp & 0x01)
+                        {
+                            const auto written = snprintf(buffer + offset, sizeof(buffer) - offset, "%u,", error_index);
+                            if(written < 0) break;
+                            if(written >= (int)(sizeof(buffer) - offset))
+                            {
+                                offset = sizeof(buffer) - 1;
+                                break;
+                            }
+                            offset += written;
+                        }
+                        error_index++;
+                        temp >>= 1ULL;
+                    }
+                    if(offset > 2) buffer[offset - 1] = '\0';
+                    parent->SendLogMessage(ERROR, buffer, sizeof(buffer));
+                }
+                monitor.last_error = error;
+            }
+            const MotorState motor_state = motor->GetCurrentState();
+            if(monitor.last_motor_state != motor_state)
+            {
+                char buffer[6];
+                snprintf(buffer, sizeof(buffer), "ST%u>%u", (uint8_t)monitor.last_motor_state, (uint8_t)motor_state);
+                parent->SendLogMessage(INFO, buffer, sizeof(buffer));
+                monitor.last_motor_state = motor_state;
+            }
+            const MotorControlMode motor_mode = motor->GetControlMode();
+            if(monitor.last_motor_mode != motor_mode)
+            {
+                char buffer[6];
+                snprintf(buffer, sizeof(buffer), "MD%u>%u", (uint8_t)monitor.last_motor_mode, (uint8_t)motor_mode);
+                parent->SendLogMessage(INFO, buffer, sizeof(buffer));
+                monitor.last_motor_mode = motor_mode;
+            }
+        }
         auto interval_ms = motor->GetConfig().can_heartbeat_interval_ms();
         if(interval_ms > 0)
         {
@@ -285,7 +359,7 @@ void DroneCANProtocol::PollingTask::UpdateMid(float Ts)
 {
     if(parent->tx_msg_fifo.used())
     {
-        DataType::Comm::CANMessage message{};
+        DataType::Comm::CANMessage message;
         while(parent->tx_msg_fifo.peek(&message, 1))
         {
             const auto ret = parent->can->TransmitMessage(message);
@@ -657,11 +731,34 @@ void DroneCANProtocol::SendNodeStatus()
                     len);
 }
 
+void DroneCANProtocol::SendLogMessage(const uint8_t level, const char* text, const uint8_t max_buffer_len)
+{
+    uavcan_protocol_debug_LogMessage log_message
+    {
+        .level = {.value = level},
+        .source = {},
+        .text = {}
+    };
+    log_message.text.len = MIN(strnlen(text, max_buffer_len), LOG_MESSAGE_MAX_SIZE);
+    memcpy(log_message.text.data, text, log_message.text.len);
+
+    uint8_t buffer[UAVCAN_PROTOCOL_DEBUG_LOGMESSAGE_MAX_SIZE];
+    const uint16_t len = uavcan_protocol_debug_LogMessage_encode(&log_message, buffer);
+
+    canardBroadcast(&canard,
+        UAVCAN_PROTOCOL_DEBUG_LOGMESSAGE_SIGNATURE,
+        UAVCAN_PROTOCOL_DEBUG_LOGMESSAGE_ID,
+        &next_transfer_id.uavcan_protocol_logmessage,
+        log_message.level.value <= UAVCAN_PROTOCOL_DEBUG_LOGLEVEL_INFO ? CANARD_TRANSFER_PRIORITY_MEDIUM : CANARD_TRANSFER_PRIORITY_HIGH,
+        buffer,
+        len);
+}
+
 void DroneCANProtocol::SendFOCCompactFeedback()
 {
     const auto motor = GetMotor<FOCMotor>();
     const auto error = motor->GetError();
-    Motion current{};
+    Motion current;
     motor->GetCurrentMotion(current,
         Motion::Ref::OUTPUT,
         Motion::TorqueUnit::AMP,
@@ -720,7 +817,7 @@ void DroneCANProtocol::SendFOCMiscFeedback()
 
 void DroneCANProtocol::SendFOCGetClearErrorResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_GetClearErrorRequest request{};
+    ifoc_GetClearErrorRequest request;
     if(ifoc_GetClearErrorRequest_decode(transfer, &request)) return;
 
     const auto motor = GetMotor<FOCMotor>();
@@ -738,13 +835,13 @@ void DroneCANProtocol::SendFOCGetClearErrorResponse(DroneCAN::CanardRxTransfer* 
 
 void DroneCANProtocol::SendFOCGetClearErrorIndexResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_GetClearErrorIndexRequest request{};
+    ifoc_GetClearErrorIndexRequest request;
     if(ifoc_GetClearErrorIndexRequest_decode(transfer, &request)) return;
     const auto motor = GetMotor<FOCMotor>();
     motor->UpdateWatchdog();
     for(auto i = 0; i < request.clear_index.len; i++)
     {
-        const uint64_t temp_error = (1 << request.clear_index.data[i]);
+        const uint64_t temp_error = (1ULL << request.clear_index.data[i]);
         if(motor->GetError() & temp_error)
         {
             motor->ClearError(temp_error);
@@ -857,7 +954,7 @@ void DroneCANProtocol::SendFOCGetTaskStatsResponse(DroneCAN::CanardRxTransfer* t
     {
         if((*it)->IsTaskRegistered(Task::TaskType::RT_TASK))
         {
-            response.rt_task_list.data[response.rt_task_list.len].task_name.len = strlen((*it)->GetName());
+            response.rt_task_list.data[response.rt_task_list.len].task_name.len = strnlen((*it)->GetName(), sizeof(response.rt_task_list.data->task_name.data));
             memcpy(response.rt_task_list.data[response.rt_task_list.len].task_name.data,
                 (*it)->GetName(),
                 response.rt_task_list.data[response.rt_task_list.len].task_name.len);
@@ -865,15 +962,17 @@ void DroneCANProtocol::SendFOCGetTaskStatsResponse(DroneCAN::CanardRxTransfer* t
         }
         if((*it)->IsTaskRegistered(Task::TaskType::MID_TASK))
         {
-            response.mid_task_list.data[response.mid_task_list.len].task_name.len = strlen((*it)->GetName());
+            response.mid_task_list.data[response.mid_task_list.len].task_name.len = strnlen((*it)->GetName(), sizeof(response.rt_task_list.data->task_name.data));
             memcpy(response.mid_task_list.data[response.mid_task_list.len].task_name.data,
                 (*it)->GetName(),
                 response.mid_task_list.data[response.mid_task_list.len].task_name.len);
             response.mid_task_list.len++;
         }
     }
+    // fix: last task name of MidTaskList not showing up properly
+    if(response.mid_task_list.len < sizeof(response.mid_task_list.data)) response.mid_task_list.len++;
     uint8_t buffer[IFOC_GETTASKSTATS_RESPONSE_MAX_SIZE];
-    const uint16_t len = ifoc_GetTaskStatsResponse_encode(&response, buffer);
+    const uint32_t len = ifoc_GetTaskStatsResponse_encode(&response, buffer);
 
     _SendResponse(transfer, IFOC_GETTASKSTATS_SIGNATURE_OVERRIDE, IFOC_GETTASKSTATS_ID, buffer, len);
 }
@@ -951,7 +1050,7 @@ void DroneCANProtocol::SendFOCGetTargetMotionResponse(DroneCAN::CanardRxTransfer
 
 void DroneCANProtocol::SendFOCSetRefFrameResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_SetRefFrameRequest request{};
+    ifoc_SetRefFrameRequest request;
     if(ifoc_SetRefFrameRequest_decode(transfer, &request)) return;
 
     if((Motion::Ref)request.set_ref.reference != Motion::Ref::ELEC)
@@ -981,7 +1080,7 @@ void DroneCANProtocol::SendFOCSetRefFrameResponse(DroneCAN::CanardRxTransfer* tr
 
 void DroneCANProtocol::SendFOCSetMotorStateResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_SetMotorStateRequest request{};
+    ifoc_SetMotorStateRequest request;
     if(ifoc_SetMotorStateRequest_decode(transfer, &request)) return;
     const auto motor = GetMotor<FOCMotor>();
     motor->UpdateWatchdog();
@@ -997,7 +1096,7 @@ void DroneCANProtocol::SendFOCSetMotorStateResponse(DroneCAN::CanardRxTransfer* 
 
 void DroneCANProtocol::SendFOCSetControlModeResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_SetControlModeRequest request{};
+    ifoc_SetControlModeRequest request;
     if(ifoc_SetControlModeRequest_decode(transfer, &request)) return;
     const auto motor = GetMotor<FOCMotor>();
     motor->UpdateWatchdog();
@@ -1013,7 +1112,7 @@ void DroneCANProtocol::SendFOCSetControlModeResponse(DroneCAN::CanardRxTransfer*
 
 void DroneCANProtocol::SendFOCSetTrajTargetResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_SetTrajTargetRequest request{};
+    ifoc_SetTrajTargetRequest request;
     if(ifoc_SetTrajTargetRequest_decode(transfer, &request)) return;
     const auto motor = GetMotor<FOCMotor>();
     motor->UpdateWatchdog();
@@ -1043,7 +1142,7 @@ void DroneCANProtocol::SendFOCSetTrajTargetResponse(DroneCAN::CanardRxTransfer* 
 
 void DroneCANProtocol::SendFOCSetPosTargetResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_SetPosTargetRequest request{};
+    ifoc_SetPosTargetRequest request;
     if(ifoc_SetPosTargetRequest_decode(transfer, &request)) return;
     const auto motor = GetMotor<FOCMotor>();
     motor->UpdateWatchdog();
@@ -1106,7 +1205,7 @@ void DroneCANProtocol::SendFOCSetPosTargetResponse(DroneCAN::CanardRxTransfer* t
 
 void DroneCANProtocol::SendFOCSetVelTargetResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_SetVelTargetRequest request{};
+    ifoc_SetVelTargetRequest request;
     if(ifoc_SetVelTargetRequest_decode(transfer, &request)) return;
     const auto motor = GetMotor<FOCMotor>();
     motor->UpdateWatchdog();
@@ -1148,7 +1247,7 @@ void DroneCANProtocol::SendFOCSetVelTargetResponse(DroneCAN::CanardRxTransfer* t
 
 void DroneCANProtocol::SendFOCSetTorqueTargetResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_SetTorqueTargetRequest request{};
+    ifoc_SetTorqueTargetRequest request;
     if(ifoc_SetTorqueTargetRequest_decode(transfer, &request)) return;
     const auto motor = GetMotor<FOCMotor>();
     motor->UpdateWatchdog();
@@ -1165,7 +1264,7 @@ void DroneCANProtocol::SendFOCSetTorqueTargetResponse(DroneCAN::CanardRxTransfer
 
 void DroneCANProtocol::SendFOCSetDebugCmdResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    ifoc_SetDebugCmdRequest request{};
+    ifoc_SetDebugCmdRequest request;
     if(ifoc_SetDebugCmdRequest_decode(transfer, &request)) return;
     const auto motor = GetMotor<FOCMotor>();
     motor->UpdateWatchdog();
@@ -1181,7 +1280,7 @@ void DroneCANProtocol::SendFOCSetDebugCmdResponse(DroneCAN::CanardRxTransfer* tr
 
 void DroneCANProtocol::SendFileGetInfoResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    uavcan_protocol_file_GetInfoRequest request{};
+    uavcan_protocol_file_GetInfoRequest request;
     if(uavcan_protocol_file_GetInfoRequest_decode(transfer, &request)) return;
     if(request.path.path.len < sizeof(request.path.path.data)) request.path.path.data[request.path.path.len] = '\0';
     const auto size = BlobNVMStorage().GetKVSize((const char*)request.path.path.data);
@@ -1208,7 +1307,7 @@ void DroneCANProtocol::SendFileGetInfoResponse(DroneCAN::CanardRxTransfer* trans
 
 void DroneCANProtocol::SendFileDeleteResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    uavcan_protocol_file_DeleteRequest request{};
+    uavcan_protocol_file_DeleteRequest request;
     if(uavcan_protocol_file_DeleteRequest_decode(transfer, &request)) return;
     if(request.path.path.len < sizeof(request.path.path.data)) request.path.path.data[request.path.path.len] = '\0';
     uavcan_protocol_file_DeleteResponse response
@@ -1222,7 +1321,7 @@ void DroneCANProtocol::SendFileDeleteResponse(DroneCAN::CanardRxTransfer* transf
 
 void DroneCANProtocol::SendFileReadResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    uavcan_protocol_file_ReadRequest request{};
+    uavcan_protocol_file_ReadRequest request;
     if(uavcan_protocol_file_ReadRequest_decode(transfer, &request)) return;
     if(request.path.path.len < sizeof(request.path.path.data)) request.path.path.data[request.path.path.len] = '\0';
     // check key match
@@ -1350,7 +1449,7 @@ void DroneCANProtocol::SendGetTransportStatsResponse(DroneCAN::CanardRxTransfer*
 
 void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    uavcan_protocol_param_GetSetRequest request{};
+    uavcan_protocol_param_GetSetRequest request;
     if(uavcan_protocol_param_GetSetRequest_decode(transfer, &request)) return;
     uavcan_protocol_param_GetSetResponse response{};
     // #1: WRITE & READ, #2: READ ONLY
@@ -1601,7 +1700,7 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
 
 void DroneCANProtocol::SendRestartNodeResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    uavcan_protocol_RestartNodeRequest request{};
+    uavcan_protocol_RestartNodeRequest request;
     if(uavcan_protocol_RestartNodeRequest_decode(transfer, &request)) return;
     const bool is_restart_valid = request.magic_number == UAVCAN_PROTOCOL_RESTARTNODE_REQUEST_MAGIC_NUMBER;
 
@@ -1648,7 +1747,7 @@ void DroneCANProtocol::SendRestartNodeResponse(DroneCAN::CanardRxTransfer* trans
 
 void DroneCANProtocol::SendExecuteOpcodeResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    uavcan_protocol_param_ExecuteOpcodeRequest request{};
+    uavcan_protocol_param_ExecuteOpcodeRequest request;
     if(uavcan_protocol_param_ExecuteOpcodeRequest_decode(transfer, &request)) return;
     uavcan_protocol_param_ExecuteOpcodeResponse response{};
     uint8_t buffer[UAVCAN_PROTOCOL_PARAM_EXECUTEOPCODE_RESPONSE_MAX_SIZE];
@@ -1757,7 +1856,7 @@ void DroneCANProtocol::SendExecuteOpcodeResponse(DroneCAN::CanardRxTransfer* tra
 
 void DroneCANProtocol::SendFWUpdateResponse(DroneCAN::CanardRxTransfer* transfer)
 {
-    uavcan_protocol_file_BeginFirmwareUpdateRequest request{};
+    uavcan_protocol_file_BeginFirmwareUpdateRequest request;
     if(uavcan_protocol_file_BeginFirmwareUpdateRequest_decode(transfer, &request)) return;
     const uint32_t path_len = request.image_file_remote_path.path.len;
 
@@ -1835,7 +1934,7 @@ void DroneCANProtocol::OnDNAAllocation(DroneCAN::CanardRxTransfer* transfer)
         return;
     }
 
-    uavcan_protocol_dynamic_node_id_Allocation msg{};
+    uavcan_protocol_dynamic_node_id_Allocation msg;
     if(uavcan_protocol_dynamic_node_id_Allocation_decode(transfer, &msg)) return;
 
     uint8_t uuid_buffer[sizeof(msg.unique_id.data)]{};

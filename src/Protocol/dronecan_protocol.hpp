@@ -8,6 +8,8 @@
 #include "../ThirdParty/libcanard-dronecan/canard_dronecan.h"
 #include "../Common/foc_task.hpp"
 #include "../ThirdParty/libcanard-dronecan/dsdl/uavcan/protocol/NodeStatus.h"
+#include "../DataType/Headers/Base/motor_state.h"
+#include "../DataType/Headers/Base/motor_control_mode.h"
 
 namespace iFOC::Protocol
 {
@@ -32,6 +34,14 @@ private:
             TickType_t feedback = 0;
             TickType_t misc_feedback = 0;
         } last_send_tick;
+        struct
+        {
+            bool is_init_send = false;
+            bool last_motor_arm_state = false;
+            MotorState last_motor_state = MotorState::IDLE;
+            MotorControlMode last_motor_mode = MotorControlMode::CTRL_MODE_POSITION;
+            uint64_t last_error = 0;
+        } monitor;
         TickType_t xLastWakeTick = 0;
     public:
         explicit PollingTask(DroneCANProtocol* p);
@@ -57,6 +67,7 @@ private:
     struct
     {
         uint8_t uavcan_protocol_nodestatus = 0;
+        uint8_t uavcan_protocol_logmessage = 0;
         uint8_t ifoc_compact_feedback = 0;
         uint8_t ifoc_misc_feedback = 0;
         uint8_t node_allocation = 0;
@@ -87,6 +98,7 @@ private:
     void _SendResponse(DroneCAN::CanardRxTransfer* transfer, uint64_t signature, uint8_t id, const void* payload, uint16_t len);
     uavcan_protocol_NodeStatus BuildNodeStatus();
     void SendNodeStatus();
+    void SendLogMessage(uint8_t level, const char* text, uint8_t max_buffer_len);
 
     void SendFOCCompactFeedback();
     void SendFOCMiscFeedback();
