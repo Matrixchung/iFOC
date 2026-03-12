@@ -26,6 +26,7 @@ public:
     [[nodiscard]] float getValueByIndex(size_t index) const;
     void setValueByIndex(size_t index, float value);
     [[nodiscard]] size_t getSerializedSize() const;
+    static size_t getTableSizeBySerializedSize(size_t serialized_size);
 private:
     float input_min_ = 0.0f;
     float input_max_ = 0.0f;

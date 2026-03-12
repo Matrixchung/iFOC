@@ -332,4 +332,13 @@ size_t LookupTable::getSerializedSize() const
 {
     return sizeof(uint32_t) + sizeof(float) * 2 + sizeof(float) * table.size() + sizeof(uint16_t);
 }
+
+size_t LookupTable::getTableSizeBySerializedSize(size_t serialized_size)
+{
+    constexpr size_t header = sizeof(uint32_t) + sizeof(float) * 2 + sizeof(uint16_t);
+    if(serialized_size <= header) return 0;
+    serialized_size -= header;
+    if(serialized_size % sizeof(float) != 0) return 0;
+    return serialized_size / sizeof(float);
+}
 }
