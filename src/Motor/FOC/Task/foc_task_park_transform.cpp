@@ -13,10 +13,11 @@ void ParkTransformTask::UpdateRT(const float Ts)
 {
     const auto foc = GetMotor<FOCMotor>();
     foc->Iqd_measured = FOC_Park(foc->Ialphabeta_measured, foc->elec_angle_rad);
-    if(MAX(ABS(foc->Iqd_measured.q), ABS(foc->Iqd_measured.d)) >= foc->GetConfig().max_current() * 1.2f) // 120% max current
+    if(MAX(ABS(foc->Iqd_measured.q), ABS(foc->Iqd_measured.d)) >= foc->GetConfig().max_current() * 1.2f) // 120% max current, no UVLO
     {
         overcurrent_tick++;
-        if(overcurrent_tick >= OVERCURRENT_DETECT_TICKS)
+        if(overcurrent_tick >= OVERCURRENT_DETECT_TICKS &&
+            !foc->CheckError(MotorError::MOTOR_DC_BUS_UNDERVOLTAGE))
         {
             foc->DisarmWithError(MotorError::MOTOR_PHASE_D_Q_AXIS_OVER_CURRENT);
         }
