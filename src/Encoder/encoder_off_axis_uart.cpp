@@ -81,7 +81,7 @@ bool EncoderOffAxisUART::OnRxEvent(uint8_t* data, uint16_t len)
                     if(total_len >= sizeof(encoder_off_axis_struct_t))
                     {
                         // processing encoder struct
-                        encoder_off_axis_struct_t temp{};
+                        encoder_off_axis_struct_t temp;
                         memcpy(&temp, buffer.data() + i - (sizeof(encoder_off_axis_struct_t) - 2 * sizeof(uint8_t)), sizeof(encoder_off_axis_struct_t));
                         const uint8_t calc_crc8 = get_crc8((const uint8_t*)&temp, sizeof(encoder_off_axis_struct_t) - 3 * sizeof(uint8_t));
                         if(calc_crc8 == temp.crc8)

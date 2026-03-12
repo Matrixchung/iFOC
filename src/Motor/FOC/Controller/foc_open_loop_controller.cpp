@@ -39,7 +39,7 @@ void OpenLoopController::UpdateMid(const float Ts)
             case MotorControlMode::CTRL_MODE_CURRENT:
             case MotorControlMode::CTRL_MODE_VELOCITY:
             {
-                Motion target{};
+                Motion target;
                 foc->GetTargetMotion(target,
                         Motion::Ref::BASE,
                         Motion::TorqueUnit::AMP,

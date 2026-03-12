@@ -127,7 +127,7 @@ void SPI::SetDataWidth(SPIBase::DataWidth w)
 
 void SPI::SetClock(const uint32_t clock)
 {
-    crm_clocks_freq_type freq{};
+    crm_clocks_freq_type freq;
     crm_clocks_freq_get(&freq);
     uint32_t spi_base_clock = freq.apb2_freq;
 #if defined(AT32F403Axx)

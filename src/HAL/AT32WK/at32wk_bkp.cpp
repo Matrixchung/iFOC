@@ -20,7 +20,7 @@ namespace iFOC::HAL::Bootloader
     void JumpToBL(const BootloaderMsg& msg)
     {
         static_assert(sizeof(bkp_struct_t::dronecan_image_path) == sizeof(BootloaderMsg::update_image_path));
-        bkp_struct_t bkp{};
+        bkp_struct_t bkp;
         if(!read_bpr(&bkp)) return;
         if(!bkp.flags.bit.bootloader_presented) return;
         bkp.flags.bit.update_requested = true;
@@ -36,7 +36,7 @@ namespace iFOC::HAL::Bootloader
 
     bool HasBL()
     {
-        bkp_struct_t bkp{};
+        bkp_struct_t bkp;
         if(!read_bpr(&bkp)) return false;
         if(!bkp.flags.bit.bootloader_presented) return false;
         return true;
@@ -47,7 +47,7 @@ namespace iFOC::HAL::Bootloader
         major = 0;
         minor = 0;
         vcs = 0;
-        bkp_struct_t bkp{};
+        bkp_struct_t bkp;
         if(!read_bpr(&bkp)) return;
         if(!bkp.flags.bit.bootloader_presented) return;
         major = bkp.version.major;
@@ -57,7 +57,7 @@ namespace iFOC::HAL::Bootloader
 
     void SetAppInitSuccessFlag()
     {
-        bkp_struct_t bkp{};
+        bkp_struct_t bkp;
         if(!read_bpr(&bkp)) return;
         bkp.flags.bit.update_requested = false;
         bkp.flags.bit.app_init_success = true;
@@ -66,7 +66,7 @@ namespace iFOC::HAL::Bootloader
 
     void OnHardFault()
     {
-        bkp_struct_t bkp{};
+        bkp_struct_t bkp;
         if(!read_bpr(&bkp)) return;
         bkp.flags.bit.controllable_hardfault = true;
         if(bkp.controllable_hardfault_count < 255) bkp.controllable_hardfault_count++; // prevent overflow

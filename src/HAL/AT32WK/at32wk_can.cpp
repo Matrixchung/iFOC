@@ -84,7 +84,7 @@ FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
 {
     // if(xSemaphoreTakeAuto(tx_sem, WRITE_TIMEOUT_MS) == pdTRUE)
     {
-        can_tx_message_type tx_msg{};
+        can_tx_message_type tx_msg;
         if(msg.is_ext)
         {
             tx_msg.standard_id = 0;
@@ -187,7 +187,7 @@ void CAN::OnIRQ() const
     // else if(can_interrupt_flag_get(hcan, CAN_RF0MN_FLAG) != RESET)
     else if(hcan->rf0_bit.rf0mn)
     {
-        can_rx_message_type rx_msg{};
+        can_rx_message_type rx_msg;
         can_message_receive(hcan, CAN_RX_FIFO0, &rx_msg);
         // if(rx_msg.id_type != CAN_ID_STANDARD) return;
         // DataType::Comm::CANMessage dt_can_msg
@@ -196,7 +196,7 @@ void CAN::OnIRQ() const
         //     .is_rtr = rx_msg.frame_type == CAN_TFT_REMOTE,
         //     .len = (uint8_t)_constrain(rx_msg.dlc, 0, sizeof(DataType::Comm::CANMessage::data))
         // };
-        DataType::Comm::CANMessage dt_can_msg{};
+        DataType::Comm::CANMessage dt_can_msg;
         dt_can_msg.is_ext = rx_msg.id_type == CAN_ID_EXTENDED;
         dt_can_msg.cob_id = dt_can_msg.is_ext ? rx_msg.extended_id : rx_msg.standard_id;
         dt_can_msg.is_rtr = rx_msg.frame_type == CAN_TFT_REMOTE;

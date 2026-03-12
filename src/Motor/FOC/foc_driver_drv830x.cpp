@@ -26,8 +26,8 @@ FOCDriverDRV830x::FOCDriverDRV830x(FOCDriverBase* _pwm, SPIBase* _spi, GPIOBase 
 void FOCDriverDRV830x::OnFaultIRQ()
 {
     SPIInit(); // there might be other SPI devices with different CPOL/CPHA
-    status_1 st1{};
-    status_2 st2{};
+    status_1 st1;
+    status_2 st2;
     ReadReg(0x00, &st1.reg);
     ReadReg(0x01, &st2.reg);
 }

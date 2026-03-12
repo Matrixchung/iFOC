@@ -19,7 +19,7 @@ void SpeedLoopPI::InitSpeedLoop()
 void SpeedLoopPI::UpdateSpeedLoop(float Ts)
 {
     const auto foc = GetMotor<FOCMotor>();
-    Motion target{}, current{};
+    Motion target, current;
     foc->GetTargetMotion(target,
                     Motion::Ref::BASE,
                     Motion::TorqueUnit::AMP,
@@ -42,16 +42,16 @@ void SpeedLoopPI::UpdateSpeedLoop(float Ts)
         case MotorControlMode::CTRL_MODE_POSITION:
         {
             // Target: pos, Feedforward: speed, torque
-            float pos_error_base = target.pos.value - current.pos.value; // RAD
-            float target_speed_base = pos_pi.GetOutput(pos_error_base, Ts) + target.speed.value; // RAD/S, +ff
-            float speed_error = target_speed_base - current.speed.value; // RAD/S
+            const float pos_error_base = target.pos.value - current.pos.value; // RAD
+            const float target_speed_base = pos_pi.GetOutput(pos_error_base, Ts) + target.speed.value; // RAD/S, +ff
+            const float speed_error = target_speed_base - current.speed.value; // RAD/S
             foc->Iqd_target.q = speed_pi.GetOutput(speed_error, Ts) + target.torque.value; // Amp, +ff
             break;
         }
         case MotorControlMode::CTRL_MODE_VELOCITY:
         {
             // Target: speed, Feedforward: torque
-            float speed_error = target.speed.value - current.speed.value; // RAD/S
+            const float speed_error = target.speed.value - current.speed.value; // RAD/S
             foc->Iqd_target.q = speed_pi.GetOutput(speed_error, Ts) + target.torque.value; // Amp, +ff
             break;
         }
@@ -59,6 +59,11 @@ void SpeedLoopPI::UpdateSpeedLoop(float Ts)
         {
             // Target: torque
             foc->Iqd_target.q = target.torque.value;
+            break;
+        }
+        case MotorControlMode::CTRL_MODE_HYBRID:
+        {
+            // MIT control
             break;
         }
         default: ResetSpeedLoop(); break;
