@@ -2,15 +2,27 @@
 
 #if defined __has_include
 #  if __has_include ("main.h") // STM32 Environment
-#  include "main.h"
+    #  include "main.h"
 #  elif __has_include ("wk_gpio.h") // AT32 with Workbench Environment
-#  define AT32WK_ENV
-#  include "wk_gpio.h"
+    #  define AT32WK_ENV
+    #  include "wk_gpio.h"
+#elif __has_include ("hpm_common.h") && __has_include("board.h") // HPMicro Environment
+    #  define HPM_ENV
+    #  include "board.h"
+#elif defined GD32_ENV
+    #if __has_include ("gd32g5x3_init.h")
+        #ifndef GD32G5X3
+            #define GD32G5X3
+        #endif
+        #include "gd32g5x3_init.h"
+    #else
+        #error "Supported GD32 platform not found, please implement"
+    #endif
 #else
-#error "No main.h specified, please check hal_const.h"
+    #error "No main.h specified, please check hal_const.h"
 #  endif
 #else
-#include "main.h"
+    #include "main.h"
 #endif
 
 #ifdef USE_HAL_DRIVER // STM32 Environment
@@ -18,14 +30,20 @@
 
 #elif defined(AT32F403Axx) || defined(AT32F407xx) // AT32F40x Environment
 #include "AT32WK/at32wk_nvm_address.h"
+
+#elif defined(HPM_ENV)
+#include "HPMicro/hpmicro_nvm_address.h"
+
+#elif defined(GD32_ENV)
+#include "GD32/gd32_nvm_address.h"
 #endif
 
 /* Checking const validity */
 
 #if !defined(FLASH_WRITE_GRAN_BITS) || \
-    !defined(FLASH_SECTOR_SIZE_BYTES) || \
-    !defined(FLASH_USER_START_ADDR) || \
-    !defined(FLASH_USER_AREA_SIZE)
+!defined(FLASH_SECTOR_SIZE_BYTES) || \
+!defined(FLASH_USER_START_ADDR) || \
+!defined(FLASH_USER_AREA_SIZE)
 #error "At least one of the required constant is not defined, please check hal_const.h"
 #endif
 
