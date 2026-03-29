@@ -84,6 +84,7 @@ void ExtendParamCalibTask::UpdateNormal()
     {
         case EstStage::NONE:
         {
+            foc->Disarm();
             if(const auto enc = foc->GetEncoderByName("EncOffAxis"); enc && foc->GetPrimaryEncoder())
             {
                 if(!((Encoder::EncoderOffAxisBase*)enc)->IsPeakCalibrated())
@@ -364,6 +365,8 @@ void ExtendParamCalibTask::UpdateNormal()
                 break;
             }
 
+            foc->Disarm();
+            sleep(100);
             foc->UnbypassTaskByName("EncArbiter", "CurrLoop");
             if(!foc->GetTaskByName("SpeedLoop")) foc->InsertTaskBeforeName("CurrLoop", new SpeedLoopPI);
             foc->UnbypassTaskByName("SpeedLoop");
