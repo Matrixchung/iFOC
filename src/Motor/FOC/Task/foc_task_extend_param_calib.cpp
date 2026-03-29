@@ -110,6 +110,7 @@ void ExtendParamCalibTask::UpdateNormal()
                     break;
                 }
             }
+#if FOC_ANTICOGGING_AVAILABLE
             if(const auto enc = foc->GetPrimaryEncoder();
                 enc && enc->GetEncoderType() == Encoder::Type::ABSOLUTE_ENCODER &&
                 foc->anticogging_lut.getTableSize() != ANTICOGGING_LUT_POINTS &&
@@ -123,6 +124,7 @@ void ExtendParamCalibTask::UpdateNormal()
                 stage = EstStage::ANTICOGGING_INIT;
                 break;
             }
+#endif
             if(anticogging_cw_map)
             {
                 vPortFree(anticogging_cw_map);
@@ -324,6 +326,7 @@ void ExtendParamCalibTask::UpdateNormal()
             foc->RemoveTaskByName(GetName());
             break;
         }
+#if FOC_ANTICOGGING_AVAILABLE
         case EstStage::ANTICOGGING_INIT:
         {
             const auto encoder = foc->GetPrimaryEncoder();
@@ -453,6 +456,7 @@ void ExtendParamCalibTask::UpdateNormal()
             stage = EstStage::NONE;
             break;
         }
+#endif
         default:
         {
             sleep(100);

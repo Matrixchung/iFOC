@@ -115,7 +115,7 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
         goto error;
     }
     if(const auto ind = GetIndicator()) ind->Init();
-
+#if FOC_ANTICOGGING_AVAILABLE
     // read anticogging lut, only if enable_anticogging is defined in config
     if(GetConfig().enable_anticogging())
     {
@@ -143,7 +143,7 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
             BlobNVMStorage().ClearNVM(key);
         }
     }
-
+#endif
     AppendTask(&this->state_machine);
     AppendTask(new UpdateSenseTask); // "SenseTask"
     AppendTask(new EncoderArbiterTask); // "EncArbiter"

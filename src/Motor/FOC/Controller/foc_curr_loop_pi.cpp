@@ -48,6 +48,7 @@ void CurrLoopPI::UpdateRT(float Ts)
     {
         // anticogging here
         float Iq_cogging = 0.0f;
+#if FOC_ANTICOGGING_AVAILABLE
         if(foc->GetConfig().enable_anticogging() &&
             foc->GetCurrentState() == MotorState::SENSORED_CLOSED_LOOP_CONTROL &&
             foc->anticogging_lut.getTableSize() == ANTICOGGING_LUT_POINTS)
@@ -57,7 +58,7 @@ void CurrLoopPI::UpdateRT(float Ts)
                 Iq_cogging = foc->anticogging_lut.lookupPeriodic(enc->compensated_single_round_angle_rad);
             }
         }
-
+#endif
         // Q-Axis
         const float iq_error = Iq_cogging + foc->Iqd_target.q - foc->Iqd_measured.q;
         float Uq_total_feedforward = 0.0f;
