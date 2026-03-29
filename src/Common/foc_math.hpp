@@ -77,7 +77,7 @@ static void FOC_SVPWM(qd_t Uqd_real, const real_t theta_rad, const real_t Udc_re
     Uabc_Pu[2] = Ualphabeta.alpha - Ualphabeta.beta;
 
     // Step #4: Midpoint Clamp
-    real_t Ucom_Pu = 0.5f * (MAX(Uabc_Pu[0], Uabc_Pu[1], Uabc_Pu[2]) + MIN(Uabc_Pu[0], Uabc_Pu[1], Uabc_Pu[2]));
+    real_t Ucom_Pu = 0.5f * (IFOC_MAX(Uabc_Pu[0], Uabc_Pu[1], Uabc_Pu[2]) + MIN(Uabc_Pu[0], Uabc_Pu[1], Uabc_Pu[2]));
 
     // Step #5: Calculate Tabc
     Ucom_Pu -= 0.5f;

@@ -13,7 +13,7 @@ void ParkTransformTask::UpdateRT(const float Ts)
 {
     const auto foc = GetMotor<FOCMotor>();
     foc->Iqd_measured = FOC_Park(foc->Ialphabeta_measured, foc->elec_angle_rad);
-    if(MAX(ABS(foc->Iqd_measured.q), ABS(foc->Iqd_measured.d)) >= foc->GetConfig().max_current() * 1.2f) // 120% max current, no UVLO
+    if(IFOC_MAX(ABS(foc->Iqd_measured.q), ABS(foc->Iqd_measured.d)) >= foc->GetConfig().max_current() * 1.2f) // 120% max current, no UVLO
     {
         overcurrent_tick++;
         if(overcurrent_tick >= OVERCURRENT_DETECT_TICKS &&

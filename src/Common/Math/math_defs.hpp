@@ -98,7 +98,7 @@ constexpr First __max_helper(const First & first,const Second & second,const Res
 }
 
 template<typename ... Ts >
-static constexpr auto MAX(Ts && ... args){return __max_helper(std::forward<Ts>(args)...);}
+static constexpr auto IFOC_MAX(Ts && ... args){return __max_helper(std::forward<Ts>(args)...);}
 
 template<typename First>
 constexpr First __min_helper(const First & value) {
@@ -301,8 +301,8 @@ __fast_inline constexpr uint32_t __ctz_impl(uint32_t x) {
 #endif
 #endif
 
-static constexpr auto BITS(auto x) {return (sizeof(x) * 8);}
-static consteval auto PLAT_WIDTH() {return BITS(std::size_t());}
+static constexpr auto IFOC_BITS(auto x) {return (sizeof(x) * 8);}
+static consteval auto PLAT_WIDTH() {return IFOC_BITS(std::size_t());}
 
 static consteval auto YEAR() {return (((__DATE__[9]-'0')) * 10 + (__DATE__[10]-'0'));}
 static consteval auto MONTH() {

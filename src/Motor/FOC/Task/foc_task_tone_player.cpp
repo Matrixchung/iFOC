@@ -55,7 +55,7 @@ FuncRetCode TonePlayerTask::PlaySound(const Vector<real_t>& freq_list, const flo
 FuncRetCode TonePlayerTask::PlaySound(const Vector<real_t>& freq_list, const float Tbeat, const bool is_bypass)
 {
     const auto foc = GetMotor<FOCMotor>();
-    float Uinject = MAX(foc->GetBusSense()->voltage, foc->GetConfig().max_voltage()) * 0.5f;
+    float Uinject = IFOC_MAX(foc->GetBusSense()->voltage, foc->GetConfig().max_voltage()) * 0.5f;
     if(Uinject >= GLOBAL_MAX_INJECT_VOLTAGE) Uinject = GLOBAL_MAX_INJECT_VOLTAGE;
     if(foc->GetConfig().phase_resistance_valid())
     {

@@ -32,7 +32,7 @@ void TaskTimer::stop(uint32_t start_us)
     const uint32_t end_time_us = HAL::PerfCounter::GetCounter() / HAL::PerfCounter::counter_to_us;
     elapsed_time_us = end_time_us - start_us;
     if(end_time_us < start_us) elapsed_time_us += HAL::PerfCounter::max_counter_us;
-    // max_elapsed_time_us = MAX(max_elapsed_time_us, elapsed_time_us);
+    // max_elapsed_time_us = IFOC_MAX(max_elapsed_time_us, elapsed_time_us);
     if(elapsed_time_us > max_elapsed_time_us) max_elapsed_time_us = elapsed_time_us;
 }
 #else
