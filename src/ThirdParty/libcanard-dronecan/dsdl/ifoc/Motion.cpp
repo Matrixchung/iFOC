@@ -60,9 +60,9 @@ bool ifoc_Motion_decode(const CanardRxTransfer* transfer, struct ifoc_Motion* ms
 struct ifoc_Motion sample_ifoc_Motion_msg(void) {
     struct ifoc_Motion msg;
 
-    msg.torque = random_float16_val();
-    msg.speed = random_float16_val();
-    msg.pos = random_float16_val();
+    msg.torque = random_float_val();
+    msg.speed = random_float_val();
+    msg.pos = random_float_val();
     return msg;
 }
 #endif

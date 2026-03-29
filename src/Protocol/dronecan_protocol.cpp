@@ -60,8 +60,8 @@ static constexpr char DRONECAN_NODE_NAME[] = "node_name";
 #define IFOC_GETTASKSTATS_SIGNATURE_OVERRIDE (0xAC9B145FEDF47CA4ULL)
 #define IFOC_GETCLEARERRORINDEX_SIGNATURE_OVERRIDE (0x62bb476f3e79fa2cULL)
 #define IFOC_GETENCODERS_SIGNATURE_OVERRIDE (0x3057F54C149920A3ULL)
-#define IFOC_GETCURRENTMOTION_SIGNATURE_OVERRIDE (0x5AFC5D6C10FB572CULL)
-#define IFOC_GETTARGETMOTION_SIGNATURE_OVERRIDE (0x67D5E143B1B01898ULL)
+#define IFOC_GETCURRENTMOTION_SIGNATURE_OVERRIDE (0x50b27b206e23f7f2ULL)
+#define IFOC_GETTARGETMOTION_SIGNATURE_OVERRIDE (0x6d9bc70fcf68b846ULL)
 #define IFOC_SETREFFRAME_SIGNATURE_OVERRIDE (0x1d8a09f14b68e511ULL)
 #define IFOC_SETMOTORSTATE_SIGNATURE_OVERRIDE (0x75b84757ca4943cbULL)
 #define IFOC_SETCONTROLMODE_SIGNATURE_OVERRIDE (0xa7a844f501ba1097ULL)
@@ -166,7 +166,7 @@ void DroneCANProtocol::PollingTask::UpdateNormal()
         parent->SetNodeID(new_node_id);
     }
     // #1: Response received transfer first
-    DataType::Comm::CANMessage message;
+    DataType::Comm::CANMessage message{};
     if(parent->isr_msg_fifo.used())
     {
         // if(parent->isr_msg_fifo.get(&message, 1)) // get one single frame stored in fifo?
@@ -1270,10 +1270,10 @@ void DroneCANProtocol::SendFOCSetDebugCmdResponse(DroneCAN::CanardRxTransfer* tr
     motor->UpdateWatchdog();
     if(!motor->GetError() && motor->GetCurrentState() == MotorState::IDLE)
     {
-        request.phase_a_duty = _constrain(request.phase_a_duty, -1.0f, 1.0f);
-        request.phase_b_duty = _constrain(request.phase_b_duty, -1.0f, 1.0f);
-        request.phase_c_duty = _constrain(request.phase_c_duty, -1.0f, 1.0f);
-        motor->Arm();
+        request.phase_a_duty = _constrain(request.phase_a_duty, 0.0f, 1.0f);
+        request.phase_b_duty = _constrain(request.phase_b_duty, 0.0f, 1.0f);
+        request.phase_c_duty = _constrain(request.phase_c_duty, 0.0f, 1.0f);
+        if(!motor->IsArmed()) motor->Arm();
         motor->GetDriver()->SetOutput3CHPu(request.phase_a_duty, request.phase_b_duty, request.phase_c_duty);
     }
 }
@@ -1934,7 +1934,7 @@ void DroneCANProtocol::OnDNAAllocation(DroneCAN::CanardRxTransfer* transfer)
         return;
     }
 
-    uavcan_protocol_dynamic_node_id_Allocation msg;
+    uavcan_protocol_dynamic_node_id_Allocation msg{};
     if(uavcan_protocol_dynamic_node_id_Allocation_decode(transfer, &msg)) return;
 
     uint8_t uuid_buffer[sizeof(msg.unique_id.data)]{};

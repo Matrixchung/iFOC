@@ -4,8 +4,8 @@
 #include "canard_dronecan.h"
 
 
-#define IFOC_MOTION_MAX_SIZE 6
-#define IFOC_MOTION_SIGNATURE (0xA547CF72C30D98EEULL)
+#define IFOC_MOTION_MAX_SIZE 12
+#define IFOC_MOTION_SIGNATURE (0x4CA2E7AEE5FEA0A8ULL)
 
 struct ifoc_Motion {
     float torque;
@@ -29,21 +29,12 @@ void _ifoc_Motion_encode(uint8_t* buffer, uint32_t* bit_ofs, struct ifoc_Motion*
     (void)msg;
     (void)tao;
 
-    {
-        uint16_t float16_val = DroneCAN::canardConvertNativeFloatToFloat16(msg->torque);
-        DroneCAN::canardEncodeScalar(buffer, *bit_ofs, 16, &float16_val);
-    }
-    *bit_ofs += 16;
-    {
-        uint16_t float16_val = DroneCAN::canardConvertNativeFloatToFloat16(msg->speed);
-        DroneCAN::canardEncodeScalar(buffer, *bit_ofs, 16, &float16_val);
-    }
-    *bit_ofs += 16;
-    {
-        uint16_t float16_val = DroneCAN::canardConvertNativeFloatToFloat16(msg->pos);
-        DroneCAN::canardEncodeScalar(buffer, *bit_ofs, 16, &float16_val);
-    }
-    *bit_ofs += 16;
+    DroneCAN::canardEncodeScalar(buffer, *bit_ofs, 32, &msg->torque);
+    *bit_ofs += 32;
+    DroneCAN::canardEncodeScalar(buffer, *bit_ofs, 32, &msg->speed);
+    *bit_ofs += 32;
+    DroneCAN::canardEncodeScalar(buffer, *bit_ofs, 32, &msg->pos);
+    *bit_ofs += 32;
 }
 
 /*
@@ -54,26 +45,14 @@ bool _ifoc_Motion_decode(const DroneCAN::CanardRxTransfer* transfer, uint32_t* b
     (void)bit_ofs;
     (void)msg;
     (void)tao;
-    {
-        uint16_t float16_val;
-        DroneCAN::canardDecodeScalar(transfer, *bit_ofs, 16, true, &float16_val);
-        msg->torque = DroneCAN::canardConvertFloat16ToNativeFloat(float16_val);
-    }
-    *bit_ofs += 16;
+    DroneCAN::canardDecodeScalar(transfer, *bit_ofs, 32, true, &msg->torque);
+    *bit_ofs += 32;
 
-    {
-        uint16_t float16_val;
-        DroneCAN::canardDecodeScalar(transfer, *bit_ofs, 16, true, &float16_val);
-        msg->speed = DroneCAN::canardConvertFloat16ToNativeFloat(float16_val);
-    }
-    *bit_ofs += 16;
+    DroneCAN::canardDecodeScalar(transfer, *bit_ofs, 32, true, &msg->speed);
+    *bit_ofs += 32;
 
-    {
-        uint16_t float16_val;
-        DroneCAN::canardDecodeScalar(transfer, *bit_ofs, 16, true, &float16_val);
-        msg->pos = DroneCAN::canardConvertFloat16ToNativeFloat(float16_val);
-    }
-    *bit_ofs += 16;
+    DroneCAN::canardDecodeScalar(transfer, *bit_ofs, 32, true, &msg->pos);
+    *bit_ofs += 32;
 
     return false; /* success */
 }
