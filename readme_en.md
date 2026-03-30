@@ -1,4 +1,12 @@
-# iFOC Intelligent FOC System
+# iFOC - Intelligent FOC System
+
+### Usages
+
+#### Prerequisites
+
+- Modified DroneCAN GUI Tool (for debugging and firmware update)：https://github.com/Matrixchung/dronecan_gui_tool
+- DroneCAN-compatible Bootloader：https://github.com/Matrixchung/iBL
+- ROS2 middleware (also independently executable) and Python package：https://github.com/Matrixchung/ifoc_control
 
 ### Design Docs
 

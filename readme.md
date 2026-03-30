@@ -6,6 +6,7 @@
 
 - 改进版 DroneCAN GUI Tool 上位机：https://github.com/Matrixchung/dronecan_gui_tool
 - 配套的 Bootloader 工程：https://github.com/Matrixchung/iBL
+- ROS2 中间件（可独立运行）和配套的 Python 库：https://github.com/Matrixchung/ifoc_control
 
 ### 设计文档
 
