@@ -284,14 +284,19 @@ __fast_inline void MotorBase<shunt_count>::DispatchRTTasks(const float Ts) const
 template<uint8_t shunt_count>
 __fast_inline void MotorBase<shunt_count>::DispatchMidTasks(const float Ts)
 {
-    if(watchdog_timeout_cnt > 0)
+    if(watchdog_timeout_cnt > 0 &&
+        IsArmed() &&
+        (GetCurrentState() == MotorState::SENSORED_CLOSED_LOOP_CONTROL ||
+            GetCurrentState() == MotorState::SENSORLESS_CLOSED_LOOP_CONTROL)
+            )
     {
         if(watchdog_cnt >= watchdog_timeout_cnt)
         {
-            DisarmWithError(MotorError::SYSTEM_MID_WATCHDOG_TIMEOUT);
+            if(!CheckError(MotorError::SYSTEM_MID_WATCHDOG_TIMEOUT)) DisarmWithError(MotorError::SYSTEM_MID_WATCHDOG_TIMEOUT);
         }
         else watchdog_cnt++;
     }
+    else watchdog_cnt = 0;
     if(IsArmed())
     {
         ProcessTrajTargetMotion(Ts);
