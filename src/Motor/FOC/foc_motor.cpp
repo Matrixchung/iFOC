@@ -75,11 +75,11 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
     if(GetConfig().deduction_ratio() <= 0.0f) GetConfig().set_deduction_ratio(1.0f);
     if(GetConfig().max_output_speed_rpm() <= 0.0f) GetConfig().set_max_output_speed_rpm(DEFAULT_PARAM_MOTOR_MAX_OUTPUT_SPEED_RPM);
     if(GetConfig().watchdog_timeout_sec() <= 0.0f) GetConfig().set_watchdog_timeout_sec(0.0f);
-    else
-    {
-        float temp = GetConfig().watchdog_timeout_sec() / iFOC::MID_LOOP_TS;
-        if(temp >= 1.0f) watchdog_timeout_cnt = (uint32_t)temp;
-    }
+    // else
+    // {
+    //     float temp = GetConfig().watchdog_timeout_sec() / iFOC::MID_LOOP_TS;
+    //     if(temp >= 1.0f) watchdog_timeout_cnt = (uint32_t)temp;
+    // }
     result = bus_sense->Init();
     if(result != FuncRetCode::OK)
     {
@@ -166,20 +166,31 @@ error:
 
 bool FOCMotor::Arm()
 {
-    if(const auto& curr = GetCurrLoop()) curr->ResetCurrLoop();
-    if(const auto& speed = GetSpeedLoop()) speed->ResetSpeedLoop();
-    if(error == to_underlying(MotorError::NONE))
+    if(!is_armed)
     {
-        is_armed = true;
-        GetDriver()->SetOutput3CHPu(0.0f, 0.0f, 0.0f);
-        GetDriver()->EnableBridges(Driver::FOCDriverBase::Bridge::HB_U,
-                                   Driver::FOCDriverBase::Bridge::LB_U,
-                                   Driver::FOCDriverBase::Bridge::HB_V,
-                                   Driver::FOCDriverBase::Bridge::LB_V,
-                                   Driver::FOCDriverBase::Bridge::HB_W,
-                                   Driver::FOCDriverBase::Bridge::LB_W);
+        if(const auto& curr = GetCurrLoop()) curr->ResetCurrLoop();
+        if(const auto& speed = GetSpeedLoop()) speed->ResetSpeedLoop();
+        if(error == to_underlying(MotorError::NONE))
+        {
+            // update watchdog_timeout_count
+            if(GetConfig().watchdog_timeout_sec() > 0.0f)
+            {
+                watchdog_timeout_cnt = (uint32_t)(GetConfig().watchdog_timeout_sec() / MID_LOOP_TS);
+            }
+            // update limits
+            config_max_current = GetConfig().max_current();
+            config_max_base_speed_rad_s = RPM2RAD(GetConfig().max_output_speed_rpm() * GetConfig().deduction_ratio(), 1); // OUTPUT -> BASE frame
+            is_armed = true;
+            GetDriver()->SetOutput3CHPu(0.0f, 0.0f, 0.0f);
+            GetDriver()->EnableBridges(Driver::FOCDriverBase::Bridge::HB_U,
+                                       Driver::FOCDriverBase::Bridge::LB_U,
+                                       Driver::FOCDriverBase::Bridge::HB_V,
+                                       Driver::FOCDriverBase::Bridge::LB_V,
+                                       Driver::FOCDriverBase::Bridge::HB_W,
+                                       Driver::FOCDriverBase::Bridge::LB_W);
+        }
+        else Disarm();
     }
-    else Disarm();
     return error == to_underlying(MotorError::NONE);
 }
 
@@ -288,7 +299,7 @@ void FOCMotor::GetTargetMotion(Motion& ret, Motion::Ref r, Motion::TorqueUnit t,
 {
     // Motion ret{current_target}; // current_target is stored with Ref == BASE, and other default unit agreements (AMP, RADS, RAD)
     ret = current_target;
-    if(ret.ref != Motion::Ref::BASE) // return zero
+    if(ret.ref != Motion::Ref::BASE || r == Motion::Ref::ELEC) // return zero
     {
         ret.Reset();
         return;
@@ -304,7 +315,7 @@ void FOCMotor::GetTargetMotion(Motion& ret, Motion::Ref r, Motion::TorqueUnit t,
         ret.speed = {ret.speed.value * temp, ret.speed.limit * temp, Motion::SpeedUnit::RADS}; // BASE -> OUTPUT
         ret.pos = {ret.pos.value * temp, ret.pos.limit * temp, Motion::PosUnit::RAD};
     }
-    else // Note that a ref_frame == ELEC will result in the same output as BASE.
+    else
     {
         if(t == Motion::TorqueUnit::NM && GetConfig().torque_constant_valid())
         {
@@ -326,7 +337,7 @@ void FOCMotor::SetTargetMotion(Motion& motion)
         if(GetConfig().deduction_ratio() <= 0.0f) return; // deduction ratio invalid, return
         if(motion.torque.unit == Motion::TorqueUnit::NM)
         {
-            real_t temp = 1.0f / GetConfig().deduction_ratio();
+            const real_t temp = 1.0f / GetConfig().deduction_ratio();
             motion.torque.value *= temp; // OUTPUT -> BASE
             motion.torque.limit *= temp;
         }
@@ -338,17 +349,17 @@ void FOCMotor::SetTargetMotion(Motion& motion)
     if(motion.torque.unit == Motion::TorqueUnit::NM)
     {
         if(!GetConfig().torque_constant_valid() || GetConfig().torque_constant() <= 0.0f) return; // if received torque target but torque constant is invalid, return
-        real_t temp = 1.0f / GetConfig().torque_constant(); // [A/Nm]
+        const real_t temp = 1.0f / GetConfig().torque_constant(); // [A/Nm]
         motion.torque = {motion.torque.value * temp, motion.torque.limit * temp, Motion::TorqueUnit::AMP}; // Nm -> A
     }
     // constrain speed & current
     motion.speed.value = _constrain(motion.speed.value, -config_max_base_speed_rad_s, config_max_base_speed_rad_s);
-    motion.speed.limit = _constrain(motion.speed.limit, 0.0f, config_max_base_speed_rad_s);
+    // motion.speed.limit = _constrain(motion.speed.limit, 0.0f, config_max_base_speed_rad_s); // remove check (for MIT mode, speed.limit is used as Kd)
     motion.torque.value = _constrain(motion.torque.value, -config_max_current, config_max_current);
     motion.torque.limit = _constrain(motion.torque.limit, 0.0f, config_max_current);
     motion.ref = Motion::Ref::BASE;
     current_target = motion;
-    _is_ramping_motion = false; // If ramping, will be overrided by SetRampedMotion() later.
+    _is_ramping_motion = false; // If ramping, will be overridden by SetRampedMotion() later.
     _is_trajectory_motion = false;
 }
 
