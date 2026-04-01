@@ -19,14 +19,14 @@ namespace iFOC::HAL
 /// \param theta input angle [rad], range: [0, 2PI]
 /// \param sin floating point representation of sin(theta). range: [-1, 1]
 /// \param cos floating point representation of cos(theta). range: [-1, 1]
-void sinf_cosf_impl(const real_t theta, real_t& sin, real_t& cos);
+void sinf_cosf_impl(real_t theta, real_t& sin, real_t& cos);
 
 /// Initialize delay part.
 void DelayInit();
 
 /// Delay a specific length of CPU cycle. DelayUs() and DelayMs() are based on this
 /// \param cycle number of CPU cycles to be delayed
-void DelayCycle(volatile uint32_t cycle);
+void DelayCycle(uint32_t cycle);
 
 /// Get current core frequency, in [Hz]
 /// \return core frequency, in [Hz]
