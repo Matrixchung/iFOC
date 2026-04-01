@@ -477,6 +477,11 @@ void DroneCANProtocol::ProcessTransfer(DroneCAN::CanardInstance* ins, DroneCAN::
                     SendFOCSetControlModeResponse(transfer);
                     break;
                 }
+                case IFOC_SETMITTARGET_ID:
+                {
+                    SendFOCSetMITTargetResponse(transfer);
+                    break;
+                }
                 case IFOC_SETTRAJTARGET_ID:
                 {
                     SendFOCSetTrajTargetResponse(transfer);
@@ -630,6 +635,11 @@ bool DroneCANProtocol::ShouldAccept(const DroneCAN::CanardInstance* ins, uint64_
                 case IFOC_SETCONTROLMODE_ID:
                 {
                     *out = IFOC_SETCONTROLMODE_SIGNATURE_OVERRIDE;
+                    return true;
+                }
+                case IFOC_SETMITTARGET_ID:
+                {
+                    *out = IFOC_SETMITTARGET_SIGNATURE_OVERRIDE;
                     return true;
                 }
                 case IFOC_SETTRAJTARGET_ID:
@@ -1108,6 +1118,71 @@ void DroneCANProtocol::SendFOCSetControlModeResponse(DroneCAN::CanardRxTransfer*
     uint8_t buffer[IFOC_SETCONTROLMODE_RESPONSE_MAX_SIZE];
     const uint16_t len = ifoc_SetControlModeResponse_encode(&response, buffer);
     _SendResponse(transfer, IFOC_SETCONTROLMODE_SIGNATURE_OVERRIDE, IFOC_SETCONTROLMODE_ID, buffer, len);
+}
+
+void DroneCANProtocol::SendFOCSetMITTargetResponse(DroneCAN::CanardRxTransfer* transfer)
+{
+    ifoc_SetMITTargetRequest request;
+    if(ifoc_SetMITTargetRequest_decode(transfer, &request)) return;
+    const auto motor = GetMotor<FOCMotor>();
+    motor->UpdateWatchdog();
+    // MIT mapping:
+    // P_MAX = mit_output_pos_range_deg (OUTPUT, ABSOLUTE, DEGREE, [-P_MAX, P_MAX])
+    // V_MAX = mit_output_vel_range_rpm (OUTPUT, ABSOLUTE, RPM, [-V_MAX, V_MAX])
+    // T_MAX = mit_output_tor_range_nm  (OUTPUT, ABSOLUTE, NM, [-T_MAX, T_MAX])
+
+    // To target motion: BASE, AMP, RADS, RAD
+    // #1: Check parameter validity first
+    if(motor->GetConfig().deduction_ratio() > 0.0f &&
+        motor->GetConfig().torque_constant_valid() &&
+        motor->GetConfig().torque_constant() > 0.0f &&
+        motor->GetConfig().mit_output_pos_range_deg() > 0.0f &&
+        motor->GetConfig().mit_output_vel_range_rpm() > 0.0f &&
+        motor->GetConfig().mit_output_tor_range_nm() > 0.0f)
+    {
+        // #2: Check Kp/Kd(uint10,1023) validity
+        if(request.kp_pu > 0 && request.kd_pu == 0) return;
+
+        // Kp, Kd (output shaft, Nm/rad & Nm*s/rad), to base frame
+        constexpr float kp_x = ((double)IFOC_SETMITTARGET_REQUEST_MIT_MAX_KP / 1023.0);
+        const float modifier = 1.0f / (motor->GetConfig().deduction_ratio() * motor->GetConfig().deduction_ratio());
+        const float target_Kp_Nm_per_rad = (float)request.kp_pu * kp_x * modifier;
+        constexpr float kd_x = ((double)IFOC_SETMITTARGET_REQUEST_MIT_MAX_KD / 1023.0);
+        const float target_Kd_Nms_per_rad = (float)request.kd_pu * kd_x * modifier;
+
+        // #3: get pos & vel & tor in OUTPUT frame, with deg, rpm & nm
+        // for position, pu limited to [-32767, +32767]
+        if(request.position_pu == -32768) request.position_pu = -32767;
+        const float target_pos_output_deg = ((float)request.position_pu / 32767.0f) * motor->GetConfig().mit_output_pos_range_deg();
+
+        // for velocity, pu limited to [-511, 511]
+        request.velocity_pu = _constrain(request.velocity_pu, -511, 511);
+        const float target_vel_output_rpm = ((float)request.velocity_pu / 511.0f) * motor->GetConfig().mit_output_vel_range_rpm();
+
+        // for torque, pu limited to [-511, 511]
+        request.torque_pu = _constrain(request.torque_pu, -511, 511);
+        const float target_tor_output_nm = ((float)request.torque_pu / 511.0f) * motor->GetConfig().mit_output_tor_range_nm();
+
+        // #4: convert pos & vel & tor to BASE frame, with RAD, RADS & AMP
+        const float target_pos_base_rad = DEG2RAD(target_pos_output_deg) * motor->GetConfig().deduction_ratio();
+        const float target_vel_base_rad_s = RPM2RAD(target_vel_output_rpm, 1) * motor->GetConfig().deduction_ratio();
+        const float x = 1.0f / (motor->GetConfig().deduction_ratio() * motor->GetConfig().torque_constant());
+        const float target_tor_base_amp = target_tor_output_nm * x;
+        // Also, we will get Iq limit.
+        const float base_amp_limit = motor->GetConfig().mit_output_tor_range_nm() * x;
+
+        // #5: construct target motion frame
+        Motion target_motion
+        {
+            .ref = Motion::Ref::BASE,
+            .torque = {target_tor_base_amp, base_amp_limit, Motion::TorqueUnit::AMP},
+            .speed = {target_vel_base_rad_s, target_Kd_Nms_per_rad, Motion::SpeedUnit::RADS},
+            .pos = {target_pos_base_rad, target_Kp_Nm_per_rad, Motion::PosUnit::RAD}
+        };
+
+        motor->SetControlMode(MotorControlMode::CTRL_MODE_HYBRID);
+        motor->SetTargetMotion(target_motion);
+    }
 }
 
 void DroneCANProtocol::SendFOCSetTrajTargetResponse(DroneCAN::CanardRxTransfer* transfer)

@@ -16,7 +16,7 @@ void SpeedLoopPI::InitSpeedLoop()
     pos_pi.limit = foc->config_max_base_speed_rad_s;
 }
 
-void SpeedLoopPI::UpdateSpeedLoop(float Ts)
+void SpeedLoopPI::UpdateSpeedLoop(const float Ts)
 {
     const auto foc = GetMotor<FOCMotor>();
     Motion target, current;
@@ -33,11 +33,20 @@ void SpeedLoopPI::UpdateSpeedLoop(float Ts)
     speed_pi.Kp = foc->GetConfig().vel_kp();
     speed_pi.Ki = foc->GetConfig().vel_ki();
     pos_pi.Kp = foc->GetConfig().pos_kp();
-    if(target.torque.limit > 0.0f) speed_pi.limit = MIN(foc->config_max_current, target.torque.limit);
-    else speed_pi.limit = foc->config_max_current;
-    if(target.speed.limit > 0.0f) pos_pi.limit = MIN(foc->config_max_base_speed_rad_s, target.speed.limit);
-    else pos_pi.limit = foc->config_max_base_speed_rad_s;
-    switch(foc->GetControlMode())
+    const auto control_mode = foc->GetControlMode();
+    if(control_mode != MotorControlMode::CTRL_MODE_HYBRID)
+    {
+        if(target.torque.limit > 0.0f) speed_pi.limit = MIN(foc->config_max_current, target.torque.limit);
+        else speed_pi.limit = foc->config_max_current;
+        if(target.speed.limit > 0.0f) pos_pi.limit = MIN(foc->config_max_base_speed_rad_s, target.speed.limit);
+        else pos_pi.limit = foc->config_max_base_speed_rad_s;
+    }
+    else // On MIT mode, pos_pi & speed_pi are unused, target.pos.limit are used as Kp, target.speed.limit is used as Kd
+    {
+        speed_pi.limit = foc->config_max_current;
+        pos_pi.limit = foc->config_max_base_speed_rad_s;
+    }
+    switch(control_mode)
     {
         case MotorControlMode::CTRL_MODE_POSITION:
         {
@@ -64,6 +73,20 @@ void SpeedLoopPI::UpdateSpeedLoop(float Ts)
         case MotorControlMode::CTRL_MODE_HYBRID:
         {
             // MIT control
+            // #1: Parameter validity check is done by setting target, here we just check torque constant
+            if(foc->GetConfig().torque_constant() <= 0.0f || !foc->GetConfig().torque_constant_valid())
+            {
+                foc->Iqd_target = {0.0f, 0.0f};
+                break;
+            }
+            const float pos_error_base = target.pos.value - current.pos.value; // RAD
+            const float speed_error_base = target.speed.value - current.speed.value; // RADS
+            const float pos_term_Nm = pos_error_base * target.pos.limit; // multiply Kp
+            const float speed_term_Nm = speed_error_base * target.speed.limit; // multiply Kd
+            const float sum_term_amp = (pos_term_Nm + speed_term_Nm) / foc->GetConfig().torque_constant();
+            const float target_iq_amp = _constrain((sum_term_amp + target.torque.value), -target.torque.limit, target.torque.limit);
+            foc->Iqd_target.q = target_iq_amp;
+            foc->Iqd_target.d = 0.0f;
             break;
         }
         default: ResetSpeedLoop(); break;
