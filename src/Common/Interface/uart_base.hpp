@@ -25,6 +25,7 @@ protected:
         OVERRIDE_NEW();
         DELETE_COPY_CONSTRUCTOR(RxEventHandlerTask);
     private:
+        static constexpr size_t RX_FIFO_BUFFER_SIZE = (configTOTAL_HEAP_SIZE >= 16384) ? 512 : 256;
         UARTBase* uart = nullptr;
         struct EventCallbackItem
         {
@@ -34,7 +35,7 @@ protected:
         uint8_t next_id = 0;
     public:
         Vector<EventCallbackItem> event_list{};
-        std::array<uint8_t, 256> buffer{};
+        std::array<uint8_t, RX_FIFO_BUFFER_SIZE> buffer{};
         explicit RxEventHandlerTask(UARTBase* _uart);
         void InitNormal() override;
         void UpdateNormal() override;
