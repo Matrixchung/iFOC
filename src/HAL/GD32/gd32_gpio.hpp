@@ -11,6 +11,8 @@ namespace iFOC::HAL
 {
     class GPIO final : public GPIOBase
     {
+        OVERRIDE_NEW();
+        DELETE_COPY_CONSTRUCTOR(GPIO);
     public:
         GPIO(uint32_t _port, uint16_t _pin) : port(_port), pin(_pin) {};
         __fast_inline void Set() override;

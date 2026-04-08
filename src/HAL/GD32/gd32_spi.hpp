@@ -10,6 +10,8 @@ namespace iFOC::HAL
 {
 class SPI final : public SPIBase
 {
+    OVERRIDE_NEW();
+    DELETE_COPY_CONSTRUCTOR(SPI);
 public:
     SPI(uint32_t spi_periph, GPIOBase& _cs);
     SPI(uint32_t spi_periph, GPIOBase* _cs);
