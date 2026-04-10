@@ -8,6 +8,10 @@
 #define TIM_DITHERING_MODE_EN // ARR * 16
 #endif
 
+// TIM Break: https://blog.csdn.net/hwytree/article/details/125603354
+// https://shequ.stmicroelectronics.cn/thread-635826-1-1.html
+// https://www.st.com/resource/en/application_note/dm00080497.pdf
+
 namespace iFOC::Driver
 {
 #define config iFOC::BoardConfig().GetConfig()
@@ -115,9 +119,15 @@ FuncRetCode FOCDriver6PWM::Init(bool initCNT)
     tim_break_param_struct.runoffstate = TIMER_ROS_STATE_ENABLE;
     tim_break_param_struct.ideloffstate = TIMER_IOS_STATE_ENABLE;
     tim_break_param_struct.deadtime = 5;
-    tim_break_param_struct.outputautostate = TIMER_OUTAUTO_DISABLE;
+    tim_break_param_struct.outputautostate = TIMER_OUTAUTO_ENABLE; // controls the automatic recovery of PWM after break signal disappear
     tim_break_param_struct.protectmode = TIMER_CCHP0_PROT_OFF;
+
+    tim_break_param_struct.break0state = TIMER_BREAK0_ENABLE; // Enable Break0 (internal LVD & Hardfault lockup)
+    tim_break_param_struct.break0filter = 0; // internal signal bypasses BRK0F
+    tim_break_param_struct.break0polarity = TIMER_BREAK0_POLARITY_HIGH; // internal signal bypasses BRK0P
+    tim_break_param_struct.break0lock = TIMER_BREAK0_LK_DISABLE;
     tim_break_param_struct.break0release = TIMER_BREAK0_UNRELEASE;
+
     tim_break_param_struct.break1release = TIMER_BREAK1_UNRELEASE;
     timer_break_config(htim, &tim_break_param_struct);
 
