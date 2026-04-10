@@ -49,12 +49,14 @@ public:
     template<typename U>
     explicit Allocator(const Allocator<U>&) noexcept {}
 
-    T* allocate(std::size_t n)
+    static T* allocate(const std::size_t n)
     {
         return static_cast<T*>(operator new(n * sizeof(T)));
     }
-    void deallocate(T* p, std::size_t n)
+
+    static void deallocate(T* p, const std::size_t n)
     {
+        (void)n;
         operator delete(p);
     }
 
