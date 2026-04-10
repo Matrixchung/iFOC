@@ -1,5 +1,3 @@
-#pragma once
-
 #include "task_timer.hpp"
 #include "../HAL/hal_impl.hpp"
 

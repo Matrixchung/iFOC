@@ -27,6 +27,11 @@
 #ifndef CANARD_H
 #define CANARD_H
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -758,4 +763,10 @@ void canard_allocate_sem_give(CanardPoolAllocator *allocator);
 // #endif
 
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
 #endif
+
+#endif
+

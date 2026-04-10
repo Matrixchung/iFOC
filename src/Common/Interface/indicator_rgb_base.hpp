@@ -15,9 +15,9 @@ public:
         SetColor(0, r, g, b);
         Update();
     }
-    virtual void Update() = 0;
+    virtual void Update() {}
     virtual void SetColor(uint8_t index, uint8_t r, uint8_t g, uint8_t b) = 0;
-    virtual void SetBrightness(float _brightness) = 0;
+    virtual void SetBrightness(float _brightness) {}
 private:
     uint8_t timer_blink_tick = 0;
     uint8_t timer_tick = 0;
