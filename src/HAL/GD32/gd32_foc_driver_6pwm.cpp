@@ -74,7 +74,10 @@ FuncRetCode FOCDriver6PWM::Init(bool initCNT)
     tim_oc_param_struct.ocidlestate = TIMER_OC_IDLE_STATE_LOW;
     tim_oc_param_struct.ocnidlestate = TIMER_OCN_IDLE_STATE_HIGH;
 
-    tim_free_comp_param_struct.freecomstate = TIMER_FCCHP_STATE_DISABLE;
+    tim_free_comp_param_struct.freecomstate = TIMER_FCCHP_STATE_ENABLE;
+    tim_free_comp_param_struct.runoffstate = TIMER_ROS_STATE_ENABLE;
+    tim_free_comp_param_struct.ideloffstate = TIMER_IOS_STATE_ENABLE;
+    tim_free_comp_param_struct.deadtime = 5;
 
     timer_channel_output_config(htim, TIMER_CH_0, &tim_oc_param_struct);
     timer_channel_output_mode_config(htim, TIMER_CH_0, TIMER_OC_MODE_PWM1); // PWM Mode B
