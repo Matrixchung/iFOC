@@ -79,10 +79,10 @@ private:
             uint16_t                : 9; /* [15:7] */
         } bit;
     } cr_2;
-    FuncRetCode WriteReg(uint8_t reg, uint16_t data);
-    FuncRetCode ReadReg(uint8_t reg, uint16_t *data);
-    uint16_t SPITransfer(uint16_t tx);
-    FuncRetCode SPIInit();
+    FuncRetCode WriteReg(uint8_t reg, uint16_t data) const;
+    FuncRetCode ReadReg(uint8_t reg, uint16_t *data) const;
+    uint16_t SPITransfer(uint16_t tx) const;
+    FuncRetCode SPIInit() const;
     FOCDriverBase *pwm_base = nullptr;
     SPIBase *spi_base = nullptr;
     GPIOBase *en_gate = nullptr;

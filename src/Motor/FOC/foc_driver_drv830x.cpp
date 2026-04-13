@@ -132,6 +132,11 @@ FuncRetCode FOCDriverDRV830x::Init(bool initCNT)
     }
     WriteReg(0x03, cr2.reg);
 
+    // Here we double-check the written value
+    cr_2 temp;
+    if(const auto r = ReadReg(0x03, &temp.reg); r != FuncRetCode::OK) return r;
+    if(temp.reg != cr2.reg) return FuncRetCode::CRC_MISMATCH;
+
     cr1.reg = 0;
     // cr1.bit.ocp_mode = 1; // OCP_MODE: OC latch shut down
     // cr1.bit.oc_adj_set = 21; // Vds approximately 0.730V?
@@ -144,33 +149,33 @@ FuncRetCode FOCDriverDRV830x::Init(bool initCNT)
     return FuncRetCode::OK;
 }
 
-FuncRetCode FOCDriverDRV830x::WriteReg(uint8_t reg, uint16_t data)
+FuncRetCode FOCDriverDRV830x::WriteReg(const uint8_t reg, const uint16_t data) const
 {
     if(!(reg & 0x2)) return FuncRetCode::PARAM_OUT_BOUND;
-    uint16_t cmd = ((reg & 0x7) << 11) | (data & 0x7FF);
+    const uint16_t cmd = ((reg & 0x7) << 11) | (data & 0x7FF);
     SPITransfer(cmd);
     return FuncRetCode::OK;
 }
 
-FuncRetCode FOCDriverDRV830x::ReadReg(uint8_t reg, uint16_t* data)
+FuncRetCode FOCDriverDRV830x::ReadReg(const uint8_t reg, uint16_t* data) const
 {
     *data = 0;
-    uint16_t cmd = (1 << 15) | ((reg & 0x7) << 11);
+    const uint16_t cmd = (1 << 15) | ((reg & 0x7) << 11);
     SPITransfer(cmd);
-    uint16_t temp = SPITransfer(0xFFFF);
+    const uint16_t temp = SPITransfer(0xFFFF);
     // #1: verify frame fault bit F [15]
     if(temp & (1 << 15)) return FuncRetCode::INVALID_RESULT;
     // #2: verify result address bits A [14:11]
-    uint8_t result_reg = (temp >> 11) & 0xF;
+    const uint8_t result_reg = (temp >> 11) & 0xF;
     if(result_reg != reg) return FuncRetCode::CRC_MISMATCH;
     // #3: store data result D [10:0]
     *data = temp & 0x7FF;
     return FuncRetCode::OK;
 }
 
-uint16_t FOCDriverDRV830x::SPITransfer(uint16_t tx)
+uint16_t FOCDriverDRV830x::SPITransfer(const uint16_t tx) const
 {
-    uint16_t tx_data = (tx << 8) | (tx >> 8); // shift bits (little-endian)
+    const uint16_t tx_data = (tx << 8) | (tx >> 8); // shift bits (little-endian)
     uint16_t rx_data = 0;
     spi_base->SetCS(false);
     HAL::DelayUs(5);
@@ -180,7 +185,7 @@ uint16_t FOCDriverDRV830x::SPITransfer(uint16_t tx)
     return (rx_data << 8) | (rx_data >> 8);
 }
 
-FuncRetCode FOCDriverDRV830x::SPIInit()
+FuncRetCode FOCDriverDRV830x::SPIInit() const
 {
     spi_base->SetClock(800000);
     spi_base->SetDataWidth(SPIBase::DataWidth::BYTE);
