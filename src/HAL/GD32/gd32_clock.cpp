@@ -8,6 +8,8 @@
 #if defined(CoreDebug) && defined(DWT)
 #define USE_DWT_COUNTER
 
+uint32_t uptime_sec = 0;
+
 namespace iFOC::HAL
 {
     namespace PerfCounter
@@ -35,7 +37,7 @@ namespace iFOC::HAL
 
     uint32_t GetCoreClockHz() { return SystemCoreClock; }
 
-    uint32_t GetUptimeSeconds() { return rtc_subsecond_get(); }
+    uint32_t GetUptimeSeconds() { return uptime_sec; }
 
     void DelayInit()
     {
