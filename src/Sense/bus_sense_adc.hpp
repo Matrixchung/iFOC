@@ -26,6 +26,6 @@ private:
     real_t Vbus_gain_V = 1.0f;
     real_t Ibus_gain_mV = 1.0f;
     TickType_t last_update_tick = 0;
-    bool reversed = false;
+    // bool reversed = false;
 };
 }

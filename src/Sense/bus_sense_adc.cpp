@@ -14,12 +14,13 @@ BusSenseADC::BusSenseADC(HAL::ADCPortBase* _vbus,
                          bool _rev) :
         Vbus_port(_vbus), Ibus_port(_ibus),
         Ibus_lpf(100), Ibus_offset_lpf(10),
-        Vbus_gain_V(_vbus_gain), Ibus_gain_mV(_ibus_gain), reversed(_rev)
+        Vbus_gain_V(_vbus_gain), Ibus_gain_mV(_ibus_gain)
 {
     // To get Ibus in [A], Ibus_factor_mV should be transformed
     if(config.bus_sense_shunt_ohm() <= 0.0f) Ibus_gain_mV = 0.0f;
     else Ibus_gain_mV = (1.0f / (Ibus_gain_mV * config.get_bus_sense_shunt_ohm() * 1000.0f));
     Ibus_offset_lpf.output_prev = Ibus_port->GetFullRangeVoltage() * 1000.0f * 0.5f;
+    if(_rev) Ibus_gain_mV *= -1.0f;
 }
 
 BusSenseADC::BusSenseADC(HAL::ADCPortBase* _vbus,
@@ -35,7 +36,6 @@ FuncRetCode BusSenseADC::Update()
     {
         const float Ts = (curr_tick - last_update_tick) * 0.001f;
         current = Ibus_lpf.GetOutput((Ibus_port->GetVoltage_mV() - Ibus_offset_lpf.output_prev) * Ibus_gain_mV, Ts);
-        if(reversed) current *= -1.0f;
     }
     last_update_tick = curr_tick;
     return FuncRetCode::OK;
@@ -43,6 +43,11 @@ FuncRetCode BusSenseADC::Update()
 
 void BusSenseADC::SampleDCOffset(uint16_t sample_ms)
 {
+    if(sample_ms == 0)
+    {
+        Ibus_offset_lpf.GetOutput(Ibus_port->GetVoltage_mV(), 0.0001f); // sample once
+        return;
+    }
     sample_ms = _constrain(sample_ms, 1, 100);
     for(uint16_t i = 0; i < sample_ms * 10; i++)
     {
