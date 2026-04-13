@@ -19,6 +19,7 @@ public:
 private:
     bool IsMailboxEmpty(uint8_t mb) const;
     uint32_t hcan;
+    uint8_t pending_tx_mailbox_idx = 0;
 };
 
 }

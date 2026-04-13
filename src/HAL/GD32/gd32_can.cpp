@@ -22,7 +22,8 @@ FuncRetCode CAN::Init(DataType::Comm::CANBaudrate baud)
 
     can_param.internal_counter_source = CAN_TIMER_SOURCE_BIT_CLOCK;
     can_param.self_reception = DISABLE;
-    can_param.mb_tx_order = CAN_TX_HIGH_PRIORITY_MB_FIRST;
+    // can_param.mb_tx_order = CAN_TX_HIGH_PRIORITY_MB_FIRST;
+    can_param.mb_tx_order = CAN_TX_LOW_NUM_MB_FIRST; // FIFO mailbox
     can_param.mb_tx_abort_enable = ENABLE;
     can_param.local_priority_enable = DISABLE;
     can_param.mb_rx_ide_rtr_type = CAN_IDE_RTR_FILTERED;
@@ -111,9 +112,19 @@ FuncRetCode CAN::Init(DataType::Comm::CANBaudrate baud)
 
 FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
 {
-    for(uint8_t i = FIRST_AVAIL_TX_MAILBOX_IDX; i <= LAST_AVAIL_TX_MAILBOX_IDX; i++)
+    // for(uint8_t i = FIRST_AVAIL_TX_MAILBOX_IDX; i <= LAST_AVAIL_TX_MAILBOX_IDX; i++)
+    constexpr uint8_t max_retry_time = (LAST_AVAIL_TX_MAILBOX_IDX - FIRST_AVAIL_TX_MAILBOX_IDX + 1) * 2;
+    uint8_t retry_time = 0;
+    while(true)
     {
-        if(!IsMailboxEmpty(i)) continue;
+        if(pending_tx_mailbox_idx < FIRST_AVAIL_TX_MAILBOX_IDX || pending_tx_mailbox_idx > LAST_AVAIL_TX_MAILBOX_IDX) pending_tx_mailbox_idx = FIRST_AVAIL_TX_MAILBOX_IDX;
+        if(!IsMailboxEmpty(pending_tx_mailbox_idx))
+        {
+            pending_tx_mailbox_idx++;
+            retry_time++;
+            if(retry_time >= max_retry_time) return FuncRetCode::BUFFER_FULL;
+            continue;
+        }
         can_mailbox_descriptor_struct desc;
         can_struct_para_init(CAN_MDSC_STRUCT, &desc);
         desc.ide = msg.is_ext;
@@ -123,10 +134,10 @@ FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
         desc.data_bytes = msg.is_rtr ? 0U : msg.len;
         desc.code = CAN_MB_TX_STATUS_DATA;
         memcpy(desc.data, msg.data, desc.data_bytes);
-        can_mailbox_config(hcan, i, &desc);
+        can_mailbox_config(hcan, pending_tx_mailbox_idx, &desc);
         return FuncRetCode::OK;
     }
-    return FuncRetCode::BUFFER_FULL;
+    // return FuncRetCode::BUFFER_FULL;
 }
 
 FuncRetCode CAN::SetHWFilter(const uint8_t filter_idx, const uint32_t id_u32, const uint32_t mask_u32, const bool ext_only, const bool accept_rtr)
