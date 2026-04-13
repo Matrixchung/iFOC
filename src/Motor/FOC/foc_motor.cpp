@@ -404,6 +404,10 @@ void FOCMotor::SetTrajectoryTargetMotion(Motion& motion, bool is_s_curve)
     _is_trajectory_motion = true;
 }
 
+/*
+ * @brief Used to attach an encoder pointer to the motor instance. \n
+ *        Need "EncArbiter" Task running first, so AppendEncoder() should be called after Init()
+ */
 FuncRetCode FOCMotor::AppendEncoder(Encoder::EncoderBase* encoder)
 {
     const auto ret = MotorBase::AppendEncoder(encoder);
