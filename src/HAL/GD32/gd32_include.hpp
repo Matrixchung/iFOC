@@ -9,3 +9,5 @@
 #include "gd32_temp_sense_core.hpp"
 #include "gd32_bkp.hpp"
 #include "gd32_can.hpp"
+
+extern uint32_t uptime_sec;
