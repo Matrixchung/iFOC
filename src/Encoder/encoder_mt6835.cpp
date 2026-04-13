@@ -124,7 +124,7 @@ FuncRetCode EncoderMT6835::ReadAbsAngleRad()
     if(_get_crc == rx_buf[5])
     {
         device_error &= ~(to_underlying(DeviceError::CRC_ERROR)); // CRC passed
-        uint32_t now_angle_cnt = (uint32_t)(rx_buf[2] << 13) | (uint32_t)(rx_buf[3] << 5) | (uint32_t)(rx_buf[4] >> 3); // 21 bit angle
+        uint32_t now_angle_cnt = (uint32_t)((uint32_t)rx_buf[2] << 13) | (uint32_t)((uint32_t)rx_buf[3] << 5) | (uint32_t)((uint32_t)rx_buf[4] >> 3); // 21 bit angle
         if(sign_and_deduction_ratio < 0.0f) now_angle_cnt = CPR - now_angle_cnt;
         // single_round_angle_rad = (float)angle / CPR_f;
         // single_round_angle_rad *= PI2;
