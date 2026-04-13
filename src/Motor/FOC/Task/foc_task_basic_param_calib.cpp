@@ -84,7 +84,12 @@ void BasicParamCalibTask::UpdateNormal()
             foc->RemoveTaskByName(GetName());
             break;
         }
-        case EstStage::PHASE_RESISTANCE_START:
+        /*
+         * In the previous version, foc->Arm() always turns on all bridges, regardless of is_armed.
+         * Now, foc->Arm() only has effect if !is_armed.
+         * So, we should Disarm() first after each resistance testing stage passed.
+         */
+        case EstStage::PHASE_RESISTANCE_START: // Phase U: U to W, Disable V
         {
             foc->BypassTaskByName("WaveGen", "CurrLoop");
             foc->Arm();
@@ -95,18 +100,21 @@ void BasicParamCalibTask::UpdateNormal()
             stage = EstStage::PHASE_RESISTANCE_TESTING_U;
             break;
         }
-        case EstStage::PHASE_RESISTANCE_TESTED_U:
+        case EstStage::PHASE_RESISTANCE_TESTED_U: // Phase V: V to W, Disable U (Re-enable V by Disarm() then Arm(), or manually re-enable)
         {
             foc->GetDriver()->SetOutput3CHPu(0.0f, 0.0f, 0.0f);
+            // foc->Disarm();
             sleep(200);
-            foc->Arm();
+            // foc->Arm();
+            // sleep(200);
+            foc->GetDriver()->EnableBridges(Bridge::HB_V, Bridge::LB_V); // re-enable V
             sleep(200);
             foc->GetDriver()->DisableBridges(Bridge::HB_U, Bridge::LB_U);
             sleep(10);
             stage = EstStage::PHASE_RESISTANCE_TESTING_V;
             break;
         }
-        case EstStage::PHASE_RESISTANCE_TESTED_V:
+        case EstStage::PHASE_RESISTANCE_TESTED_V: // Phase W: W to V, Disable U
         {
             foc->GetDriver()->SetOutput3CHPu(0.0f, 0.0f, 0.0f);
             sleep(200); // let the remaining current flow
