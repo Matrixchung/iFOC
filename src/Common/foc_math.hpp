@@ -18,6 +18,8 @@ void osDelayMs(uint32_t ms);
 
 namespace iFOC
 {
+void ifoc_srand(unsigned long seed);
+int ifoc_rand();
 /// Clarke equal-amplitude transformation
 /// \param abc Three-shunt currents
 /// \return Transformed value in Alpha-Beta axis

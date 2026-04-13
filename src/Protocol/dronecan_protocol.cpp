@@ -260,7 +260,8 @@ void DroneCANProtocol::PollingTask::UpdateNormal()
             }
         }
         auto interval_ms = motor->GetConfig().can_heartbeat_interval_ms();
-        if(interval_ms > 0)
+        if(interval_ms == 0) interval_ms = UAVCAN_PROTOCOL_NODESTATUS_MAX_BROADCASTING_PERIOD_MS; // forced to send heartbeat
+        // if(interval_ms > 0)
         {
             interval_ms = _constrain(interval_ms,
                                      UAVCAN_PROTOCOL_NODESTATUS_MIN_BROADCASTING_PERIOD_MS,
@@ -1348,8 +1349,10 @@ void DroneCANProtocol::SendFOCSetDebugCmdResponse(DroneCAN::CanardRxTransfer* tr
         request.phase_a_duty = _constrain(request.phase_a_duty, 0.0f, 1.0f);
         request.phase_b_duty = _constrain(request.phase_b_duty, 0.0f, 1.0f);
         request.phase_c_duty = _constrain(request.phase_c_duty, 0.0f, 1.0f);
+        // const auto ab = FOC_Clark({request.phase_a_duty, request.phase_b_duty, request.phase_c_duty});
+        // const auto qd = FOC_Park(ab, motor->elec_angle_rad);
         if(!motor->IsArmed()) motor->Arm();
-        motor->GetDriver()->SetOutput3CHPu(request.phase_a_duty, request.phase_b_duty, request.phase_c_duty);
+        // motor->Uqd_target = {qd.q * motor->GetBusSense()->voltage, qd.d * motor->GetBusSense()->voltage};
     }
 }
 
@@ -1956,9 +1959,12 @@ void DroneCANProtocol::SendFWUpdateResponse(DroneCAN::CanardRxTransfer* transfer
 void DroneCANProtocol::RequestDNAAllocation()
 {
     const auto current_tick = xTaskGetTickCount();
-    srand(current_tick); // update random seed
+    // srand(current_tick); // update random seed
+    // dna.next_dna_request_tick = current_tick + UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MIN_REQUEST_PERIOD_MS +
+    //                             (rand() % UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MAX_FOLLOWUP_DELAY_MS);
+    ifoc_srand(current_tick); // update random seed
     dna.next_dna_request_tick = current_tick + UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MIN_REQUEST_PERIOD_MS +
-                                (rand() % UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MAX_FOLLOWUP_DELAY_MS);
+                                (ifoc_rand() % UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MAX_FOLLOWUP_DELAY_MS);
 #if CANARD_ENABLE_CANFD
     uint8_t allocation_request[CANARD_CANFD_FRAME_MAX_DATA_LEN - 1]{};
 #else
@@ -1999,10 +2005,12 @@ void DroneCANProtocol::OnDNAAllocation(DroneCAN::CanardRxTransfer* transfer)
 
     // Rule C - updating the randomized time interval
     const auto current_tick = xTaskGetTickCount();
-    srand(current_tick); // update random seed
+    // srand(current_tick); // update random seed
+    // dna.next_dna_request_tick = current_tick + UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MIN_REQUEST_PERIOD_MS +
+    //                             (rand() % UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MAX_FOLLOWUP_DELAY_MS);
+    ifoc_srand(current_tick); // update random seed
     dna.next_dna_request_tick = current_tick + UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MIN_REQUEST_PERIOD_MS +
-                                (rand() % UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MAX_FOLLOWUP_DELAY_MS);
-
+                                (ifoc_rand() % UAVCAN_PROTOCOL_DYNAMIC_NODE_ID_ALLOCATION_MAX_FOLLOWUP_DELAY_MS);
     if(transfer->source_node_id == CANARD_BROADCAST_NODE_ID) // received another anonymous node's request, invalid
     {
         dna.id_allocation_uuid_offset = 0;

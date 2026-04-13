@@ -15,3 +15,18 @@ namespace iFOC::HAL
         vTaskDelay(ms / portTICK_PERIOD_MS);
     }
 }
+
+namespace iFOC
+{
+static unsigned long next = 1;
+void ifoc_srand(const unsigned long seed)
+{
+    next = seed;
+}
+
+int ifoc_rand()
+{
+    next = next * 1103515245 + 12345;
+    return ((next / 65536) % 32768);
+}
+}
