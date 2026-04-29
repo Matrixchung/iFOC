@@ -1,5 +1,9 @@
 # iFOC 智能驱动系统
 
+<center class ='img'>
+<img title="整体架构图" src=".\docs\zh\structure_map_cn.png" width="100%">
+</center>
+
 ### 使用说明
 
 #### 前置准备工作
