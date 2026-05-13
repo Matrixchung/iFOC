@@ -61,7 +61,7 @@ FuncRetCode CAN::Init(DataType::Comm::CANBaudrate baud)
 
 FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
 {
-    if(xSemaphoreTakeAuto(tx_sem, WRITE_TIMEOUT_MS) == pdTRUE)
+    // if(xSemaphoreTakeAuto(tx_sem, WRITE_TIMEOUT_MS) == pdTRUE)
     {
 #ifdef USE_STM32_FDCAN
         FDCAN_TxHeaderTypeDef header{};
@@ -72,12 +72,12 @@ FuncRetCode CAN::TransmitMessage(DataType::Comm::CANMessage& msg)
         // memcpy(tx_buffer, msg.data, msg.len);
         if(HAL_FDCAN_AddMessageToTxFifoQ(hcan, &header, msg.data) != HAL_OK)
         {
-            xSemaphoreGiveAuto(tx_sem);
+            // xSemaphoreGiveAuto(tx_sem);
             return FuncRetCode::BUFFER_FULL;
         }
 #else
 #endif
-        xSemaphoreGiveAuto(tx_sem);
+        // xSemaphoreGiveAuto(tx_sem);
         return FuncRetCode::OK;
     }
     return FuncRetCode::REMOTE_TIMEOUT;
