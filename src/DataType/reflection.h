@@ -91,36 +91,21 @@ constexpr const char* GetFieldName(const ProtoFieldType field)
     }
 }
 
-template<typename T>
-concept HasFieldType = requires { typename T::TYPE; };
-
-template<typename T>
+/*
+ * ExtractFieldType: map any C++ type to its underlying scalar type.
+ * Uses partial specialisation to avoid instantiating std::underlying_type_t
+ * on non-enum types (std::conditional_t evaluates both branches).
+ */
+template<typename T, bool = std::is_enum_v<T>>
 struct ExtractFieldType
 {
-    using raw_type = typename T::TYPE;
-    using type = std::conditional_t<
-            std::is_enum_v<raw_type>,
-            std::underlying_type_t<raw_type>,
-            raw_type
-    >;
+    using type = T;   /* non-enum: use T directly */
 };
 
 template<typename T>
-requires (!HasFieldType<T>)
-struct ExtractFieldType<T>
+struct ExtractFieldType<T, true>
 {
-    using type = std::conditional_t<
-            std::is_enum_v<T>,
-            std::underlying_type_t<T>,
-            T
-    >;
-};
-
-template<typename T>
-requires (HasFieldType<T> && !std::is_enum_v<typename T::TYPE>)
-struct ExtractFieldType<T>
-{
-    using type = typename T::TYPE;
+    using type = std::underlying_type_t<T>;   /* enum: strip to integral */
 };
 }
 

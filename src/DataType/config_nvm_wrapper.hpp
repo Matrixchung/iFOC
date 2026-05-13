@@ -5,7 +5,7 @@
 
 namespace iFOC::DataType
 {
-template<ProtoMessage msg_t>
+template<NanopbMessage msg_t>
 class ConfigNVMWrapper
 {
     OVERRIDE_NEW();
@@ -42,13 +42,13 @@ public:
     decltype(wrapper) GetWrapper() { return wrapper; }
 };
 
-template<ProtoMessage msg_t>
+template<NanopbMessage msg_t>
 msg_t& ConfigNVMWrapper<msg_t>::GetConfig()
 {
     return wrapper->payload();
 }
 
-template<ProtoMessage msg_t>
+template<NanopbMessage msg_t>
 FuncRetCode ConfigNVMWrapper<msg_t>::ReadNVMConfig()
 {
     // if(xPortIsInsideInterrupt()) return FuncRetCode::ACCESS_VIOLATION; // can't be running inside isr
@@ -67,19 +67,19 @@ FuncRetCode ConfigNVMWrapper<msg_t>::ReadNVMConfig()
 #endif
     if(ret != FuncRetCode::OK) return ret;
     auto result = wrapper->Deserialize(buffer_in_out_size);
-    if(result == EmbeddedProto::Error::NO_ERRORS) return FuncRetCode::OK;
-    if(result == EmbeddedProto::Error::END_OF_BUFFER) return FuncRetCode::BUFFER_FULL;
-    if(result == EmbeddedProto::Error::INVALID_FIELD_ID) return FuncRetCode::CRC_MISMATCH;
+    if(result == FuncRetCode::OK) return FuncRetCode::OK;
+    if(result == FuncRetCode::BUFFER_FULL) return FuncRetCode::BUFFER_FULL;
+    if(result == FuncRetCode::CRC_MISMATCH) return FuncRetCode::CRC_MISMATCH;
     return FuncRetCode::INVALID_RESULT;
 }
 
-template<ProtoMessage msg_t>
+template<NanopbMessage msg_t>
 FuncRetCode ConfigNVMWrapper<msg_t>::SaveNVMConfig()
 {
     // if(xPortIsInsideInterrupt()) return FuncRetCode::ACCESS_VIOLATION; // can't be running inside isr
     size_t len = 0;
     auto result = wrapper->Serialize(len);
-    if(result == EmbeddedProto::Error::NO_ERRORS)
+    if(result == FuncRetCode::OK)
     {
 #if defined(USE_EASYFLASH)
 
@@ -91,11 +91,11 @@ FuncRetCode ConfigNVMWrapper<msg_t>::SaveNVMConfig()
                      ALIGN_TO(len, _const::NVM_ALIGN_BYTES));
 #endif
     }
-    if(result == EmbeddedProto::Error::BUFFER_FULL) return FuncRetCode::BUFFER_FULL;
+    if(result == FuncRetCode::BUFFER_FULL) return FuncRetCode::BUFFER_FULL;
     return FuncRetCode::INVALID_INPUT;
 }
 
-template<ProtoMessage msg_t>
+template<NanopbMessage msg_t>
 FuncRetCode ConfigNVMWrapper<msg_t>::ClearNVMConfig()
 {
     if(xPortIsInsideInterrupt()) return FuncRetCode::ACCESS_VIOLATION; // can't be running inside isr

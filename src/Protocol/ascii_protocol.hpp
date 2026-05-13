@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include "../Common/Interface/uart_base.hpp"
 #include "../Motor/FOC/foc_motor.hpp"
 #include "../Motor/DC/dc_motor.hpp"
@@ -747,11 +748,6 @@ void ASCIIProtocol<Motor>::CmdReadConfig(uint8_t* data, uint16_t len, bool use_c
         uint8_t arg_len = len - 4;
         Vector<char> temp(arg_len + 2);
         memcpy(temp.data(), data + 4, arg_len);
-        if(temp[arg_len - 1] != '_')
-        {
-            temp[arg_len] = '_';
-            arg_len++;
-        }
         temp[arg_len] = '\0';
         if(const auto& it = reflect.find(temp.data()); it != reflect.end())
         {
@@ -803,11 +799,6 @@ void ASCIIProtocol<Motor>::CmdWriteConfig(uint8_t* data, uint16_t len, bool use_
     }
     Vector<char> temp(arg_len + 2);
     memcpy(temp.data(), data + 4, arg_len);
-    if(temp[arg_len - 1] != '_')
-    {
-        temp[arg_len] = '_';
-        arg_len++;
-    }
     temp[arg_len] = '\0';
     if(const auto& it = reflect.find(temp.data()); it != reflect.end())
     {

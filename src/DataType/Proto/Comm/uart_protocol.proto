@@ -4,8 +4,9 @@ option optimize_for = LITE_RUNTIME;
 package iFOC.DataType.Comm;
 
 enum UARTProtocol {
-  ASCII  = 0;
+  UNIFIED  = 0;
   VOFA   = 1;
   RAW_PROTO = 2;
   MATLAB = 3;
+  ASCII = 4;
 }

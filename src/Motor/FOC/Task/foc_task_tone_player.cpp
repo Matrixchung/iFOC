@@ -1,4 +1,5 @@
 #include "foc_task_tone_player.hpp"
+#include <algorithm>
 
 static constexpr float GLOBAL_MAX_INJECT_VOLTAGE = 5.0f;
 static constexpr float GLOBAL_MAX_INJECT_CURRENT = 5.0f;

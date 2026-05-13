@@ -55,7 +55,7 @@ private:
     static constexpr size_t FILE_READ_TIMEOUT_MS = 1000;
     PollingTask polling_task;
     DroneCAN::CanardInstance canard{};
-    char node_name[32]{};
+    /* node_name moved to FOCMotorConfig::node_name (foc_motor_config.proto tag 3) */
     // QueueHandle_t isr_msg_queue{};
     DataType::Ringbuf::obj_kfifo_t<DataType::Comm::CANMessage> isr_msg_fifo{};
     DataType::Ringbuf::obj_kfifo_t<DataType::Comm::CANMessage> tx_msg_fifo{};

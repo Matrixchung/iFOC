@@ -51,7 +51,6 @@ using namespace DroneCAN;
 #define WARNING (UAVCAN_PROTOCOL_DEBUG_LOGLEVEL_WARNING)
 #define ERROR   (UAVCAN_PROTOCOL_DEBUG_LOGLEVEL_ERROR)
 
-static constexpr char DRONECAN_NODE_NAME_DB_KEY_PREFIX[] = "nn";
 static constexpr char DRONECAN_NODE_NAME[] = "node_name";
 
 // Fixed a bug causing difference between dronecan_dsdlc.py compiled signature and PyDroneCAN compiled
@@ -109,22 +108,11 @@ void DroneCANProtocol::Init()
     }
     // canard.node_id = target_node_id;
     SetNodeID(target_node_id);
-    // read node name
-    char key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) + 1];
-    memcpy(key, DRONECAN_NODE_NAME_DB_KEY_PREFIX, sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) - 1);
-    key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) - 1] = motor->GetInternalID() + '0';
-    key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX)] = '\0';
-    uint16_t buffer_len = sizeof(node_name);
-    if(BlobNVMStorage().ReadNVM(key, (uint8_t*)node_name, &buffer_len) != FuncRetCode::OK || buffer_len == 0 || buffer_len >= sizeof(node_name))
+    // node_name is now stored in FOCMotorConfig (tag 3, max 32 chars).
+    // On first boot the field is empty; fall back to the compiled-in default.
+    if(motor->GetConfig().node_name()[0] == '\0')
     {
-        static_assert(sizeof(IFOC_NODE_NAME) < sizeof(node_name) - 1);
-        const auto len = strlen(IFOC_NODE_NAME);
-        memcpy(node_name, IFOC_NODE_NAME, len);
-        node_name[len] = '\0';
-    }
-    else
-    {
-        node_name[buffer_len] = '\0';
+        motor->GetConfig().set_node_name(IFOC_NODE_NAME);
     }
     BoardConfig().GetConfig().GetReflectMap(); // generate reflect map first, to avoid generate in interrupt
     motor->GetConfig().GetReflectMap();
@@ -1495,8 +1483,9 @@ void DroneCANProtocol::SendGetNodeInfoResponse(DroneCAN::CanardRxTransfer* trans
     };
     const auto serial_number = HAL::GetSerialNumber();
     memcpy(response.hardware_version.unique_id, &serial_number, sizeof(serial_number));
-    response.name.len = strnlen(node_name, sizeof(node_name));
-    memcpy(response.name.data, node_name, response.name.len);
+    const char* nn = GetMotor<FOCMotor>()->GetConfig().node_name();
+    response.name.len = strnlen(nn, 32);
+    memcpy(response.name.data, nn, response.name.len);
 
     uint8_t buffer[UAVCAN_PROTOCOL_GETNODEINFO_RESPONSE_MAX_SIZE];
     const uint32_t len = uavcan_protocol_GetNodeInfoResponse_encode(&response, buffer);
@@ -1563,24 +1552,17 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
                 else if(original_len >= strlen(DRONECAN_NODE_NAME) && strcmp(buffer, DRONECAN_NODE_NAME) == 0)
                 {
                     info.first = Reflection::ProtoFieldType::STRING;
-                    info.second = sizeof(node_name);
-                    target_ptr = (uint8_t*)node_name;
+                    info.second = sizeof(motor->GetConfig()._d.node_name);
+                    target_ptr = (uint8_t*)motor->GetConfig()._d.node_name;
                     memcpy(target_name, DRONECAN_NODE_NAME, sizeof(DRONECAN_NODE_NAME));
                     target_name[sizeof(DRONECAN_NODE_NAME)] = '\0';
                 }
                 if(reflect && start_ptr)
                 {
                     memcpy(target_name, buffer, original_len);
-                    // trim target string
+                    // trim "board." / "motor." prefix (6 chars)
                     original_len -= 6;
                     memmove(buffer, buffer + 6, original_len + 1);
-
-                    // add underscore
-                    if(buffer[original_len - 1] != '_')
-                    {
-                        buffer[original_len] = '_';
-                        original_len++;
-                    }
                     buffer[original_len] = '\0';
 
                     if(const auto& it = reflect->find(buffer); it != reflect->end())
@@ -1600,8 +1582,8 @@ void DroneCANProtocol::SendParamGetSetResponse(DroneCAN::CanardRxTransfer* trans
             memcpy(target_name, DRONECAN_NODE_NAME, sizeof(DRONECAN_NODE_NAME));
             target_name[sizeof(DRONECAN_NODE_NAME)] = '\0';
             info.first = Reflection::ProtoFieldType::STRING;
-            info.second = sizeof(node_name);
-            target_ptr = (uint8_t*)node_name;
+            info.second = sizeof(motor->GetConfig()._d.node_name);
+            target_ptr = (uint8_t*)motor->GetConfig()._d.node_name;
         }
         else
         {
@@ -1876,18 +1858,7 @@ void DroneCANProtocol::SendExecuteOpcodeResponse(DroneCAN::CanardRxTransfer* tra
                 response.ok = false;
                 break;
             }
-            // save node name
-            char key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) + 1];
-            memcpy(key, DRONECAN_NODE_NAME_DB_KEY_PREFIX, sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) - 1);
-            key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX) - 1] = motor->GetInternalID() + '0';
-            key[sizeof(DRONECAN_NODE_NAME_DB_KEY_PREFIX)] = '\0';
-            ret = BlobNVMStorage().SaveNVM(key, (uint8_t*)node_name, strnlen(node_name, sizeof(node_name)));
-            if(ret != FuncRetCode::OK)
-            {
-                response.argument = 4;
-                response.ok = false;
-                break;
-            }
+            // node_name is now part of FOCMotorConfig, already saved above
             response.argument = 0;
             response.ok = true;
             break;
