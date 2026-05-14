@@ -13,7 +13,9 @@ public:
     // SlidingFilter(const SlidingFilter&) = delete;
     // SlidingFilter& operator=(const SlidingFilter&) = delete;
     real_t GetOutput(real_t input);
+    real_t GetCurrent() const;
     void Reset();
+    void SetSize(size_t size);
 private:
     real_t sum = 0.0f;
     real_t old = 0.0f;

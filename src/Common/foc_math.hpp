@@ -330,6 +330,16 @@ __fast_inline static constexpr real_t RPM2RAD(const real_t rpm, const uint8_t po
     return (real_t)(rpm * _divPI_30 * (real_t)pole_pair);
 }
 
+__fast_inline static constexpr real_t RADS2HZ(const real_t rad_s)
+{
+    return (real_t)(rad_s * divPI2);
+}
+
+__fast_inline static constexpr real_t HZ2RADS(const real_t hz)
+{
+    return (real_t)(hz * PI2);
+}
+
 __fast_inline static constexpr real_t ELEC2OUTPUT(const real_t elec, const real_t gear_ratio)
 {
     return (real_t)(elec / gear_ratio);
