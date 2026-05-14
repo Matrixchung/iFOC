@@ -149,7 +149,7 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
     AppendTask(new EncoderArbiterTask); // "EncArbiter"
     AppendTask(new ParkTransformTask); // "Park"
     HAL::DelayMs(50);
-    AppendTask(new WaveGenSVPWM);    // "WaveGen"
+    AppendTask(new WaveGenSVPWM);    // "WaveGen", WaveGenTask will not perform SVPWM till Armed() == 1.
     return FuncRetCode::OK;
 error:
     if(const auto ind = GetIndicator())

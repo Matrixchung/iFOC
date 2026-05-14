@@ -4,6 +4,8 @@
 
 static constexpr float G9 = 2.0f;
 static constexpr size_t AVG_WINDOW_SIZE = 10000;
+static constexpr float MOTOR_SHUNT_RESISTANCE_OHM_MIN = 0.001f;
+static constexpr float MOTOR_SHUNT_RESISTANCE_OHM_MAX = 50.0f;
 
 namespace iFOC::FOC
 {
@@ -138,13 +140,16 @@ void BasicParamCalibTask::UpdateNormal()
             if(ABS(rs_max_result - rs_min_result) >= 0.5f)
             {
                 foc->DisarmWithError(MotorError::MOTOR_PHASE_IMBALANCE);
+                if(data.Rs_est.Rs_result[0] <= MOTOR_SHUNT_RESISTANCE_OHM_MIN || data.Rs_est.Rs_result[0] >= MOTOR_SHUNT_RESISTANCE_OHM_MAX) foc->ThrowError(MotorError::MOTOR_PHASE_IMBALANCE_U);
+                if(data.Rs_est.Rs_result[1] <= MOTOR_SHUNT_RESISTANCE_OHM_MIN || data.Rs_est.Rs_result[1] >= MOTOR_SHUNT_RESISTANCE_OHM_MAX) foc->ThrowError(MotorError::MOTOR_PHASE_IMBALANCE_V);
+                if(data.Rs_est.Rs_result[2] <= MOTOR_SHUNT_RESISTANCE_OHM_MIN || data.Rs_est.Rs_result[2] >= MOTOR_SHUNT_RESISTANCE_OHM_MAX) foc->ThrowError(MotorError::MOTOR_PHASE_IMBALANCE_W);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
             else
             {
                 rs_result *= 0.3333333333f;
-                if(rs_result <= 0.001f || rs_result >= 50.0f)
+                if(rs_result <= MOTOR_SHUNT_RESISTANCE_OHM_MIN || rs_result >= MOTOR_SHUNT_RESISTANCE_OHM_MAX)
                 {
                     foc->DisarmWithError(MotorError::MOTOR_PHASE_RESISTANCE_OUT_OF_RANGE);
                     foc->RemoveTaskByName(GetName());
