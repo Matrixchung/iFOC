@@ -173,7 +173,7 @@ bool FOCMotor::Arm()
         if(error == to_underlying(MotorError::NONE))
         {
             // update watchdog_timeout_count
-            if(GetConfig().watchdog_timeout_sec() > 0.0f)
+            if(GetConfig().watchdog_timeout_sec() >= 0.0f) // add == 0.0f
             {
                 watchdog_timeout_cnt = (uint32_t)(GetConfig().watchdog_timeout_sec() / MID_LOOP_TS);
             }
