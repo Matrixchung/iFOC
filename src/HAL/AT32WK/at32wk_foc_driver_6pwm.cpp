@@ -19,6 +19,7 @@ FuncRetCode FOCDriver6PWM::Init(bool initCNT)
     tmr_counter_enable(htim, FALSE);
 
     auto pwm_freq = config.pwm_wave_freq();
+    if(pwm_freq == 0) pwm_freq = 20000; // fallback to 20KHz
     const auto timer_base_clock = HAL::GetCoreClockHz();
     uint32_t arr = (timer_base_clock / pwm_freq) / 2; // center aligned
     max_compare = arr;
