@@ -45,12 +45,15 @@ WS2812::WS2812(tmr_type *_htim, tmr_channel_select_type _ch, dma_channel_type *_
 
 FuncRetCode WS2812::Init()
 {
-    auto tmr_base_clock = GetCoreClockHz();
+    tmr_reset(htim);
+    const auto tmr_base_clock = GetCoreClockHz();
     uint32_t set_period = tmr_base_clock / 800000;
     if(set_period <= 1) return FuncRetCode::HARDWARE_ERROR;
     set_period -= 1;
     int32_t diff = (int32_t)set_period - (int32_t)tmr_period_value_get(htim);
-    if(tmr_div_value_get(htim) != 0x00 || tmr_period_value_get(htim) == 0 || ABS(diff) >= 50) // wrong DIVider & period
+    if(tmr_div_value_get(htim) != 0x00 ||
+        tmr_period_value_get(htim) == 0 || tmr_period_value_get(htim) == 65535 ||
+        ABS(diff) >= 50) // wrong DIVider & period
     {
         tmr_div_value_set(htim, 0x00);
         tmr_period_value_set(htim, set_period);
@@ -62,11 +65,26 @@ FuncRetCode WS2812::Init()
     tmr_channel_buffer_enable(htim, TRUE);
     tmr_output_channel_buffer_enable(htim, channel, TRUE);
     tmr_overflow_event_disable(htim, FALSE); // ENABLE OVERFLOW EVENT!
+
+    // Reset channel to PWM MODE A
+    tmr_output_config_type tmr_output_struct;
+    tmr_output_struct.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A;
+    tmr_output_struct.oc_output_state = TRUE;
+    tmr_output_struct.occ_output_state = FALSE;
+    tmr_output_struct.oc_polarity = TMR_OUTPUT_ACTIVE_HIGH;
+    tmr_output_struct.occ_polarity = TMR_OUTPUT_ACTIVE_HIGH;
+    tmr_output_struct.oc_idle_state = FALSE;
+    tmr_output_struct.occ_idle_state = FALSE;
+    tmr_output_channel_config(htim, channel, &tmr_output_struct);
+    tmr_channel_value_set(htim, channel, 0);
+    tmr_output_channel_buffer_enable(htim, channel, TRUE);
+    tmr_output_channel_immediately_set(htim, channel, FALSE);
+
     hdma->ctrl_bit.mwidth = DMA_MEMORY_DATA_WIDTH_WORD;
     hdma->ctrl_bit.pwidth = DMA_PERIPHERAL_DATA_WIDTH_WORD;
     hdma->ctrl_bit.mincm = TRUE;  // Memory Increment Enable
     hdma->ctrl_bit.pincm = FALSE; // Periph. Increment Disable
-#if defined(AT32F403Axx)
+#if defined(AT32F403Axx) || defined(AT32F435xx)
     hdma->ctrl_bit.lm = TRUE; // Circular mode
 #endif
     SetBrightness(brightness);
