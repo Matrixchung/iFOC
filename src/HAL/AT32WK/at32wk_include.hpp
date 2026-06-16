@@ -11,3 +11,8 @@
 #include "at32wk_temp_sense_core.hpp"
 #include "at32wk_encoder_ab.hpp"
 #include "at32wk_bkp.hpp"
+
+#if defined(AT32F403AxG) || defined(AT32F407xx)
+#else
+extern uint32_t uptime_sec;
+#endif

@@ -9,6 +9,7 @@
 /* Using backup register to exchange information between App & Bootloader
  * See: RM_AT32F403A_407_407A_CH_V2.07, Page 285 (BPR)
  * AT32F403A BPR size: 42 * 2 = 84 bytes
+ * AT32F435/437 BPR size: 20 * 4 = 80 bytes
  */
 
 // automatically handle crc stuffs
@@ -83,6 +84,8 @@ namespace iFOC::HAL::Bootloader
     }
 #endif
 }
+
+#if defined(AT32F403AxG) || defined(AT32F407xx)
 
 // bkp_struct_t size: 18, BPR_DATA1 -> BPR_DATA9, little-endian
 bool read_bpr(bkp_struct_t* dst)
@@ -175,5 +178,86 @@ void write_bpr(bkp_struct_t* src)
 
     // PWC->ctrl_bit.bpwen = 0; // lock BPR // lock BPR cause lock of RTC
 }
+
+#elif defined(AT32F435xG) || defined(AT32F435xx)
+
+// bkp_struct_t size: 18, ERTC_DT1 -> ERTC_DT5 (2 bytes wasted), little-endian
+bool read_bpr(bkp_struct_t* dst)
+{
+    static_assert(sizeof(bkp_struct_t) == 18);
+
+    memset(dst, 0, sizeof(bkp_struct_t));
+    uint8_t buffer[sizeof(bkp_struct_t)];
+    volatile uint32_t temp = 0;
+
+    temp = ertc_bpr_data_read(ERTC_DT1); // 32 bits (4 bytes)
+    buffer[0] = (uint8_t)(temp & 0xFF);
+    buffer[1] = (uint8_t)((temp >> 8) & 0xFF);
+    buffer[2] = (uint8_t)((temp >> 16) & 0xFF);
+    buffer[3] = (uint8_t)((temp >> 24) & 0xFF);
+    temp = ertc_bpr_data_read(ERTC_DT2);
+    buffer[4] = (uint8_t)(temp & 0xFF);
+    buffer[5] = (uint8_t)((temp >> 8) & 0xFF);
+    buffer[6] = (uint8_t)((temp >> 16) & 0xFF);
+    buffer[7] = (uint8_t)((temp >> 24) & 0xFF);
+    temp = ertc_bpr_data_read(ERTC_DT3);
+    buffer[8] = (uint8_t)(temp & 0xFF);
+    buffer[9] = (uint8_t)((temp >> 8) & 0xFF);
+    buffer[10] = (uint8_t)((temp >> 16) & 0xFF);
+    buffer[11] = (uint8_t)((temp >> 24) & 0xFF);
+    temp = ertc_bpr_data_read(ERTC_DT4);
+    buffer[12] = (uint8_t)(temp & 0xFF);
+    buffer[13] = (uint8_t)((temp >> 8) & 0xFF);
+    buffer[14] = (uint8_t)((temp >> 16) & 0xFF);
+    buffer[15] = (uint8_t)((temp >> 24) & 0xFF);
+    temp = ertc_bpr_data_read(ERTC_DT5);
+    buffer[16] = (uint8_t)(temp & 0xFF);
+    buffer[17] = (uint8_t)((temp >> 8) & 0xFF);
+
+    // crc calculation
+    const uint8_t calc_crc8 = iFOC::get_crc8(buffer, sizeof(buffer) - 1);
+    if(calc_crc8 == buffer[sizeof(buffer) - 1]) // crc8 matched
+    {
+        memcpy(dst, buffer, sizeof(bkp_struct_t));
+        return true;
+    }
+    return false;
+}
+
+void write_bpr(bkp_struct_t* src)
+{
+    static_assert(sizeof(bkp_struct_t) == 18);
+
+    volatile uint32_t temp = 0;
+
+    const uint8_t* ptr = (const uint8_t*)src;
+
+    src->crc8 = iFOC::get_crc8(ptr, sizeof(bkp_struct_t) - 1);
+
+    // Unlock BPR first
+    CRM->apb1en_bit.pwcen = 1;
+    PWC->ctrl_bit.bpwen = 1;
+
+    temp = (uint32_t)((uint8_t)*(ptr + 0)) | (uint32_t)((uint8_t)*(ptr + 1)) << 8 | (uint32_t)((uint8_t)*(ptr + 2)) << 16 | (uint32_t)((uint8_t)*(ptr + 3)) << 24;
+    ertc_bpr_data_write(ERTC_DT1, temp);
+
+    temp = (uint32_t)((uint8_t)*(ptr + 4)) | (uint32_t)((uint8_t)*(ptr + 5)) << 8 | (uint32_t)((uint8_t)*(ptr + 6)) << 16 | (uint32_t)((uint8_t)*(ptr + 7)) << 24;
+    ertc_bpr_data_write(ERTC_DT2, temp);
+
+    temp = (uint32_t)((uint8_t)*(ptr + 8)) | (uint32_t)((uint8_t)*(ptr + 9)) << 8 | (uint32_t)((uint8_t)*(ptr + 10)) << 16 | (uint32_t)((uint8_t)*(ptr + 11)) << 24;
+    ertc_bpr_data_write(ERTC_DT3, temp);
+
+    temp = (uint32_t)((uint8_t)*(ptr + 12)) | (uint32_t)((uint8_t)*(ptr + 13)) << 8 | (uint32_t)((uint8_t)*(ptr + 14)) << 16 | (uint32_t)((uint8_t)*(ptr + 15)) << 24;
+    ertc_bpr_data_write(ERTC_DT4, temp);
+
+    temp = (uint32_t)((uint8_t)*(ptr + 16)) | (uint32_t)((uint8_t)*(ptr + 17)) << 8;
+    ertc_bpr_data_write(ERTC_DT5, temp);
+}
+
+#else
+
+#error "Please specify bkp read/write functions for current platform."
+
+#endif
 
 #endif

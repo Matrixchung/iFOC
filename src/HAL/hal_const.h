@@ -31,6 +31,9 @@
 #elif defined(AT32F403Axx) || defined(AT32F407xx) // AT32F40x Environment
 #include "AT32WK/at32wk_nvm_address.h"
 
+#elif defined(AT32F435xx) || defined(AT32F435xG) // AT32F435 Environment
+#include "AT32WK/at32wk_nvm_address.h"
+
 #elif defined(HPM_ENV)
 #include "HPMicro/hpmicro_nvm_address.h"
 

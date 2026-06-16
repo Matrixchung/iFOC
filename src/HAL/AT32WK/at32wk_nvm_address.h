@@ -524,3 +524,270 @@
 #define FLASH_USER_AREA_SIZE    (16 * FLASH_SECTOR_SIZE_BYTES)
 #define USE_FLASHDB
 #endif
+
+#if defined(AT32F435xG) // 1024K, Single Bank
+#define ADDR_FLASH_SECTOR_0   ((uint32_t)0x8000000) /* Base @ of Sector 0  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_1   ((uint32_t)0x8001000) /* Base @ of Sector 1  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_2   ((uint32_t)0x8002000) /* Base @ of Sector 2  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_3   ((uint32_t)0x8003000) /* Base @ of Sector 3  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_4   ((uint32_t)0x8004000) /* Base @ of Sector 4  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_5   ((uint32_t)0x8005000) /* Base @ of Sector 5  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_6   ((uint32_t)0x8006000) /* Base @ of Sector 6  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_7   ((uint32_t)0x8007000) /* Base @ of Sector 7  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_8   ((uint32_t)0x8008000) /* Base @ of Sector 8  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_9   ((uint32_t)0x8009000) /* Base @ of Sector 9  , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_10  ((uint32_t)0x800a000) /* Base @ of Sector 10 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_11  ((uint32_t)0x800b000) /* Base @ of Sector 11 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_12  ((uint32_t)0x800c000) /* Base @ of Sector 12 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_13  ((uint32_t)0x800d000) /* Base @ of Sector 13 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_14  ((uint32_t)0x800e000) /* Base @ of Sector 14 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_15  ((uint32_t)0x800f000) /* Base @ of Sector 15 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_16  ((uint32_t)0x8010000) /* Base @ of Sector 16 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_17  ((uint32_t)0x8011000) /* Base @ of Sector 17 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_18  ((uint32_t)0x8012000) /* Base @ of Sector 18 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_19  ((uint32_t)0x8013000) /* Base @ of Sector 19 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_20  ((uint32_t)0x8014000) /* Base @ of Sector 20 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_21  ((uint32_t)0x8015000) /* Base @ of Sector 21 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_22  ((uint32_t)0x8016000) /* Base @ of Sector 22 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_23  ((uint32_t)0x8017000) /* Base @ of Sector 23 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_24  ((uint32_t)0x8018000) /* Base @ of Sector 24 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_25  ((uint32_t)0x8019000) /* Base @ of Sector 25 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_26  ((uint32_t)0x801a000) /* Base @ of Sector 26 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_27  ((uint32_t)0x801b000) /* Base @ of Sector 27 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_28  ((uint32_t)0x801c000) /* Base @ of Sector 28 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_29  ((uint32_t)0x801d000) /* Base @ of Sector 29 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_30  ((uint32_t)0x801e000) /* Base @ of Sector 30 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_31  ((uint32_t)0x801f000) /* Base @ of Sector 31 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_32  ((uint32_t)0x8020000) /* Base @ of Sector 32 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_33  ((uint32_t)0x8021000) /* Base @ of Sector 33 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_34  ((uint32_t)0x8022000) /* Base @ of Sector 34 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_35  ((uint32_t)0x8023000) /* Base @ of Sector 35 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_36  ((uint32_t)0x8024000) /* Base @ of Sector 36 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_37  ((uint32_t)0x8025000) /* Base @ of Sector 37 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_38  ((uint32_t)0x8026000) /* Base @ of Sector 38 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_39  ((uint32_t)0x8027000) /* Base @ of Sector 39 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_40  ((uint32_t)0x8028000) /* Base @ of Sector 40 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_41  ((uint32_t)0x8029000) /* Base @ of Sector 41 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_42  ((uint32_t)0x802a000) /* Base @ of Sector 42 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_43  ((uint32_t)0x802b000) /* Base @ of Sector 43 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_44  ((uint32_t)0x802c000) /* Base @ of Sector 44 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_45  ((uint32_t)0x802d000) /* Base @ of Sector 45 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_46  ((uint32_t)0x802e000) /* Base @ of Sector 46 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_47  ((uint32_t)0x802f000) /* Base @ of Sector 47 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_48  ((uint32_t)0x8030000) /* Base @ of Sector 48 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_49  ((uint32_t)0x8031000) /* Base @ of Sector 49 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_50  ((uint32_t)0x8032000) /* Base @ of Sector 50 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_51  ((uint32_t)0x8033000) /* Base @ of Sector 51 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_52  ((uint32_t)0x8034000) /* Base @ of Sector 52 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_53  ((uint32_t)0x8035000) /* Base @ of Sector 53 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_54  ((uint32_t)0x8036000) /* Base @ of Sector 54 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_55  ((uint32_t)0x8037000) /* Base @ of Sector 55 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_56  ((uint32_t)0x8038000) /* Base @ of Sector 56 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_57  ((uint32_t)0x8039000) /* Base @ of Sector 57 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_58  ((uint32_t)0x803a000) /* Base @ of Sector 58 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_59  ((uint32_t)0x803b000) /* Base @ of Sector 59 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_60  ((uint32_t)0x803c000) /* Base @ of Sector 60 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_61  ((uint32_t)0x803d000) /* Base @ of Sector 61 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_62  ((uint32_t)0x803e000) /* Base @ of Sector 62 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_63  ((uint32_t)0x803f000) /* Base @ of Sector 63 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_64  ((uint32_t)0x8040000) /* Base @ of Sector 64 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_65  ((uint32_t)0x8041000) /* Base @ of Sector 65 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_66  ((uint32_t)0x8042000) /* Base @ of Sector 66 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_67  ((uint32_t)0x8043000) /* Base @ of Sector 67 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_68  ((uint32_t)0x8044000) /* Base @ of Sector 68 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_69  ((uint32_t)0x8045000) /* Base @ of Sector 69 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_70  ((uint32_t)0x8046000) /* Base @ of Sector 70 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_71  ((uint32_t)0x8047000) /* Base @ of Sector 71 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_72  ((uint32_t)0x8048000) /* Base @ of Sector 72 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_73  ((uint32_t)0x8049000) /* Base @ of Sector 73 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_74  ((uint32_t)0x804a000) /* Base @ of Sector 74 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_75  ((uint32_t)0x804b000) /* Base @ of Sector 75 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_76  ((uint32_t)0x804c000) /* Base @ of Sector 76 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_77  ((uint32_t)0x804d000) /* Base @ of Sector 77 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_78  ((uint32_t)0x804e000) /* Base @ of Sector 78 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_79  ((uint32_t)0x804f000) /* Base @ of Sector 79 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_80  ((uint32_t)0x8050000) /* Base @ of Sector 80 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_81  ((uint32_t)0x8051000) /* Base @ of Sector 81 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_82  ((uint32_t)0x8052000) /* Base @ of Sector 82 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_83  ((uint32_t)0x8053000) /* Base @ of Sector 83 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_84  ((uint32_t)0x8054000) /* Base @ of Sector 84 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_85  ((uint32_t)0x8055000) /* Base @ of Sector 85 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_86  ((uint32_t)0x8056000) /* Base @ of Sector 86 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_87  ((uint32_t)0x8057000) /* Base @ of Sector 87 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_88  ((uint32_t)0x8058000) /* Base @ of Sector 88 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_89  ((uint32_t)0x8059000) /* Base @ of Sector 89 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_90  ((uint32_t)0x805a000) /* Base @ of Sector 90 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_91  ((uint32_t)0x805b000) /* Base @ of Sector 91 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_92  ((uint32_t)0x805c000) /* Base @ of Sector 92 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_93  ((uint32_t)0x805d000) /* Base @ of Sector 93 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_94  ((uint32_t)0x805e000) /* Base @ of Sector 94 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_95  ((uint32_t)0x805f000) /* Base @ of Sector 95 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_96  ((uint32_t)0x8060000) /* Base @ of Sector 96 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_97  ((uint32_t)0x8061000) /* Base @ of Sector 97 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_98  ((uint32_t)0x8062000) /* Base @ of Sector 98 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_99  ((uint32_t)0x8063000) /* Base @ of Sector 99 , 4 Kbytes */
+#define ADDR_FLASH_SECTOR_100 ((uint32_t)0x8064000) /* Base @ of Sector 100, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_101 ((uint32_t)0x8065000) /* Base @ of Sector 101, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_102 ((uint32_t)0x8066000) /* Base @ of Sector 102, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_103 ((uint32_t)0x8067000) /* Base @ of Sector 103, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_104 ((uint32_t)0x8068000) /* Base @ of Sector 104, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_105 ((uint32_t)0x8069000) /* Base @ of Sector 105, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_106 ((uint32_t)0x806a000) /* Base @ of Sector 106, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_107 ((uint32_t)0x806b000) /* Base @ of Sector 107, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_108 ((uint32_t)0x806c000) /* Base @ of Sector 108, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_109 ((uint32_t)0x806d000) /* Base @ of Sector 109, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_110 ((uint32_t)0x806e000) /* Base @ of Sector 110, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_111 ((uint32_t)0x806f000) /* Base @ of Sector 111, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_112 ((uint32_t)0x8070000) /* Base @ of Sector 112, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_113 ((uint32_t)0x8071000) /* Base @ of Sector 113, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_114 ((uint32_t)0x8072000) /* Base @ of Sector 114, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_115 ((uint32_t)0x8073000) /* Base @ of Sector 115, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_116 ((uint32_t)0x8074000) /* Base @ of Sector 116, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_117 ((uint32_t)0x8075000) /* Base @ of Sector 117, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_118 ((uint32_t)0x8076000) /* Base @ of Sector 118, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_119 ((uint32_t)0x8077000) /* Base @ of Sector 119, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_120 ((uint32_t)0x8078000) /* Base @ of Sector 120, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_121 ((uint32_t)0x8079000) /* Base @ of Sector 121, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_122 ((uint32_t)0x807a000) /* Base @ of Sector 122, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_123 ((uint32_t)0x807b000) /* Base @ of Sector 123, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_124 ((uint32_t)0x807c000) /* Base @ of Sector 124, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_125 ((uint32_t)0x807d000) /* Base @ of Sector 125, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_126 ((uint32_t)0x807e000) /* Base @ of Sector 126, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_127 ((uint32_t)0x807f000) /* Base @ of Sector 127, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_128 ((uint32_t)0x8080000) /* Base @ of Sector 128, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_129 ((uint32_t)0x8081000) /* Base @ of Sector 129, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_130 ((uint32_t)0x8082000) /* Base @ of Sector 130, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_131 ((uint32_t)0x8083000) /* Base @ of Sector 131, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_132 ((uint32_t)0x8084000) /* Base @ of Sector 132, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_133 ((uint32_t)0x8085000) /* Base @ of Sector 133, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_134 ((uint32_t)0x8086000) /* Base @ of Sector 134, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_135 ((uint32_t)0x8087000) /* Base @ of Sector 135, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_136 ((uint32_t)0x8088000) /* Base @ of Sector 136, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_137 ((uint32_t)0x8089000) /* Base @ of Sector 137, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_138 ((uint32_t)0x808a000) /* Base @ of Sector 138, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_139 ((uint32_t)0x808b000) /* Base @ of Sector 139, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_140 ((uint32_t)0x808c000) /* Base @ of Sector 140, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_141 ((uint32_t)0x808d000) /* Base @ of Sector 141, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_142 ((uint32_t)0x808e000) /* Base @ of Sector 142, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_143 ((uint32_t)0x808f000) /* Base @ of Sector 143, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_144 ((uint32_t)0x8090000) /* Base @ of Sector 144, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_145 ((uint32_t)0x8091000) /* Base @ of Sector 145, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_146 ((uint32_t)0x8092000) /* Base @ of Sector 146, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_147 ((uint32_t)0x8093000) /* Base @ of Sector 147, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_148 ((uint32_t)0x8094000) /* Base @ of Sector 148, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_149 ((uint32_t)0x8095000) /* Base @ of Sector 149, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_150 ((uint32_t)0x8096000) /* Base @ of Sector 150, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_151 ((uint32_t)0x8097000) /* Base @ of Sector 151, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_152 ((uint32_t)0x8098000) /* Base @ of Sector 152, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_153 ((uint32_t)0x8099000) /* Base @ of Sector 153, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_154 ((uint32_t)0x809a000) /* Base @ of Sector 154, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_155 ((uint32_t)0x809b000) /* Base @ of Sector 155, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_156 ((uint32_t)0x809c000) /* Base @ of Sector 156, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_157 ((uint32_t)0x809d000) /* Base @ of Sector 157, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_158 ((uint32_t)0x809e000) /* Base @ of Sector 158, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_159 ((uint32_t)0x809f000) /* Base @ of Sector 159, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_160 ((uint32_t)0x80a0000) /* Base @ of Sector 160, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_161 ((uint32_t)0x80a1000) /* Base @ of Sector 161, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_162 ((uint32_t)0x80a2000) /* Base @ of Sector 162, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_163 ((uint32_t)0x80a3000) /* Base @ of Sector 163, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_164 ((uint32_t)0x80a4000) /* Base @ of Sector 164, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_165 ((uint32_t)0x80a5000) /* Base @ of Sector 165, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_166 ((uint32_t)0x80a6000) /* Base @ of Sector 166, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_167 ((uint32_t)0x80a7000) /* Base @ of Sector 167, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_168 ((uint32_t)0x80a8000) /* Base @ of Sector 168, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_169 ((uint32_t)0x80a9000) /* Base @ of Sector 169, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_170 ((uint32_t)0x80aa000) /* Base @ of Sector 170, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_171 ((uint32_t)0x80ab000) /* Base @ of Sector 171, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_172 ((uint32_t)0x80ac000) /* Base @ of Sector 172, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_173 ((uint32_t)0x80ad000) /* Base @ of Sector 173, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_174 ((uint32_t)0x80ae000) /* Base @ of Sector 174, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_175 ((uint32_t)0x80af000) /* Base @ of Sector 175, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_176 ((uint32_t)0x80b0000) /* Base @ of Sector 176, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_177 ((uint32_t)0x80b1000) /* Base @ of Sector 177, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_178 ((uint32_t)0x80b2000) /* Base @ of Sector 178, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_179 ((uint32_t)0x80b3000) /* Base @ of Sector 179, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_180 ((uint32_t)0x80b4000) /* Base @ of Sector 180, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_181 ((uint32_t)0x80b5000) /* Base @ of Sector 181, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_182 ((uint32_t)0x80b6000) /* Base @ of Sector 182, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_183 ((uint32_t)0x80b7000) /* Base @ of Sector 183, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_184 ((uint32_t)0x80b8000) /* Base @ of Sector 184, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_185 ((uint32_t)0x80b9000) /* Base @ of Sector 185, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_186 ((uint32_t)0x80ba000) /* Base @ of Sector 186, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_187 ((uint32_t)0x80bb000) /* Base @ of Sector 187, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_188 ((uint32_t)0x80bc000) /* Base @ of Sector 188, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_189 ((uint32_t)0x80bd000) /* Base @ of Sector 189, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_190 ((uint32_t)0x80be000) /* Base @ of Sector 190, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_191 ((uint32_t)0x80bf000) /* Base @ of Sector 191, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_192 ((uint32_t)0x80c0000) /* Base @ of Sector 192, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_193 ((uint32_t)0x80c1000) /* Base @ of Sector 193, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_194 ((uint32_t)0x80c2000) /* Base @ of Sector 194, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_195 ((uint32_t)0x80c3000) /* Base @ of Sector 195, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_196 ((uint32_t)0x80c4000) /* Base @ of Sector 196, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_197 ((uint32_t)0x80c5000) /* Base @ of Sector 197, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_198 ((uint32_t)0x80c6000) /* Base @ of Sector 198, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_199 ((uint32_t)0x80c7000) /* Base @ of Sector 199, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_200 ((uint32_t)0x80c8000) /* Base @ of Sector 200, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_201 ((uint32_t)0x80c9000) /* Base @ of Sector 201, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_202 ((uint32_t)0x80ca000) /* Base @ of Sector 202, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_203 ((uint32_t)0x80cb000) /* Base @ of Sector 203, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_204 ((uint32_t)0x80cc000) /* Base @ of Sector 204, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_205 ((uint32_t)0x80cd000) /* Base @ of Sector 205, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_206 ((uint32_t)0x80ce000) /* Base @ of Sector 206, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_207 ((uint32_t)0x80cf000) /* Base @ of Sector 207, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_208 ((uint32_t)0x80d0000) /* Base @ of Sector 208, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_209 ((uint32_t)0x80d1000) /* Base @ of Sector 209, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_210 ((uint32_t)0x80d2000) /* Base @ of Sector 210, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_211 ((uint32_t)0x80d3000) /* Base @ of Sector 211, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_212 ((uint32_t)0x80d4000) /* Base @ of Sector 212, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_213 ((uint32_t)0x80d5000) /* Base @ of Sector 213, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_214 ((uint32_t)0x80d6000) /* Base @ of Sector 214, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_215 ((uint32_t)0x80d7000) /* Base @ of Sector 215, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_216 ((uint32_t)0x80d8000) /* Base @ of Sector 216, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_217 ((uint32_t)0x80d9000) /* Base @ of Sector 217, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_218 ((uint32_t)0x80da000) /* Base @ of Sector 218, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_219 ((uint32_t)0x80db000) /* Base @ of Sector 219, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_220 ((uint32_t)0x80dc000) /* Base @ of Sector 220, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_221 ((uint32_t)0x80dd000) /* Base @ of Sector 221, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_222 ((uint32_t)0x80de000) /* Base @ of Sector 222, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_223 ((uint32_t)0x80df000) /* Base @ of Sector 223, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_224 ((uint32_t)0x80e0000) /* Base @ of Sector 224, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_225 ((uint32_t)0x80e1000) /* Base @ of Sector 225, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_226 ((uint32_t)0x80e2000) /* Base @ of Sector 226, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_227 ((uint32_t)0x80e3000) /* Base @ of Sector 227, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_228 ((uint32_t)0x80e4000) /* Base @ of Sector 228, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_229 ((uint32_t)0x80e5000) /* Base @ of Sector 229, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_230 ((uint32_t)0x80e6000) /* Base @ of Sector 230, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_231 ((uint32_t)0x80e7000) /* Base @ of Sector 231, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_232 ((uint32_t)0x80e8000) /* Base @ of Sector 232, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_233 ((uint32_t)0x80e9000) /* Base @ of Sector 233, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_234 ((uint32_t)0x80ea000) /* Base @ of Sector 234, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_235 ((uint32_t)0x80eb000) /* Base @ of Sector 235, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_236 ((uint32_t)0x80ec000) /* Base @ of Sector 236, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_237 ((uint32_t)0x80ed000) /* Base @ of Sector 237, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_238 ((uint32_t)0x80ee000) /* Base @ of Sector 238, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_239 ((uint32_t)0x80ef000) /* Base @ of Sector 239, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_240 ((uint32_t)0x80f0000) /* Base @ of Sector 240, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_241 ((uint32_t)0x80f1000) /* Base @ of Sector 241, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_242 ((uint32_t)0x80f2000) /* Base @ of Sector 242, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_243 ((uint32_t)0x80f3000) /* Base @ of Sector 243, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_244 ((uint32_t)0x80f4000) /* Base @ of Sector 244, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_245 ((uint32_t)0x80f5000) /* Base @ of Sector 245, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_246 ((uint32_t)0x80f6000) /* Base @ of Sector 246, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_247 ((uint32_t)0x80f7000) /* Base @ of Sector 247, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_248 ((uint32_t)0x80f8000) /* Base @ of Sector 248, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_249 ((uint32_t)0x80f9000) /* Base @ of Sector 249, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_250 ((uint32_t)0x80fa000) /* Base @ of Sector 250, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_251 ((uint32_t)0x80fb000) /* Base @ of Sector 251, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_252 ((uint32_t)0x80fc000) /* Base @ of Sector 252, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_253 ((uint32_t)0x80fd000) /* Base @ of Sector 253, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_254 ((uint32_t)0x80fe000) /* Base @ of Sector 254, 4 Kbytes */
+#define ADDR_FLASH_SECTOR_255 ((uint32_t)0x80ff000) /* Base @ of Sector 255, 4 Kbytes */
+
+#define FLASH_WRITE_GRAN_BITS   (32) // WORD
+#define FLASH_SECTOR_SIZE_BYTES (1024 * 4)
+#define FLASH_USER_START_ADDR   (ADDR_FLASH_SECTOR_248)
+#define FLASH_BL_START_ADDR     (ADDR_FLASH_SECTOR_0)
+#define FLASH_APP_START_ADDR    (ADDR_FLASH_SECTOR_8) // 32K Bootloader
+#define FLASH_USER_AREA_SIZE    (8 * FLASH_SECTOR_SIZE_BYTES)
+#define USE_FLASHDB
+#endif
