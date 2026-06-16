@@ -29,9 +29,6 @@
 #include <easyflash.h>
 #include "hal_impl.hpp"
 
-#include "cpp_classes.hpp"
-#include "ascii_tiny_printf.hpp"
-
 #ifdef USE_EASYFLASH
 
 #include <cstdarg>
