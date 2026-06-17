@@ -16,7 +16,11 @@ enum class UARTBaudrate : uint32_t
   BAUD_230400 = 2,
   BAUD_460800 = 3,
   BAUD_921600 = 4,
-  BAUD_1843200 = 5
+  BAUD_1843200 = 5,
+  BAUD_1000000 = 6,
+  BAUD_4000000 = 7,
+  BAUD_6000000 = 8,
+  BAUD_8000000 = 9
 };
 
 } // End of namespace Comm

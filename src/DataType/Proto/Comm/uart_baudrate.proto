@@ -10,4 +10,8 @@ enum UARTBaudrate {
   BAUD_460800 = 3;
   BAUD_921600 = 4;
   BAUD_1843200 = 5;
+  BAUD_1000000 = 6;
+  BAUD_4000000 = 7;
+  BAUD_6000000 = 8;
+  BAUD_8000000 = 9;
 }
