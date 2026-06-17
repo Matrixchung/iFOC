@@ -11,6 +11,12 @@
 
 namespace iFOC::HAL
 {
+/// UART interface under Producer-Consumer mode, multiple consumers are allowed
+/// through calling RegisterRxHandler() multiple times. \n
+/// Incoming messages will be distributed by RxEventHandlerTask in RTOS loop,
+/// with a maximum timeout of 10ms. Users should be noted that the real-time capability
+/// cannot be proven under this interface. \n
+/// For real-time capable interface, see UART High-Speed(HS) interface in uart_hs_base.hpp.
 class UARTBase
 {
     DELETE_COPY_CONSTRUCTOR(UARTBase);
@@ -66,7 +72,7 @@ public:
 
     /// Write a specific amount of data to the FIFO.
     /// \param data pointer to src array
-    /// \param size size of data requested to be wrote
+    /// \param size size of data requested to be written
     /// \return actual size wrote into the FIFO
     virtual uint16_t WriteBytes(const uint8_t* data, uint16_t size);
 
