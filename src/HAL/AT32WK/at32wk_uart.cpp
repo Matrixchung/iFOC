@@ -28,8 +28,9 @@ constexpr uint8_t get_channel_index_by_chaddr(uint32_t addr)
 
 namespace iFOC::HAL
 {
-UART::UART(usart_type *_huart, dma_channel_type *_rx_dma, dma_channel_type *_tx_dma) : UARTBase(), huart(_huart), rx_dma(_rx_dma), tx_dma(_tx_dma) {}
+UART::UART(usart_type *_huart, dma_channel_type *_rx_dma, dma_channel_type *_tx_dma) : UART(_huart, _rx_dma, _tx_dma, false) {}
 
+UART::UART(usart_type *_huart, dma_channel_type *_rx_dma, dma_channel_type *_tx_dma, const bool rs485_mode) : UARTBase(), huart(_huart), rx_dma(_rx_dma), tx_dma(_tx_dma), is_rs485_mode(rs485_mode) {}
 
 FuncRetCode UART::Init(DataType::Comm::UARTBaudrate baud)
 {
@@ -40,13 +41,18 @@ FuncRetCode UART::Init(DataType::Comm::UARTBaudrate baud)
     if(ret != FuncRetCode::OK) return ret;
     xSemaphoreGive(tx_sem);
     uint32_t baudrate = 115200;
+    uint16_t delay = 1;
     switch(baud)
     {
         case DataType::Comm::UARTBaudrate::BAUD_9600: baudrate = 9600; break;
         case DataType::Comm::UARTBaudrate::BAUD_230400: baudrate = 230400; break;
         case DataType::Comm::UARTBaudrate::BAUD_460800: baudrate = 460800; break;
-        case DataType::Comm::UARTBaudrate::BAUD_921600: baudrate = 921600; break;
-        case DataType::Comm::UARTBaudrate::BAUD_1843200: baudrate = 1843200; break;
+        case DataType::Comm::UARTBaudrate::BAUD_921600: baudrate = 921600; delay = 2; break;
+        case DataType::Comm::UARTBaudrate::BAUD_1843200: baudrate = 1843200; delay = 2; break;
+        case DataType::Comm::UARTBaudrate::BAUD_1000000: baudrate = 1000000; delay = 2; break;
+        case DataType::Comm::UARTBaudrate::BAUD_4000000: baudrate = 4000000; delay = 8; break;
+        case DataType::Comm::UARTBaudrate::BAUD_6000000: baudrate = 6000000; delay = 12; break;
+        case DataType::Comm::UARTBaudrate::BAUD_8000000: baudrate = 8000000; delay = 15; break;
         default: break;
     }
     dma_channel_enable(rx_dma, FALSE);
@@ -77,6 +83,13 @@ FuncRetCode UART::Init(DataType::Comm::UARTBaudrate baud)
     rx_buffer.fill(0);
     // UART Init
     usart_init(huart, baudrate, USART_DATA_8BITS, USART_STOP_1_BIT);
+    // RS485 mode compatible
+    if(is_rs485_mode)
+    {
+        usart_de_polarity_set(huart, USART_DE_POLARITY_HIGH);
+        usart_rs485_delay_time_config(huart, delay, delay);
+        usart_rs485_mode_enable(huart, TRUE);
+    }
     event_handler.Start();
     dma_channel_enable(rx_dma, TRUE);
     usart_receiver_enable(huart, TRUE);

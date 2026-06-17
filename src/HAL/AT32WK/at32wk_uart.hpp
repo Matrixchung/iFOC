@@ -11,6 +11,7 @@ class UART final : public UARTBase
 {
 public:
     UART(usart_type *_huart, dma_channel_type *_rx_dma, dma_channel_type *_tx_dma);
+    UART(usart_type *_huart, dma_channel_type *_rx_dma, dma_channel_type *_tx_dma, bool rs485_mode);
     FuncRetCode Init(DataType::Comm::UARTBaudrate baud) override;
     FuncRetCode StartTransmit(bool blocked) override;
     void OnUARTIRQ();
@@ -38,6 +39,7 @@ private:
     uint8_t RX_DMA_CHANNEL = 0;
     uint8_t TX_DMA_INDEX = 0;
     uint8_t TX_DMA_CHANNEL = 0;
+    bool is_rs485_mode = false;
 };
 }
 
