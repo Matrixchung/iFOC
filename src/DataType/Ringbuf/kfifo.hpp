@@ -20,6 +20,9 @@ public:
     uint32_t peek(uint8_t *p, uint32_t len) const;
     uint32_t get(uint8_t *p, uint32_t len);
     void wipe_n(uint32_t len);
+    /// Move up to len bytes directly from this FIFO into dst without an intermediate buffer.
+    /// \return actual number of bytes moved
+    uint32_t move_to(kfifo_t& dst, uint32_t len);
     [[nodiscard]] __fast_inline uint32_t used() const { return in - out; };
     [[nodiscard]] __fast_inline uint32_t available() const { return size - (in - out); };
     __fast_inline void flush() { in = out = 0; };

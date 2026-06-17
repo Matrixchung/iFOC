@@ -52,6 +52,25 @@ void kfifo_t::wipe_n(const uint32_t len)
     out += len;
 }
 
+uint32_t kfifo_t::move_to(kfifo_t& dst, uint32_t len)
+{
+    const auto x = uint32_min(used(), dst.available());
+    len = uint32_min(len, x);
+    const uint32_t src_pos = out & (size - 1);
+    const uint32_t tail = size - src_pos;
+    if(tail >= len)
+    {
+        dst.put(buffer + src_pos, len);
+    }
+    else
+    {
+        dst.put(buffer + src_pos, tail);
+        dst.put(buffer, len - tail);
+    }
+    out += len;
+    return len;
+}
+
 kfifo_t::~kfifo_t()
 {
     MEMFREE(buffer);
