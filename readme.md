@@ -315,6 +315,7 @@ motor->RegisterProtocol(new iFOC::Protocol::DroneCANProtocol(can1));
 1. [IAP & Bootloader 设计](https://github.com/Matrixchung/iFOC/blob/v2.0/docs/zh/IAP%20%26%20Bootloader%20%E8%AE%BE%E8%AE%A1.md)
 1. 各模块设计
    - [自适应缺相检测算法](https://github.com/Matrixchung/iFOC/blob/v2.0/docs/zh/modules/自适应缺相检测算法.md)
+   - [高速串口接口(UART-HS)](https://github.com/Matrixchung/iFOC/blob/v2.0/docs/zh/modules/高速串口接口(UART-HS).md)
 
 
 ### 开发文档
