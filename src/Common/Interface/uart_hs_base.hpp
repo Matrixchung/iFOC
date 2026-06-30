@@ -4,6 +4,7 @@
 #include "../foc_types.hpp"
 #include "../../DataType/Headers/Comm/uart_baudrate.h"
 #include "../../DataType/Ringbuf/kfifo.hpp"
+#include <functional>
 
 namespace iFOC::HAL
 {
@@ -15,10 +16,11 @@ class UARTHSBase
 {
     DELETE_COPY_CONSTRUCTOR(UARTHSBase);
     OVERRIDE_NEW();
-// protected:
-//     DataType::Ringbuf::kfifo_t tx_fifo;
-//     DataType::Ringbuf::kfifo_t rx_fifo;
 public:
+    /// Called from the UART IDLE ISR after rx_fifo is fully updated.
+    /// May call ReadBytes(), WriteBytes(), StartTransmit(). Must not use FreeRTOS blocking APIs.
+    using IdleCallback = std::function<void(UARTHSBase*)>;
+
     UARTHSBase() = default;
     virtual ~UARTHSBase() = default;
 
@@ -27,13 +29,10 @@ public:
     /// \return FuncRetCode
     virtual FuncRetCode Init(DataType::Comm::UARTBaudrate baud) = 0;
 
-    /// By polling this function periodically, a consumer should have
-    /// updated incoming bytes in the Rx FIFO. Then the handling process is
-    /// dominated by ReadBytes().
-    virtual void Update();
-
     /// Start transmit after multiple WriteBytes(), forced by DMA.
     virtual void StartTransmit() = 0;
+
+    virtual void UpdateRxFIFO();
 
     /// Write a specific amount of data to the Tx FIFO.
     /// \param data pointer to src array
@@ -48,11 +47,17 @@ public:
     /// \return actual size read from the Rx FIFO
     uint16_t ReadBytes(uint8_t* data, uint16_t size, bool peek);
 
+    void RegisterIdleCallback(IdleCallback cb);
+    void RemoveIdleCallback();
+
     [[nodiscard]] __fast_inline auto GetRxLen() const { return rx_fifo.used(); };
     [[nodiscard]] __fast_inline auto GetTxPending() const { return tx_fifo.used(); };
     [[nodiscard]] __fast_inline auto GetTxAvailable() const { return tx_fifo.available(); };
 
     DataType::Ringbuf::kfifo_t tx_fifo;
     DataType::Ringbuf::kfifo_t rx_fifo;
+
+protected:
+    IdleCallback idle_cb;
 };
 }

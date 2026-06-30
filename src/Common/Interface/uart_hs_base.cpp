@@ -2,7 +2,17 @@
 
 namespace iFOC::HAL
 {
-void UARTHSBase::Update() {}
+void UARTHSBase::UpdateRxFIFO() {}
+
+void UARTHSBase::RegisterIdleCallback(IdleCallback cb)
+{
+    idle_cb = std::move(cb);
+}
+
+void UARTHSBase::RemoveIdleCallback()
+{
+    idle_cb = nullptr;
+}
 
 uint16_t UARTHSBase::WriteBytes(const uint8_t* data, uint16_t size)
 {
