@@ -33,6 +33,8 @@ uint32_t ADCPort::GetFullRange() const
 {
 #if defined(AT32F403Axx)
     return 4095;
+#elif defined(AT32F435xx)
+    return 4095;
 #endif
     return 0;
 }

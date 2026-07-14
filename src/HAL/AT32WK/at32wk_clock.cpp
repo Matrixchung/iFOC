@@ -7,6 +7,11 @@
 #define USE_DWT_COUNTER
 #endif
 
+#if defined(AT32F403AxG) || defined(AT32F407xx)
+#else
+uint32_t uptime_sec = 0;
+#endif
+
 namespace iFOC::HAL
 {
     namespace PerfCounter
@@ -38,7 +43,6 @@ namespace iFOC::HAL
     // F403A/407: simple 32-bit RTC counter, 1Hz from HEXT/128/62500
     uint32_t GetUptimeSeconds() { return rtc_counter_get(); }
 #else
-    uint32_t uptime_sec = 0;
     uint32_t GetUptimeSeconds()
     {
         return uptime_sec;

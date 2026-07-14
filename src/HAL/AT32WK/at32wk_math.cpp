@@ -34,7 +34,7 @@ void sinf_cosf_impl(const real_t theta, real_t& sin, real_t& cos)
 
 uint32_t _get_sn()
 {
-#if defined(AT32F403Axx) || defined(AT32F407xx)
+#if defined(AT32F403Axx) || defined(AT32F407xx) || defined(AT32F435xx)
 #define FLASH_SIZE_BASE 0x1FFFF7E0
 #define UID_BASE_1      0x1FFFF7E8
 #define UID_BASE_2      0x1FFFF7EC
