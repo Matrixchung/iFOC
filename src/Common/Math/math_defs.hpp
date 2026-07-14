@@ -312,7 +312,7 @@ static consteval auto MONTH() {
             __DATE__[0] == 'M' && __DATE__[2] == 'r' ? 3 :
             __DATE__[0] == 'A' && __DATE__[1] == 'p' ? 4 :
             __DATE__[0] == 'M' ?  5 :
-            __DATE__[0] == 'J' && __DATE__[1] == 'u' ? 6 :
+            __DATE__[0] == 'J' && __DATE__[1] == 'u' && __DATE__[2] == 'n' ? 6 :
             __DATE__[0] == 'J' ? 7 :
             __DATE__[0] == 'A' ? 8 :
             __DATE__[0] == 'S' ? 9 :
