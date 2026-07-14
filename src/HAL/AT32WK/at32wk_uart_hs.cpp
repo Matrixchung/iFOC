@@ -57,8 +57,8 @@ namespace iFOC::HAL
             case DataType::Comm::UARTBaudrate::BAUD_1000000: baudrate = 1000000; delay = 2; break;
             case DataType::Comm::UARTBaudrate::BAUD_4000000: baudrate = 4000000; delay = 8; break;
             case DataType::Comm::UARTBaudrate::BAUD_6000000: baudrate = 6000000; delay = 12; break;
-            case DataType::Comm::UARTBaudrate::BAUD_8000000: baudrate = 8000000; delay = 15; break;
-            case DataType::Comm::UARTBaudrate::BAUD_9000000: baudrate = 9000000; delay = 16; break;
+            case DataType::Comm::UARTBaudrate::BAUD_8000000: baudrate = 8000000; delay = 18; break;
+            case DataType::Comm::UARTBaudrate::BAUD_9000000: baudrate = 9000000; delay = 22; break;
             default: break;
         }
         dma_channel_enable(rx_dma, FALSE);
