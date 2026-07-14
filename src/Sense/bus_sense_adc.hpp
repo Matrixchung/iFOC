@@ -16,6 +16,7 @@ public:
                 HAL::ADCPortBase* _ibus, real_t _ibus_gain, bool _rev);
     BusSenseADC(HAL::ADCPortBase* _vbus, real_t _vbus_gain,
                 HAL::ADCPortBase* _ibus, real_t _ibus_gain);
+    BusSenseADC(HAL::ADCPortBase* _vbus, real_t _vbus_gain);
     FuncRetCode Update() override;
     void SampleDCOffset(uint16_t sample_ms);
 private:

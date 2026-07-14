@@ -8,41 +8,51 @@
 namespace iFOC::Sense
 {
 BusSenseADC::BusSenseADC(HAL::ADCPortBase* _vbus,
-                         real_t _vbus_gain,
+                         const real_t _vbus_gain,
                          HAL::ADCPortBase* _ibus,
-                         real_t _ibus_gain,
-                         bool _rev) :
+                         const real_t _ibus_gain,
+                         const bool _rev) :
         Vbus_port(_vbus), Ibus_port(_ibus),
         Ibus_lpf(100), Ibus_offset_lpf(10),
         Vbus_gain_V(_vbus_gain), Ibus_gain_mV(_ibus_gain)
 {
-    // To get Ibus in [A], Ibus_factor_mV should be transformed
-    if(config.bus_sense_shunt_ohm() <= 0.0f) Ibus_gain_mV = 0.0f;
-    else Ibus_gain_mV = (1.0f / (Ibus_gain_mV * config.get_bus_sense_shunt_ohm() * 1000.0f));
-    Ibus_offset_lpf.output_prev = Ibus_port->GetFullRangeVoltage() * 1000.0f * 0.5f;
-    if(_rev) Ibus_gain_mV *= -1.0f;
+    if(_ibus && Ibus_port)
+    {
+        // To get Ibus in [A], Ibus_factor_mV should be transformed
+        if(config.bus_sense_shunt_ohm() <= 0.0f) Ibus_gain_mV = 0.0f;
+        else Ibus_gain_mV = (1.0f / (Ibus_gain_mV * config.get_bus_sense_shunt_ohm() * 1000.0f));
+        Ibus_offset_lpf.output_prev = Ibus_port->GetFullRangeVoltage() * 1000.0f * 0.5f;
+        if(_rev) Ibus_gain_mV *= -1.0f;
+    }
 }
 
 BusSenseADC::BusSenseADC(HAL::ADCPortBase* _vbus,
-                     real_t _vbus_gain,
+                     const real_t _vbus_gain,
                      HAL::ADCPortBase* _ibus,
-                     real_t _ibus_gain) : BusSenseADC(_vbus, _vbus_gain, _ibus, _ibus_gain, false) {}
+                     const real_t _ibus_gain) : BusSenseADC(_vbus, _vbus_gain, _ibus, _ibus_gain, false) {}
+
+BusSenseADC::BusSenseADC(HAL::ADCPortBase* _vbus, const real_t _vbus_gain) : BusSenseADC(_vbus, _vbus_gain, nullptr, 1.0f, false) {}
 
 FuncRetCode BusSenseADC::Update()
 {
     voltage = Vbus_port->GetVoltage() * Vbus_gain_V;
-    const auto curr_tick = xTaskGetTickCount();
-    if(last_update_tick > 0)
+    if(Ibus_port)
     {
-        const float Ts = (curr_tick - last_update_tick) * 0.001f;
-        current = Ibus_lpf.GetOutput((Ibus_port->GetVoltage_mV() - Ibus_offset_lpf.output_prev) * Ibus_gain_mV, Ts);
+        const auto curr_tick = xTaskGetTickCount();
+        if(last_update_tick > 0)
+        {
+            const float Ts = (curr_tick - last_update_tick) * 0.001f;
+            current = Ibus_lpf.GetOutput((Ibus_port->GetVoltage_mV() - Ibus_offset_lpf.output_prev) * Ibus_gain_mV, Ts);
+        }
+        last_update_tick = curr_tick;
     }
-    last_update_tick = curr_tick;
+    else current = 0.0f;
     return FuncRetCode::OK;
 }
 
 void BusSenseADC::SampleDCOffset(uint16_t sample_ms)
 {
+    if(!Ibus_port) return;
     if(sample_ms == 0)
     {
         Ibus_offset_lpf.GetOutput(Ibus_port->GetVoltage_mV(), 0.0001f); // sample once
