@@ -15,22 +15,18 @@ namespace iFOC
 struct TaskTimer
 {
 public:
-    // uint32_t start_time_us = 0;
-    // uint32_t end_time_us = 0;
     uint32_t elapsed_time_us = 0;
     uint32_t max_elapsed_time_us = 0;
-    uint32_t start();
-    void stop(uint32_t start_us);
+    static uint32_t start();
+    void stop(uint32_t start_cycle);
 };
 #else
 struct TaskTimer
 {
 public:
-    // uint32_t start_time_cycle = 0;
-    // uint32_t end_time_cycle = 0;
     uint32_t elapsed_time_cycle = 0;
     uint32_t max_elapsed_time_cycle = 0;
-    uint32_t start();
+    static uint32_t start();
     void stop(uint32_t start_cycle);
 };
 #endif

@@ -99,15 +99,9 @@ namespace NVM
 /// Used in: iFOC::TaskTimer
 namespace PerfCounter
 {
-    /// Max readout value of GetCounter(), typically 0xFFFF (for 32-bit timer).
-    extern uint32_t max_counter;
-
     /// Defines how many counter cycles represent one us, typically GetCoreClockHz() / 1000000.
     /// Leave non-zero value if PerfCounter is not used!!
     extern uint32_t counter_to_us;
-
-    /// Typically max_counter / counter_to_us.
-    extern uint32_t max_counter_us;
 
     /// Initialize and start the timer used for performance counter.
     void InitTimer();

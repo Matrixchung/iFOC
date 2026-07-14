@@ -14,11 +14,7 @@ namespace iFOC::HAL
 {
     namespace PerfCounter
     {
-        uint32_t max_counter = 0;
-
         uint32_t counter_to_us = 1;
-
-        uint32_t max_counter_us = 0;
 
         void InitTimer()
         {
@@ -61,9 +57,7 @@ namespace iFOC::HAL
                         SysTick_CTRL_TICKINT_Msk |
                         SysTick_CTRL_ENABLE_Msk;
         PerfCounter::InitTimer();
-        PerfCounter::max_counter = 0xFFFF;
         PerfCounter::counter_to_us = GetCoreClockHz() / 1000000;
-        PerfCounter::max_counter_us = PerfCounter::max_counter / PerfCounter::counter_to_us;
 #endif
     }
 
