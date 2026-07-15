@@ -21,7 +21,7 @@ FuncRetCode I2CSW::WriteBytes(uint8_t addr, const uint8_t* data, const uint16_t 
     addr <<= 1;
     addr &= ~0x01;
     // DisableIRQ();
-    portENTER_CRITICAL();
+    if(!xPortIsInsideInterrupt()) portENTER_CRITICAL();
     I2CStart();
     SendByte(addr);
     if(!WaitAck()) goto timeout;
@@ -37,11 +37,11 @@ FuncRetCode I2CSW::WriteBytes(uint8_t addr, const uint8_t* data, const uint16_t 
     }
     I2CStop();
     // EnableIRQ();
-    portEXIT_CRITICAL();
+    if(!xPortIsInsideInterrupt()) portEXIT_CRITICAL();
     return FuncRetCode::OK;
     timeout:
     // EnableIRQ();
-    portEXIT_CRITICAL();
+    if(!xPortIsInsideInterrupt()) portEXIT_CRITICAL();
     return FuncRetCode::REMOTE_TIMEOUT;
 }
 
@@ -52,7 +52,7 @@ FuncRetCode I2CSW::ReadBytes(uint8_t addr, uint8_t* data, const uint16_t size)
     addr <<= 1;
     addr |= 0x01;
     // DisableIRQ();
-    portENTER_CRITICAL();
+    if(!xPortIsInsideInterrupt()) portENTER_CRITICAL();
     I2CStart();
     SendByte(addr);
     if(!WaitAck()) goto timeout;
@@ -77,11 +77,11 @@ FuncRetCode I2CSW::ReadBytes(uint8_t addr, uint8_t* data, const uint16_t size)
     SendNAck();
     I2CStop();
     // EnableIRQ();
-    portEXIT_CRITICAL();
+    if(!xPortIsInsideInterrupt()) portEXIT_CRITICAL();
     return FuncRetCode::OK;
     timeout:
     // EnableIRQ();
-    portEXIT_CRITICAL();
+    if(!xPortIsInsideInterrupt()) portEXIT_CRITICAL();
     return FuncRetCode::REMOTE_TIMEOUT;
 }
 
@@ -199,7 +199,7 @@ uint8_t I2CSW::ReceiveByte() const
 
 void I2CSW::_delay() const
 {
-    HAL::DelayCycle(clock_cycles);
+    DelayCycle(clock_cycles);
 }
 
 }
