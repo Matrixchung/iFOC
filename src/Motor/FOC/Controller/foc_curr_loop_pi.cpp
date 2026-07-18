@@ -140,9 +140,13 @@ void CurrLoopPI::UpdateRT(float Ts)
         const bool enable_flux_feedforward = foc->GetConfig().flux_linkage_valid();
         if(enable_pi_feedforward)
         {
-            if(enable_flux_feedforward) Uq_total_feedforward += foc->elec_omega_rad_s * (foc->GetConfig().d_axis_inductance() * foc->Iqd_measured.d + foc->GetConfig().flux_linkage());
-            else Uq_total_feedforward += foc->elec_omega_rad_s * (foc->GetConfig().d_axis_inductance() * foc->Iqd_measured.d);
-            Ud_total_feedforward -= foc->elec_omega_rad_s * (foc->GetConfig().q_axis_inductance() * foc->Iqd_measured.q);
+            // if(enable_flux_feedforward) Uq_total_feedforward += foc->elec_omega_rad_s * (foc->GetConfig().d_axis_inductance() * foc->Iqd_measured.d + foc->GetConfig().flux_linkage());
+            // else Uq_total_feedforward += foc->elec_omega_rad_s * (foc->GetConfig().d_axis_inductance() * foc->Iqd_measured.d);
+            // Ud_total_feedforward -= foc->elec_omega_rad_s * (foc->GetConfig().q_axis_inductance() * foc->Iqd_measured.q);
+            // Use foc->Iqd_target instead of foc->Iqd_measured, increasing stability under current sampling noise
+            if(enable_flux_feedforward) Uq_total_feedforward += foc->elec_omega_rad_s * (foc->GetConfig().d_axis_inductance() * foc->Iqd_target.d + foc->GetConfig().flux_linkage());
+            else Uq_total_feedforward += foc->elec_omega_rad_s * (foc->GetConfig().d_axis_inductance() * foc->Iqd_target.d);
+            Ud_total_feedforward -= foc->elec_omega_rad_s * (foc->GetConfig().q_axis_inductance() * foc->Iqd_target.q);
         }
         foc->Uqd_target.q = q_pi.GetOutput(iq_error, Ts, Uq_total_feedforward);
         foc->Uqd_target.d = d_pi.GetOutput(id_error, Ts, Ud_total_feedforward);
