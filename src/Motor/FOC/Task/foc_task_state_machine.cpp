@@ -10,6 +10,7 @@
 #include "../Task/foc_task_tone_player.hpp"
 #include "../Observer/foc_observer_hfi.hpp"
 #include "../../../Encoder/encoder_off_axis_base.hpp"
+#include "../../../Encoder/encoder_vernier.hpp"
 
 constexpr float OFF_AXIS_ENCODER_VALID_TIMEOUT = 0.5f;
 
@@ -85,9 +86,42 @@ void StateMachineTask::InitNormal()
                         enc->full_rotations = target_full_rotations;
                     }
                 }
+                else if(const auto vernier = foc->GetEncoderByName("EncVernier"))
+                {
+                    float off_axis_encoder_valid_timer = 0.0f;
+                    while(!vernier->IsResultValid() || !enc->IsResultValid())
+                    {
+                        off_axis_encoder_valid_timer += 0.01f;
+                        if(off_axis_encoder_valid_timer >= OFF_AXIS_ENCODER_VALID_TIMEOUT) break;
+                        sleep(10);
+                    }
+                    const float gear_ratio = ((Encoder::EncoderVernier*)vernier)->GetGearRatio();
+                    if(vernier->IsResultValid() && enc->IsResultValid())
+                    {
+                        float min_error = PI2;
+                        int target_full_rotations = 0;
+                        const int k_max = (int)ceilf(foc->GetConfig().deduction_ratio()) - 1;
+                        for(int k = 0; k <= k_max; ++k)
+                        {
+                            const float theta = enc->compensated_single_round_angle_rad + PI2 * (float)k;
+                            const float beta_pred = normalize_rad((-gear_ratio) * theta);
+                            const float abs_error = ABS(normalize_rad_pm_pi(beta_pred - vernier->compensated_single_round_angle_rad));
+                            if(abs_error < min_error)
+                            {
+                                min_error = abs_error;
+                                target_full_rotations = k;
+                            }
+                        }
+                        enc->full_rotations = target_full_rotations;
+                    }
+                }
             }
         }
-        else foc->RemoveEncoderByName("EncOffAxis");
+        else
+        {
+            foc->RemoveEncoderByName("EncVernier");
+            foc->RemoveEncoderByName("EncOffAxis");
+        }
     }
 
     // Here we are in IDLE.
@@ -112,6 +146,12 @@ void StateMachineTask::InitNormal()
 void StateMachineTask::UpdateNormal()
 {
     const auto foc = GetMotor<FOCMotor>();
+    if(isr_request_state_called)
+    {
+        RequestState(isr_requested_state);
+        isr_requested_state = MotorState::IDLE;
+        isr_request_state_called = false;
+    }
     switch(current_state)
     {
         case MotorState::STARTUP_SEQUENCE:
@@ -253,18 +293,18 @@ bool StateMachineTask::CheckStateRequirement(const MotorState new_state)
         {
             while(foc->GetTaskByName("ExtCalib")) sleep(10);
             const auto enc = foc->GetEncoderByName("EncOffAxis");
-            return !CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
-                    !CheckStateRequirement(MotorState::ENCODER_INDEX_SEARCH) &&
-                    !CheckStateRequirement(MotorState::ENCODER_CALIBRATION) &&
+            return CheckStateRequirement(MotorState::SENSORED_CLOSED_LOOP_CONTROL) &&
                     ((enc &&
                         ((Encoder::EncoderOffAxisBase*)enc)->IsConnected() &&
                         !((Encoder::EncoderOffAxisBase*)enc)->IsCalibrated() &&
                         foc->GetPrimaryEncoder() &&
                         foc->GetConfig().deduction_ratio() > 1.0f)
 #if FOC_ANTICOGGING_AVAILABLE
-                        || (true && CheckStateRequirement(MotorState::SENSORED_CLOSED_LOOP_CONTROL)
-                            && foc->GetConfig().anticogging_base_pos_err_deg() > 0.0f &&
+                        || (foc->GetConfig().anticogging_base_pos_err_deg() > 0.0f &&
                             foc->GetConfig().anticogging_base_vel_err_rpm() > 0.0f &&
+                            foc->GetConfig().vel_kp() > 0.0f &&
+                            foc->GetConfig().vel_ki() > 0.0f &&
+                            foc->GetConfig().pos_kp() > 0.0f &&
                             foc->anticogging_lut.getTableSize() != ANTICOGGING_LUT_POINTS)
 #endif
                      );
@@ -295,6 +335,12 @@ MotorState StateMachineTask::BackToLastState()
 
 MotorState StateMachineTask::RequestState(const MotorState new_state)
 {
+    if(xPortIsInsideInterrupt())
+    {
+        isr_request_state_called = true;
+        isr_requested_state = new_state;
+        return new_state; // latch the request to RTOS task
+    }
     const auto foc = GetMotor<FOCMotor>();
     if(current_state == new_state) TRANSITION_FAILED();
     switch(new_state)
