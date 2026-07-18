@@ -374,8 +374,8 @@ void FOCMotor::SetTrajectoryTargetMotion(Motion& motion, bool is_s_curve)
     if(GetConfig().deduction_ratio() <= 0.0f) return; // deduction ratio invalid, return
 
     real_t traj_base_speed_lim_rads = RPM2RAD(GetConfig().traj_output_speed_limit_rpm() * GetConfig().deduction_ratio(), 1);
-    real_t traj_base_accel_lim_rads2 = RPM2RAD(GetConfig().traj_output_accel_limit_rpm() * GetConfig().deduction_ratio(), 1);
-    real_t traj_base_decel_lim_rads2 = RPM2RAD(GetConfig().traj_output_decel_limit_rpm() * GetConfig().deduction_ratio(), 1);
+    const real_t traj_base_accel_lim_rads2 = RPM2RAD(GetConfig().traj_output_accel_limit_rpm() * GetConfig().deduction_ratio(), 1);
+    const real_t traj_base_decel_lim_rads2 = RPM2RAD(GetConfig().traj_output_decel_limit_rpm() * GetConfig().deduction_ratio(), 1);
     if(traj_base_speed_lim_rads <= 0.0f || traj_base_accel_lim_rads2 <= 0.0f || traj_base_decel_lim_rads2 <= 0.0f) return; // settings invalid, return
 
     motion.ConvertSpeedPosToDefault();
@@ -383,7 +383,7 @@ void FOCMotor::SetTrajectoryTargetMotion(Motion& motion, bool is_s_curve)
     {
         if(motion.torque.unit == Motion::TorqueUnit::NM)
         {
-            real_t temp = 1.0f / GetConfig().deduction_ratio();
+            const real_t temp = 1.0f / GetConfig().deduction_ratio();
             motion.torque.value *= temp; // OUTPUT -> BASE
             motion.torque.limit *= temp;
         }
@@ -394,6 +394,7 @@ void FOCMotor::SetTrajectoryTargetMotion(Motion& motion, bool is_s_curve)
     }
     motion.ref = Motion::Ref::BASE;
     // now we have BASE ref, with RADS speed & RAD pos.
+    if(motion.speed.limit > 0.0f) traj_base_speed_lim_rads = MIN(motion.speed.limit, traj_base_speed_lim_rads); // limit speed
     const auto current_motion = GetCurrentMotionStruct(motion);
     traj_controller.PlanTrajectory(motion.pos.value,
                                    current_motion.pos.value,
