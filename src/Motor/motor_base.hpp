@@ -562,6 +562,7 @@ __fast_inline void MotorBase<shunt_count>::SetPrimaryEncoderIndex(const uint8_t 
     primary_encoder_idx = idx;
 }
 
+// If we will read motor config, this should be called after motor->Init();
 template<uint8_t shunt_count>
 void MotorBase<shunt_count>::RegisterProtocol(ProtocolBase *protocol)
 {

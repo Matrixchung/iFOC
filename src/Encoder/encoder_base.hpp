@@ -19,23 +19,23 @@ class EncoderBase
 {
     OVERRIDE_NEW();
 public:
-    EncoderBase(const char *_name, Type _type, int8_t _s) :
+    EncoderBase(const char *_name, const Type _type, const int8_t _s) :
     encoder_type(_type),
     sign_and_deduction_ratio(_s == -1 ? -1.0f : 1.0f)
     {
         strncpy(name, _name, sizeof(name));
     };
     virtual ~EncoderBase() = default;
-    virtual FuncRetCode Init(uint8_t motor_id) { return FuncRetCode::OK; };
-    virtual void UpdateRT(float Ts) {};
-    virtual void UpdateMid(float Ts) {};
-    virtual void SaveConfig(uint8_t motor_id) {};
+    virtual FuncRetCode Init(const uint8_t motor_id) { return FuncRetCode::OK; };
+    virtual void UpdateRT(const float Ts) {};
+    virtual void UpdateMid(const float Ts) {};
+    virtual void SaveConfig(const uint8_t motor_id) {};
     // Since Normal task is running in RTOS loop and delay time is not proven,
     // all encoder instance shouldn't run a normal task.
     [[nodiscard]] const char* GetName() const { return name; };
     [[nodiscard]] bool IsResultValid() const { return result_valid; }
     [[nodiscard]] Type GetEncoderType() const { return encoder_type; }
-    void SetSign(int8_t _sign)
+    void SetSign(const int8_t _sign)
     {
         sign_and_deduction_ratio = _sign >= 0 ? ABS(sign_and_deduction_ratio) : -ABS(sign_and_deduction_ratio);
     }

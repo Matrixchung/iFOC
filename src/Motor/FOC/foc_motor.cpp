@@ -143,6 +143,7 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
             BlobNVMStorage().ClearNVM(key);
         }
     }
+    else anticogging_lut.clear();
 #endif
     AppendTask(&this->state_machine);
     AppendTask(new UpdateSenseTask); // "SenseTask"
@@ -417,7 +418,7 @@ FuncRetCode FOCMotor::AppendEncoder(Encoder::EncoderBase* encoder)
         {
             if(GetConfig().sensor_direction_clockwise() == false) // we need clockwise, so reverse primary encoder sign.
             {
-                if(auto enc = GetPrimaryEncoder(); enc && enc == encoder) enc->SetSign(-1 * enc->GetSign());
+                if(const auto enc = GetPrimaryEncoder(); enc && enc == encoder) enc->SetSign(-1 * enc->GetSign());
             }
         }
     }
