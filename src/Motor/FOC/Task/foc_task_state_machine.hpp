@@ -25,6 +25,8 @@ public:
 protected:
     MotorState current_state = MotorState::IDLE;
     MotorState last_state = MotorState::IDLE;
+    bool isr_request_state_called = false;
+    MotorState isr_requested_state = MotorState::IDLE;
 private:
     TransitionCallback trans_success_cb{};
     TransitionCallback trans_failure_cb{};
