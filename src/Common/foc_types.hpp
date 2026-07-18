@@ -6,6 +6,7 @@
 #include <functional>
 #include <cmath>
 
+#include "Math/float16.hpp"
 #include "Math/real_t.hpp"
 #include "FreeRTOS.h"
 #include "semphr.h"
