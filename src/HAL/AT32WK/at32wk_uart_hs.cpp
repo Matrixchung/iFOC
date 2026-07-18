@@ -162,8 +162,10 @@ namespace iFOC::HAL
         last_dma_rx_size = curr_rx_pos;
         rx_copy_busy = false;
 
+        usart_interrupt_enable(huart, USART_IDLE_INT, FALSE); // prevent re-enter ISR
         // Step 2: Invoke idle callback — rx_fifo is fully up to date at this point.
         if(idle_cb) idle_cb(this);
+        usart_interrupt_enable(huart, USART_IDLE_INT, TRUE);
 
         // Step 3: Start TX DMA if idle and tx_pending — drain all of tx_fifo in one shot.
         // If TX DMA is still running (previous frame not finished), skip.
