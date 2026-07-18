@@ -138,6 +138,32 @@ public:
         spi->SetDataWidth(HAL::SPIBase::DataWidth::BYTE);
         spi->SetClock(15000000); // 15 MHz MAX
         if(const auto r = spi->Init(); r != FuncRetCode::OK) return FuncRetCode::HARDWARE_ERROR;
+
+        // try to read nonlinear compensation lut
+        char key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
+        memcpy(key, NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
+        key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = motor_id + '0';
+        key[sizeof(NONLINEAR_LUT_DB_KEY_PREFIX)] = '\0';
+
+        auto buffer_size = BlobNVMStorage().GetKVSize(key);
+        if(DataType::LookupTable::getTableSizeBySerializedSize(buffer_size) == NONLINEAR_LUT_POINTS)
+        {
+            uint8_t* deserialize_buffer = (uint8_t*)pvPortMalloc(buffer_size * sizeof(uint8_t));
+            if(deserialize_buffer)
+            {
+                if(BlobNVMStorage().ReadNVM(key, deserialize_buffer, &buffer_size) == FuncRetCode::OK)
+                {
+                    nonlinear_lut.deserialize(deserialize_buffer, buffer_size);
+                }
+                vPortFree(deserialize_buffer);
+                deserialize_buffer = nullptr;
+            }
+        }
+        else // incorrect size, delete KV
+        {
+            BlobNVMStorage().ClearNVM(key);
+        }
+
         return ReadAbsAngleRad();
     }
     void UpdateRT(const float Ts) override
@@ -178,7 +204,12 @@ private:
         uint16_t now_angle_cnt = ((uint16_t)buf[0] << 6) | ((uint16_t)buf[1] >> 2);
         if(sign_and_deduction_ratio < 0.0f) now_angle_cnt = (CPR - now_angle_cnt) & (CPR - 1);
         raw_single_round_angle_rad = (float)now_angle_cnt * PI2divCPR_f;
-        compensated_single_round_angle_rad = raw_single_round_angle_rad;
+        if(nonlinear_lut.getTableSize() == NONLINEAR_LUT_POINTS)
+        {
+            const float nl_err = nonlinear_lut.lookupPeriodic(raw_single_round_angle_rad);
+            compensated_single_round_angle_rad = normalize_rad(raw_single_round_angle_rad - nl_err);
+        }
+        else compensated_single_round_angle_rad = raw_single_round_angle_rad;
         result_valid = true;
         return FuncRetCode::OK;
     }
@@ -203,6 +234,7 @@ private:
         0x23, 0x20, 0x25, 0x26, 0x2F, 0x2C, 0x29, 0x2A, 0x3B, 0x38, 0x3D, 0x3E, 0x37, 0x34, 0x31, 0x32,
         0x13, 0x10, 0x15, 0x16, 0x1F, 0x1C, 0x19, 0x1A, 0x0B, 0x08, 0x0D, 0x0E, 0x07, 0x04, 0x01, 0x02,
     };
+    DataType::LookupTable nonlinear_lut;
     T* spi = nullptr;
     real_t last_compensated_angle_rad = 0.0f;
 };
