@@ -341,4 +341,12 @@ size_t LookupTable::getTableSizeBySerializedSize(size_t serialized_size)
     if(serialized_size % sizeof(float) != 0) return 0;
     return serialized_size / sizeof(float);
 }
+
+void LookupTable::clear()
+{
+    table.clear();
+    input_max_ = 0.0f;
+    input_min_ = 0.0f;
+    step_ = 0.0f;
+}
 }
