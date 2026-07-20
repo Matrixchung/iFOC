@@ -394,11 +394,29 @@ void FOCMotor::SetTrajectoryTargetMotion(Motion& motion, bool is_s_curve)
     }
     motion.ref = Motion::Ref::BASE;
     // now we have BASE ref, with RADS speed & RAD pos.
+    if(_is_trajectory_motion && motion.pos.value == _traj_final_target_motion.pos.value)
+    {
+        return; // same absolute target, no re-planning
+    }
+    float current_pos, current_speed;
+    if(_is_trajectory_motion && !traj_controller.GetState())
+    {
+        // Old trajectory still running, connect with new current_pos/speed
+        // to ensure no encoder disturbance
+        current_pos = traj_controller.GetCurrPos();
+        current_speed = traj_controller.GetCurrSpeed();
+    }
+    else
+    {
+        // No running trajectory, use current motion from encoder
+        const auto current_motion = GetCurrentMotionStruct(motion);
+        current_pos = current_motion.pos.value;
+        current_speed = current_motion.speed.value;
+    }
     if(motion.speed.limit > 0.0f) traj_base_speed_lim_rads = MIN(motion.speed.limit, traj_base_speed_lim_rads); // limit speed
-    const auto current_motion = GetCurrentMotionStruct(motion);
     traj_controller.PlanTrajectory(motion.pos.value,
-                                   current_motion.pos.value,
-                                   current_motion.speed.value,
+                                   current_pos,
+                                   current_speed,
                                    traj_base_speed_lim_rads,
                                    traj_base_accel_lim_rads2,
                                    traj_base_decel_lim_rads2, is_s_curve);
