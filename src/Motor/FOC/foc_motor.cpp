@@ -396,6 +396,10 @@ void FOCMotor::SetTrajectoryTargetMotion(Motion& motion, bool is_s_curve)
     // now we have BASE ref, with RADS speed & RAD pos.
     if(_is_trajectory_motion && motion.pos.value == _traj_final_target_motion.pos.value)
     {
+        // we could only sync the speed & current limit, and current feedforward
+        _traj_final_target_motion.speed.limit = motion.speed.limit;
+        _traj_final_target_motion.torque.value = motion.torque.value;
+        _traj_final_target_motion.torque.limit = motion.torque.limit;
         return; // same absolute target, no re-planning
     }
     float current_pos, current_speed;
