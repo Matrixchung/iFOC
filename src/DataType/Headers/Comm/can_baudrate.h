@@ -22,7 +22,13 @@ enum class CANBaudrate : uint32_t
   BAUD_800_KBPS = 8,
   BAUD_1_MBPS = 9,
   BAUD_2_MBPS = 10,
-  BAUD_5_MBPS = 11
+  BAUD_3_MBPS = 11,
+  BAUD_4_MBPS = 12,
+  BAUD_5_MBPS = 13,
+  BAUD_6_MBPS = 14,
+  BAUD_8_MBPS = 15,
+  BAUD_10_MBPS = 16,
+  BAUD_12_MBPS = 17
 };
 
 } // End of namespace Comm
