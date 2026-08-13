@@ -25,6 +25,10 @@
     #include "main.h"
 #endif
 
+#ifdef IFOC_CANFD_AVAILABLE
+#undef IFOC_CANFD_AVAILABLE
+#endif
+
 #ifdef USE_HAL_DRIVER // STM32 Environment
 #include "STM32/stm32_nvm_address.h"
 
@@ -33,6 +37,10 @@
 
 #elif defined(AT32F435xx) || defined(AT32F435xG) // AT32F435 Environment
 #include "AT32WK/at32wk_nvm_address.h"
+
+#elif defined(AT32F456xx) // AT32F456 Environment
+#include "AT32WK/at32wk_nvm_address.h"
+#define IFOC_CANFD_AVAILABLE
 
 #elif defined(HPM_ENV)
 #include "HPMicro/hpmicro_nvm_address.h"

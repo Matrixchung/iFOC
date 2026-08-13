@@ -8,6 +8,9 @@ constexpr real_t Avg_Slope_mV_C = -4.26f;
 #elif defined(AT32F435xx)
 constexpr real_t V25 = 1.27f;;
 constexpr real_t Avg_Slope_mV_C = -4.13f;
+#elif defined(AT32F456xx)
+constexpr real_t V25 = 1.28f;
+constexpr real_t Avg_Slope_mV_C = -4.27f;
 #endif
 
 namespace iFOC::Sense

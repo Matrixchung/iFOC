@@ -179,7 +179,7 @@ void write_bpr(bkp_struct_t* src)
     // PWC->ctrl_bit.bpwen = 0; // lock BPR // lock BPR cause lock of RTC
 }
 
-#elif defined(AT32F435xG) || defined(AT32F435xx)
+#elif defined(AT32F435xG) || defined(AT32F435xx) || defined(AT32F456xx)
 
 // bkp_struct_t size: 18, ERTC_DT1 -> ERTC_DT5 (2 bytes wasted), little-endian
 bool read_bpr(bkp_struct_t* dst)

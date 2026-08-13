@@ -1,6 +1,6 @@
 #include "at32wk_can.hpp"
 
-#if defined(AT32WK_ENV) && defined(CAN_MODULE_ENABLED)
+#if defined(AT32WK_ENV) && defined(CAN_MODULE_ENABLED) && !defined(IFOC_CANFD_AVAILABLE)
 
 #include "../../Common/foc_math.hpp"
 

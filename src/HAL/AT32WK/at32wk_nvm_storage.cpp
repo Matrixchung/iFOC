@@ -5,7 +5,7 @@
 
 #include "at32wk_nvm_address.h"
 
-#if defined(AT32F403AxG) || defined(AT32F435xG)
+#if defined(AT32F403AxG) || defined(AT32F435xG) || defined(AT32F456xx)
 static constexpr uint32_t GetSector(const uint32_t Addr)
 {
     return (Addr - FLASH_BASE) / FLASH_SECTOR_SIZE_BYTES;

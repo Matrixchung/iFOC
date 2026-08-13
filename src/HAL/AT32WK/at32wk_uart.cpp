@@ -86,9 +86,11 @@ FuncRetCode UART::Init(DataType::Comm::UARTBaudrate baud)
     // RS485 mode compatible
     if(is_rs485_mode)
     {
+#if defined(AT32F435xG) || defined(AT32F456xx)
         usart_de_polarity_set(huart, USART_DE_POLARITY_HIGH);
         usart_rs485_delay_time_config(huart, delay, delay);
         usart_rs485_mode_enable(huart, TRUE);
+#endif
     }
     event_handler.Start();
     dma_channel_enable(rx_dma, TRUE);
@@ -109,7 +111,7 @@ FuncRetCode UART::StartTransmit(bool blocked)
     {
         if(xSemaphoreTakeAuto(tx_sem, READ_WRITE_TIMEOUT_MS) == pdTRUE)
         {
-            auto len = tx_fifo.get(tx_buffer.data(), tx_buffer.max_size());
+            const auto len = tx_fifo.get(tx_buffer.data(), tx_buffer.max_size());
             if(len == 0) xSemaphoreGiveAuto(tx_sem);
             else if(TransmitDMA(tx_buffer.data(), len) != FuncRetCode::OK)
             {
@@ -121,7 +123,7 @@ FuncRetCode UART::StartTransmit(bool blocked)
         }
         return FuncRetCode::REMOTE_TIMEOUT;
     }
-    auto len = tx_fifo.get(tx_buffer.data(), tx_buffer.max_size());
+    const auto len = tx_fifo.get(tx_buffer.data(), tx_buffer.max_size());
     return TransmitBlocking(tx_buffer.data(), len, 0xF);
 }
 
@@ -130,9 +132,18 @@ void UART::OnUARTIRQ()
     // if(usart_interrupt_flag_get(huart, USART_IDLEF_FLAG) != RESET)
     if(huart->sts & USART_IDLEF_FLAG)
     {
-        uint16_t recv_total_size = rx_buffer.max_size() - rx_dma->dtcnt;
-        uint16_t recv_size = recv_total_size - last_dma_rx_size;
-        rx_fifo.put(rx_buffer.data() + last_dma_rx_size, recv_size);
+        const uint16_t recv_total_size = rx_buffer.max_size() - rx_dma->dtcnt;
+        if(recv_total_size >= last_dma_rx_size)
+        {
+            const uint16_t recv_size = recv_total_size - last_dma_rx_size;
+            if(recv_size > 0) rx_fifo.put(rx_buffer.data() + last_dma_rx_size, recv_size);
+        }
+        else // buffer rollback
+        {
+            const uint16_t tail = rx_buffer.max_size() - last_dma_rx_size;
+            rx_fifo.put(rx_buffer.data() + last_dma_rx_size, tail);
+            if(recv_total_size > 0) rx_fifo.put(rx_buffer.data(), recv_total_size);
+        }
         last_dma_rx_size = recv_total_size;
         vTaskNotifyGiveFromISR(event_handler.GetHandle(), nullptr);
         // usart_flag_clear(huart, USART_IDLEF_FLAG);
@@ -154,15 +165,15 @@ void UART::OnRxDMAIRQ()
     }
     if(dma_interrupt_flag_get(FDT_FLAG) != RESET) // DMA Full Complete, ~HAL_UART_RXEVENT_TC
     {
-        uint16_t recv_size = rx_buffer.max_size() - last_dma_rx_size;
+        const uint16_t recv_size = rx_buffer.max_size() - last_dma_rx_size;
         rx_fifo.put(rx_buffer.data() + last_dma_rx_size, recv_size);
         last_dma_rx_size = 0;
         dma_flag_clear(FDT_FLAG);
     }
     if(dma_interrupt_flag_get(HDT_FLAG) != RESET) // DMA Half Complete, ~HAL_UART_RXEVENT_HT
     {
-        uint16_t recv_total_size = rx_buffer.max_size() - rx_dma->dtcnt;
-        uint16_t recv_size = recv_total_size - last_dma_rx_size;
+        const uint16_t recv_total_size = rx_buffer.max_size() - rx_dma->dtcnt;
+        const uint16_t recv_size = recv_total_size - last_dma_rx_size;
         rx_fifo.put(rx_buffer.data() + last_dma_rx_size, recv_size);
         last_dma_rx_size = recv_total_size;
         dma_flag_clear(HDT_FLAG);

@@ -84,7 +84,7 @@ FuncRetCode WS2812::Init()
     hdma->ctrl_bit.pwidth = DMA_PERIPHERAL_DATA_WIDTH_WORD;
     hdma->ctrl_bit.mincm = TRUE;  // Memory Increment Enable
     hdma->ctrl_bit.pincm = FALSE; // Periph. Increment Disable
-#if defined(AT32F403Axx) || defined(AT32F435xx)
+#if defined(AT32F403Axx) || defined(AT32F435xx) || defined(AT32F456xx)
     hdma->ctrl_bit.lm = TRUE; // Circular mode
 #endif
     SetBrightness(brightness);

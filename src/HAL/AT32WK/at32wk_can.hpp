@@ -3,7 +3,7 @@
 #include "../../Common/Interface/can_base.hpp"
 #include "hal_const.h"
 
-#if defined(AT32WK_ENV) && defined(CAN_MODULE_ENABLED)
+#if defined(AT32WK_ENV) && defined(CAN_MODULE_ENABLED) && !defined(IFOC_CANFD_AVAILABLE)
 
 namespace iFOC::HAL
 {

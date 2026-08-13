@@ -33,7 +33,11 @@ namespace iFOC::HAL
         }
     }
 
+#if defined(AT32F456xx)
+    uint32_t GetCoreClockHz() { return system_core_clock; }
+#else
     uint32_t GetCoreClockHz() { return SystemCoreClock; }
+#endif
 
 #if defined(AT32F403AxG) || defined(AT32F407xx)
     // F403A/407: simple 32-bit RTC counter, 1Hz from HEXT/128/62500

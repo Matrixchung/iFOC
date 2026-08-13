@@ -96,9 +96,11 @@ namespace iFOC::HAL
         // RS485 mode compatible
         if(is_rs485_mode)
         {
+#if defined(AT32F435xG) || defined(AT32F456xx)
             usart_de_polarity_set(huart, USART_DE_POLARITY_HIGH);
             usart_rs485_delay_time_config(huart, delay, delay);
             usart_rs485_mode_enable(huart, TRUE);
+#endif
         }
         dma_channel_enable(rx_dma, TRUE);
         usart_receiver_enable(huart, TRUE);
