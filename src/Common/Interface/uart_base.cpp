@@ -39,13 +39,15 @@ uint16_t UARTBase::WriteBytes(const uint8_t *data, uint16_t size)
 {
     if(xPortIsInsideInterrupt()) // If from ISR, we can directly insert data to the FIFO (caller must be >= SYSCALL_PRIORITY)
     {
-        const uint16_t len = MIN(size, GetTxAvailable());
+        // const uint16_t len = MIN(size, GetTxAvailable());
+        const uint16_t len = size;
         tx_fifo.put(data, len);
         return len;
     }
     if(xSemaphoreTake(tx_fifo_mutex, pdMS_TO_TICKS(READ_WRITE_TIMEOUT_MS)) == pdTRUE)
     {
-        const uint16_t len = MIN(size, GetTxAvailable());
+        // const uint16_t len = MIN(size, GetTxAvailable());
+        const uint16_t len = size;
         tx_fifo.put(data, len);
         xSemaphoreGive(tx_fifo_mutex);
         return len;
@@ -56,7 +58,8 @@ uint16_t UARTBase::WriteBytes(const uint8_t *data, uint16_t size)
 uint16_t UARTBase::ReadBytes(uint8_t *data, uint16_t size, bool peek)
 {
     // xSemaphoreTake(rx_fifo_mutex, portMAX_DELAY);
-    const uint16_t len = MIN(size, GetRxLen());
+    // const uint16_t len = MIN(size, GetRxLen());
+    const uint16_t len = size;
     if(peek) rx_fifo.peek(data, len);
     else rx_fifo.get(data, len);
     // xSemaphoreGive(rx_fifo_mutex);
