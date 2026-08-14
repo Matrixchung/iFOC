@@ -56,6 +56,7 @@ FuncRetCode EncoderMT6835::Init(uint8_t motor_id)
             vPortFree(deserialize_buffer);
             deserialize_buffer = nullptr;
         }
+        else return FuncRetCode::BUFFER_FULL;
     }
     else // incorrect size, delete KV
     {
