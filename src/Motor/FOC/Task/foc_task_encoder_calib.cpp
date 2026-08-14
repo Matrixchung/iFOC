@@ -11,7 +11,7 @@ EncoderCalibTask::EncoderCalibTask() : Task("EncCalib")
 {
     RegisterTask(TaskType::NORMAL_TASK, TaskType::MID_TASK);
     config.rtos_priority = configMAX_PRIORITIES - 5;
-    config.stack_depth = 512;
+    config.stack_depth = 1024;
 }
 
 EncoderCalibTask::~EncoderCalibTask()
@@ -116,15 +116,25 @@ void EncoderCalibTask::UpdateNormal()
                 break;
             }
             encoder->SetSign(1); // first: positive sign
+            float previous_angle = 0.0f;
+            float forward_moved = 0.0f;
+            bool previous_angle_valid = false;
             for(int i = 0; i < 500; i++)
             {
                 float angle_rad = PI2 * (float)i / 500.0f;
                 foc->Iqd_target = {0.0f, foc->GetConfig().calibration_current()};
                 foc->elec_angle_rad = normalize_rad(angle_rad);
                 sleep(2);
+                const float current_angle = encoder->raw_single_round_angle_rad;
+                if(!previous_angle_valid)
+                {
+                    previous_angle = current_angle;
+                    previous_angle_valid = true;
+                    continue;
+                }
+                forward_moved += normalize_rad_pm_pi(current_angle - previous_angle);
+                previous_angle = current_angle;
             }
-            float mid_angle = 0.0f;
-            mid_angle = encoder->raw_single_round_angle_rad;
             for(int i = 499; i >= 0; i--)
             {
                 float angle_rad = PI2 * (float)i / 500.0f;
@@ -134,16 +144,17 @@ void EncoderCalibTask::UpdateNormal()
             }
             foc->Iqd_target = {0.0f, 0.0f};
             sleep(200);
-            float end_angle = 0.0f;
-            end_angle = encoder->raw_single_round_angle_rad;
-            float moved = std::fabsf(mid_angle - end_angle);
+            // Use the accumulated circular displacement from the forward sweep.
+            // Comparing mid_angle and end_angle directly fails when the encoder
+            // crosses the [0, 2pi) wrap boundary during the sweep.
+            const float moved = std::fabsf(forward_moved);
             if(moved < MIN_ANGLE_DETECT_MOVEMENT)
             {
                 foc->DisarmWithError(MotorError::MOTOR_FAILED_TO_ROTATE);
                 foc->RemoveTaskByName(GetName());
                 break;
             }
-            if(mid_angle < end_angle)
+            if(forward_moved < 0.0f)
             {
                 foc->GetConfig().set_sensor_direction_clockwise(false);
                 // we need clockwise, so reverse primary encoder sign.
@@ -326,6 +337,37 @@ void EncoderCalibTask::UpdateNormal()
                     lut.setValueByIndex(lut_index, lut_value);
                 }
                 lut.setValueByIndex(LUT_SEGMENTS, lut.getValueByIndex(0)); // wrap around
+
+                // Check LUT validity
+                constexpr float MAX_NONLINEAR_LUT_PEAK_RAD = 0.1f;
+                float lut_peak_abs_rad = 0.0f;
+                bool lut_valid = true;
+
+                for(size_t i = 0; i < LUT_SEGMENTS; ++i)
+                {
+                    const float value = lut.getValueByIndex(i);
+
+                    if(!std::isfinite(value))
+                    {
+                        lut_valid = false;
+                        break;
+                    }
+
+                    lut_peak_abs_rad = IFOC_MAX(
+                        lut_peak_abs_rad,
+                        std::fabsf(value)
+                    );
+                }
+
+                if(!lut_valid || lut_peak_abs_rad > MAX_NONLINEAR_LUT_PEAK_RAD)
+                {
+                    foc->DisarmWithError(MotorError::PRIMARY_SENSOR_CALIBRATION_FAILED);
+                    foc->GetConfig().set_sensor_direction_valid(false);
+                    foc->GetConfig().set_sensor_zero_offset_rad(0.0f);
+                    foc->GetConfig().set_sensor_zero_offset_valid(false);
+                    foc->RemoveTaskByName(GetName());
+                    break;
+                }
 
                 if(temp_map)
                 {
