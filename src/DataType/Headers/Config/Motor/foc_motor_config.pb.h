@@ -13,7 +13,7 @@ extern "C" {
 typedef struct {
     uint32_t node_id;
     float    current_loop_bandwidth;
-    char     node_name[33];           /* max 32 chars + null, STRING field tag 3 */
+    char     node_name[33];  /* max 32 chars + null, STRING field */
     float    calibration_voltage;
     float    calibration_current;
     float    max_voltage;
