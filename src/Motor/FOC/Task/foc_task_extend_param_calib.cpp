@@ -5,7 +5,7 @@
 #include "../../../Encoder/encoder_off_axis_base.hpp"
 
 #define PEAK_FINDING_PHASE_OMEGA_RADS (40.0f)
-#define LUT_CALIBRATION_PHASE_OMEGA_RADS (20.0f)
+#define LUT_CALIBRATION_PHASE_OMEGA_RADS (10.0f)
 
 namespace iFOC::FOC
 {
