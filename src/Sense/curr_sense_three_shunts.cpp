@@ -8,7 +8,7 @@ constexpr uint16_t ZERO_OFFSET_STABLE_TIMES = 1000;
 namespace iFOC::Sense
 {
 CurrSenseThreeShunts::CurrSenseThreeShunts(HAL::ADCPortBase* _a, HAL::ADCPortBase* _b, HAL::ADCPortBase* _c,
-    bool rev_a, bool rev_b, bool rev_c) :
+    const bool rev_a, const bool rev_b, const bool rev_c) :
         CurrSenseBase(config.get_current_sense_gain(), config.get_current_sense_shunt_ohm()),
         JDR_a(_a), JDR_b(_b), JDR_c(_c),
         Ia_zero_lpf(10), Ib_zero_lpf(10), Ic_zero_lpf(10),
@@ -18,12 +18,12 @@ CurrSenseThreeShunts::CurrSenseThreeShunts(HAL::ADCPortBase* _a, HAL::ADCPortBas
 {
     Ia_zero_lpf.output_prev = Ib_zero_lpf.output_prev = Ic_zero_lpf.output_prev = JDR_a->GetFullRangeVoltage() * 1000.0f * 0.5f;
     zero_a = zero_b = zero_c = Ia_zero_lpf.output_prev;
-    sign_a = rev_a ? -1 : 1;
-    sign_b = rev_b ? -1 : 1;
-    sign_c = rev_c ? -1 : 1;
+    coeff_a = rev_a ? -current_factor_mV : current_factor_mV;
+    coeff_b = rev_b ? -current_factor_mV : current_factor_mV;
+    coeff_c = rev_c ? -current_factor_mV : current_factor_mV;
 }
 
-void CurrSenseThreeShunts::Update(float Ts)
+void CurrSenseThreeShunts::Update(const float Ts)
 {
     if(zero_offset_calc_times < ZERO_OFFSET_STABLE_TIMES)
     {
@@ -32,12 +32,12 @@ void CurrSenseThreeShunts::Update(float Ts)
         shunt_values[2] = 0.0f;
         return;
     }
-    shunt_values[0] = Ia_lpf.GetOutput((JDR_a->GetVoltage_mV() - zero_a) * current_factor_mV * (real_t)sign_a, Ts);
-    shunt_values[1] = Ib_lpf.GetOutput((JDR_b->GetVoltage_mV() - zero_b) * current_factor_mV * (real_t)sign_b, Ts);
-    shunt_values[2] = Ic_lpf.GetOutput((JDR_c->GetVoltage_mV() - zero_c) * current_factor_mV * (real_t)sign_c, Ts);
+    shunt_values[0] = Ia_lpf.GetOutput((JDR_a->GetVoltage_mV() - zero_a) * coeff_a, Ts);
+    shunt_values[1] = Ib_lpf.GetOutput((JDR_b->GetVoltage_mV() - zero_b) * coeff_b, Ts);
+    shunt_values[2] = Ic_lpf.GetOutput((JDR_c->GetVoltage_mV() - zero_c) * coeff_c, Ts);
 }
 
-void CurrSenseThreeShunts::UpdateRemainingCurrent(float Ts)
+void CurrSenseThreeShunts::UpdateRemainingCurrent(const float Ts)
 {
     const real_t Va = JDR_a->GetVoltage_mV();
     const real_t Vb = JDR_b->GetVoltage_mV();

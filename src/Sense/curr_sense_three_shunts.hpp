@@ -31,8 +31,11 @@ private:
     Filter::LowpassFilter Ib_lpf;
     Filter::LowpassFilter Ic_lpf;
     uint16_t zero_offset_calc_times = 0;
-    int8_t sign_a = 1;
-    int8_t sign_b = 1;
-    int8_t sign_c = 1;
+    // int8_t sign_a = 1;
+    // int8_t sign_b = 1;
+    // int8_t sign_c = 1;
+    real_t coeff_a = 1.0f;
+    real_t coeff_b = 1.0f;
+    real_t coeff_c = 1.0f;
 };
 }
