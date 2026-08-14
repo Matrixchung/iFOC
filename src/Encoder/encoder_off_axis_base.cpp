@@ -60,6 +60,7 @@ FuncRetCode EncoderOffAxisBase::Init(uint8_t motor_id)
 void EncoderOffAxisBase::UpdateMid(const float Ts)
 {
     result_valid = IsConnected() && IsCalibrated();
+
     raw_single_round_angle_rad = normalize_rad(GetAtan2());
     if(IsLUTCalibrated())
     {
@@ -87,28 +88,31 @@ void EncoderOffAxisBase::UpdateMid(const float Ts)
     const real_t vel = delta / Ts;
     angular_speed_rad_s = speed_lpf.GetOutput(vel, Ts);
 
-    switch(calib_state)
+    if(IsConnected())
     {
-        case CalibrationState::PEAK:
+        switch(calib_state)
         {
-            // CH_A
-            const auto ch_a = GetChannelA_mV();
-            if(ch_a >= param_ChA.Vmax) param_ChA.Vmax = ch_a;
-            if(ch_a <= param_ChA.Vmin) param_ChA.Vmin = ch_a;
-            if(param_ChA.Vmax > param_ChA.Vmin) param_ChA.Vamp = 0.5f * (param_ChA.Vmax - param_ChA.Vmin);
+            case CalibrationState::PEAK:
+            {
+                // CH_A
+                const auto ch_a = GetChannelA_mV();
+                if(ch_a >= param_ChA.Vmax) param_ChA.Vmax = ch_a;
+                if(ch_a <= param_ChA.Vmin) param_ChA.Vmin = ch_a;
+                if(param_ChA.Vmax > param_ChA.Vmin) param_ChA.Vamp = 0.5f * (param_ChA.Vmax - param_ChA.Vmin);
 
-            // CH_B
-            const auto ch_b = GetChannelB_mV();
-            if(ch_b >= param_ChB.Vmax) param_ChB.Vmax = ch_b;
-            if(ch_b <= param_ChB.Vmin) param_ChB.Vmin = ch_b;
-            if(param_ChB.Vmax > param_ChB.Vmin) param_ChB.Vamp = 0.5f * (param_ChB.Vmax - param_ChB.Vmin);
-            break;
+                // CH_B
+                const auto ch_b = GetChannelB_mV();
+                if(ch_b >= param_ChB.Vmax) param_ChB.Vmax = ch_b;
+                if(ch_b <= param_ChB.Vmin) param_ChB.Vmin = ch_b;
+                if(param_ChB.Vmax > param_ChB.Vmin) param_ChB.Vamp = 0.5f * (param_ChB.Vmax - param_ChB.Vmin);
+                break;
+            }
+            case CalibrationState::LUT:
+            {
+                break;
+            }
+            default: break;
         }
-        case CalibrationState::LUT:
-        {
-            break;
-        }
-        default: break;
     }
 }
 
