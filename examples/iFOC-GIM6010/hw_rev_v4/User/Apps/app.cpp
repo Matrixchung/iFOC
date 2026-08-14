@@ -1,24 +1,25 @@
-#include "ascii_protocol.hpp"
-#include "at32f403a_407_int.h"
 #include "cpp_classes.hpp"
+#include "at32f403a_407_int.h"
 #include "board_default_config.h"
 #include "foc_task_update_sense.hpp"
 #include "i2c_sw.hpp"
-#include "vofa.hpp"
 #include "rtos_task.hpp"
 #include "cyphal_protocol.hpp"
 #include "dronecan_protocol.hpp"
 #include "encoder_off_axis_uart.hpp"
+#include "rs485_protocol.hpp"
 
 iFOC::FOCMotor* motor_1 = nullptr;
 
 iFOC::HAL::UART* uart1 = nullptr;
 
-iFOC::HAL::UART* uart3 = nullptr;
+iFOC::HAL::UARTHS* uart3 = nullptr;
+
+iFOC::HAL::USBUARTHS* usb_uart = nullptr;
+
+iFOC::Protocol::RS485Protocol* rs485_protocol = nullptr;
 
 iFOC::HAL::CAN* can1 = nullptr;
-
-// iFOC::Protocol::USBProtocolFOC* usb_protocol = nullptr;
 
 iFOC::Driver::FOCDriverDRV830x* drv830x = nullptr;
 
@@ -27,55 +28,55 @@ class UARTTask : public RTOSTask
 public:
     void loop() final
     {
-        iFOC::Motion target;
-        iFOC::Motion current;
-        motor_1->GetTargetMotion(target,
-                    iFOC::Motion::Ref::OUTPUT,
-                    iFOC::Motion::TorqueUnit::AMP,
-                    iFOC::Motion::SpeedUnit::RADS,
-                    iFOC::Motion::PosUnit::DEG);
-        motor_1->GetCurrentMotion(current,
-                    iFOC::Motion::Ref::OUTPUT,
-                    iFOC::Motion::TorqueUnit::AMP,
-                    iFOC::Motion::SpeedUnit::RADS,
-                    iFOC::Motion::PosUnit::DEG);
-        vofa.add(0, target.speed.value);
-        vofa.add(1, current.speed.value);
-        vofa.add(2, target.pos.value);
-        vofa.add(3, current.pos.value);
-        // vofa.add(4, motor_1->Iqd_measured.q);
-        // vofa.add(5, motor_1->Iqd_measured.d);
+        // iFOC::Motion target;
+        // iFOC::Motion current;
+        // motor_1->GetTargetMotion(target,
+        //             iFOC::Motion::Ref::OUTPUT,
+        //             iFOC::Motion::TorqueUnit::AMP,
+        //             iFOC::Motion::SpeedUnit::RADS,
+        //             iFOC::Motion::PosUnit::DEG);
+        // motor_1->GetCurrentMotion(current,
+        //             iFOC::Motion::Ref::OUTPUT,
+        //             iFOC::Motion::TorqueUnit::AMP,
+        //             iFOC::Motion::SpeedUnit::RADS,
+        //             iFOC::Motion::PosUnit::DEG);
+
+        // // vofa.add(4, motor_1->Iqd_measured.q);
+        // // vofa.add(5, motor_1->Iqd_measured.d);
+        //
+        // auto* encoder = motor_1->GetEncoderByName("EncOffAxis");
+        // if(encoder)
+        // {
+        //     auto* ptr = (iFOC::Encoder::EncoderOffAxisBase*)encoder;
+        //     vofa.add(4, iFOC::RAD2DEG(ptr->multi_round_angle_rad));
+        //     vofa.add(5, ptr->angular_speed_rad_s);
+        // }
+        //
+        // // vofa.add(6, gpio_input_data_bit_read(DRV_FAULT_GPIO_PORT, DRV_FAULT_PIN));
+        // // vofa.add(6, motor_1->GetCurrSense()->shunt_values[0]);
+        // // vofa.add(7, motor_1->GetCurrSense()->shunt_values[1]);
+        // uart1->WriteBytes(vofa.buffer(), sizeof(vofa));
+        // uart1->StartTransmit(false);
+        // // uart1.Print(1, "Vin/Iin:%.2f,%.2f, Vout:%.2f,%.2f\n", ina237_in.voltage, ina237_in.current, ina237_out.voltage, ina237_out.current);
+
+        // rs485_protocol->SetScopeData(0, motor_1->GetCurrSense()->shunt_values[0]);
+        // rs485_protocol->SetScopeData(1, motor_1->GetCurrSense()->shunt_values[1]);
+        // rs485_protocol->SetScopeData(2, motor_1->GetCurrSense()->shunt_values[2]);
 
         auto* encoder = motor_1->GetEncoderByName("EncOffAxis");
         if(encoder)
         {
             auto* ptr = (iFOC::Encoder::EncoderOffAxisBase*)encoder;
-            vofa.add(4, iFOC::RAD2DEG(ptr->multi_round_angle_rad));
-            vofa.add(5, ptr->angular_speed_rad_s);
+            rs485_protocol->SetScopeData(0, iFOC::RAD2DEG(ptr->multi_round_angle_rad));
+            rs485_protocol->SetScopeData(1, ptr->angular_speed_rad_s);
+            rs485_protocol->SetScopeData(2, ptr->GetChannelA_mV());
+            rs485_protocol->SetScopeData(3, ptr->GetChannelB_mV());
         }
 
-        // vofa.add(6, gpio_input_data_bit_read(DRV_FAULT_GPIO_PORT, DRV_FAULT_PIN));
-        // vofa.add(6, motor_1->GetCurrSense()->shunt_values[0]);
-        // vofa.add(7, motor_1->GetCurrSense()->shunt_values[1]);
-        uart1->WriteBytes(vofa.buffer(), sizeof(vofa));
-        uart1->StartTransmit(false);
-        // uart1.Print(1, "Vin/Iin:%.2f,%.2f, Vout:%.2f,%.2f\n", ina237_in.voltage, ina237_in.current, ina237_out.voltage, ina237_out.current);
         sleep(10);
     }
 };
 UARTTask uartTask;
-
-void usb_init()
-{
-    crm_periph_clock_enable(CRM_USB_PERIPH_CLOCK, TRUE); // Enable USB clock
-    /*
-     * Note: from AT32F403Ax Reference Manual, when both USB & CAN peripheral activated,
-     *       USB interrupts will be remapped to IRQ Line 73 & 74 (USBFS_MAPH/L)
-     *       see: crm_usb_interrupt_remapping_set(CRM_USB_INT73_INT74);
-     */
-    usbd_core_init(&usb_core_dev, USB, &custom_hid_class_handler, &custom_hid_desc_handler, 0);
-    usbd_connect(&usb_core_dev);
-}
 
 extern "C"
 {
@@ -90,9 +91,9 @@ void app_main(void)
 
     motor_1 = new iFOC::FOCMotor();
     uart1 = new iFOC::HAL::UART(USART1, DMA2_CHANNEL1, DMA2_CHANNEL2);
-    uart3 = new iFOC::HAL::UART(USART3, DMA2_CHANNEL3, DMA2_CHANNEL4);
+    uart3 = new iFOC::HAL::UARTHS(USART3, DMA2_CHANNEL3, DMA2_CHANNEL4);
     can1 = new iFOC::HAL::CAN(CAN1);
-    // usb_protocol = new iFOC::Protocol::USBProtocolFOC(64);
+    usb_uart = new iFOC::HAL::USBUARTHS();
 
     auto* swi2c = new iFOC::HAL::I2CSW(new iFOC::HAL::GPIO(SWI2C_SCL_GPIO_PORT, SWI2C_SCL_PIN),
                                  new iFOC::HAL::GPIO(SWI2C_SDA_GPIO_PORT, SWI2C_SDA_PIN),
@@ -129,15 +130,16 @@ void app_main(void)
 
     uart1->Init(iFOC::BoardConfig().GetConfig().uart_1_baudrate());
     uart3->Init(iFOC::DataType::Comm::UARTBaudrate::BAUD_921600);
+    usb_uart->Init(iFOC::DataType::Comm::UARTBaudrate::BAUD_9000000); // unused baud param for USB
     can1->Init(iFOC::DataType::Comm::CANBaudrate::BAUD_1_MBPS);
+
+    rs485_protocol = new iFOC::Protocol::RS485Protocol(usb_uart);
 
     gpio_bits_set(SPI1_CS1_GPIO_PORT, SPI1_CS1_PIN);
     gpio_bits_set(SPI1_CS2_GPIO_PORT, SPI1_CS2_PIN);
 
     if(iFOC::BoardConfig().GetConfig().enable_can_terminal_resistor()) gpio_bits_reset(CAN_RES_TRIG_GPIO_PORT, CAN_RES_TRIG_PIN);
     else gpio_bits_set(CAN_RES_TRIG_GPIO_PORT, CAN_RES_TRIG_PIN);
-
-    // usb_init();
 
     drv830x = new iFOC::Driver::FOCDriverDRV830x(new iFOC::Driver::FOCDriver6PWM(TMR1),
                                                 new iFOC::HAL::SPI(SPI1, new iFOC::HAL::GPIO(SPI1_CS1_GPIO_PORT, SPI1_CS1_PIN)),
@@ -160,6 +162,10 @@ void app_main(void)
     // motor_1->RegisterProtocol(usb_protocol);
     // motor_1->RegisterProtocol(new iFOC::Protocol::ASCIIProtocol<iFOC::FOCMotor>(uart1));
     motor_1->RegisterProtocol(new iFOC::Protocol::DroneCANProtocol(can1));
+    motor_1->RegisterProtocol(rs485_protocol);
+
+    // motor_1->GetDriver()->Init(true);
+    // motor_1->GetDriver()->SetOutput3CHPu(0.5f, 0.5f, 0.5f);
 
     motor_1->Init(true);
 
@@ -181,7 +187,7 @@ void app_main(void)
 
     iFOC::HAL::Bootloader::SetAppInitSuccessFlag();
 
-    // uartTask.start("UARTTask", 512, tskIDLE_PRIORITY + 1);
+    uartTask.start("UARTTask", 512, tskIDLE_PRIORITY + 1);
     vTaskStartScheduler();
     while(1);
 }

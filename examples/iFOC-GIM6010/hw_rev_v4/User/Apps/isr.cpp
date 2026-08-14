@@ -76,17 +76,18 @@ void usart3_irq(void)
 
 void usart3_rx_dma_irq(void)
 {
-    uart3->OnRxDMAIRQ();
+    // uart3->OnRxDMAIRQ();
 }
 
 void usart3_tx_dma_irq(void)
 {
-    uart3->OnTxDMAIRQ();
+    // uart3->OnTxDMAIRQ();
 }
 
 void usbfs_irq(void)
 {
-    usbd_irq_handler(&usb_core_dev);
+    // usbd_irq_handler(&usb_core_dev);
+    usb_uart->OnUSBIRQ();
 }
 
 void can1_rx0_irq(void)
@@ -97,11 +98,6 @@ void can1_rx0_irq(void)
 void hardfault_irq(void)
 {
     iFOC::HAL::Bootloader::OnHardFault();
-}
-
-void hid_bytes_process(const uint8_t *data, uint16_t len, uint8_t *reply_buf, uint16_t *reply_len)
-{
-    // usb_protocol->OnRxPacket(data, len, reply_buf, reply_len);
 }
 
 #if defined(configUSE_MALLOC_FAILED_HOOK)

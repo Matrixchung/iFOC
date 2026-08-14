@@ -10,14 +10,15 @@
 
 #include "encoder_mt6835.hpp"
 #include "foc_driver_drv830x.hpp"
-#include "usb_protocol.hpp"
 
 #include "at32wk_include.hpp"
+#include "foc_motor.hpp"
 
 extern iFOC::FOCMotor* motor_1;
 
 extern iFOC::HAL::UART* uart1;
-extern iFOC::HAL::UART* uart3;
+extern iFOC::HAL::UARTHS* uart3;
+extern iFOC::HAL::USBUARTHS* usb_uart;
 extern iFOC::HAL::CAN* can1;
 
 // extern iFOC::Protocol::USBProtocolFOC* usb_protocol;
