@@ -187,6 +187,7 @@
   |         5 / 获取电机当前错误值         |                       /                       |    (uint64_t)motor->GetError()    |
   |   6 / 按给定 mask 清除电机当前错误值   |             (uint64_t)error_mask              |    (uint64_t)motor->GetError()    |
   | 7 / 设置电机当前运行状态（MotorState） |                 request_state                 |          response_state           |
+  |        10 / NVM 用户区全部擦除         |       0x11 0x22 0x33 0x44（MAGIC_WORD)        |                 /                 |
 
 - ##### FRAME_ID = 4（Get/Set 参数服务帧，类似 DroneCAN GetSet / CANopen SDO）
 

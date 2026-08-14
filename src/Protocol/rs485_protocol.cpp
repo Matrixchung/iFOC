@@ -329,6 +329,26 @@ void RS485Protocol::HandleExecuteOpcode()
             WriteTxPacket();
             break;
         }
+        case 10: // ERASE_NVM_USER_AREA
+        {
+            if((argument & 0xFF) != 0x11 ||
+                ((argument >> 8) & 0xFF) != 0x22 ||
+                ((argument >> 16) & 0xFF) != 0x33 ||
+                ((argument >> 24) & 0xFF) != 0x44)
+            {
+                WriteTxPacket();
+                break;
+            }
+            if(motor->GetCurrentState() != MotorState::IDLE)
+            {
+                WriteTxPacket();
+                break;
+            }
+            if(BlobNVMStorage().ClearAllNVM() == FuncRetCode::OK) tx_packet.data[0] = 0x02;
+            else tx_packet.data[0] = 0x01;
+            WriteTxPacket();
+            break;
+        }
         default:
         {
             WriteTxPacket();

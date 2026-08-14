@@ -111,6 +111,15 @@ FuncRetCode BlobNVMStorage::ClearNVM(const char* key)
     return FuncRetCode::OK;
 }
 
+FuncRetCode BlobNVMStorage::ClearAllNVM()
+{
+    auto init_ret = kvdb_init();
+    if(init_ret != FDB_NO_ERR) return FuncRetCode::HARDWARE_ERROR;
+    init_ret = HAL::NVM::fdb_kv_set_default(&blob_kvdb);
+    if(init_ret != FDB_NO_ERR) return FuncRetCode::INVALID_RESULT;
+    return FuncRetCode::OK;
+}
+
 uint16_t BlobNVMStorage::GetKVSize(const char* key)
 {
     if(kvdb_init() != FDB_NO_ERR) return 0;

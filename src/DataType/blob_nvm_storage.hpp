@@ -17,6 +17,7 @@ public:
     static FuncRetCode ReadNVM(const char* key, uint8_t* buffer, uint16_t* in_out_buf_len);
     static FuncRetCode SaveNVM(const char* key, uint8_t* buffer, uint16_t buf_len);
     static FuncRetCode ClearNVM(const char* key);
+    static FuncRetCode ClearAllNVM();
     static uint16_t GetKVSize(const char* key);
 };
 }
