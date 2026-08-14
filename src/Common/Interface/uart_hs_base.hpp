@@ -50,6 +50,9 @@ public:
     void RegisterIdleCallback(IdleCallback cb);
     void RemoveIdleCallback();
 
+    __fast_inline uint8_t RegisterRxHandler(const IdleCallback& cb) { RegisterIdleCallback(cb); return 0; };
+    __fast_inline void RemoveRxHandler(const uint8_t id) { RemoveIdleCallback(); };
+
     [[nodiscard]] __fast_inline auto GetRxLen() const { return rx_fifo.used(); };
     [[nodiscard]] __fast_inline auto GetTxPending() const { return tx_fifo.used(); };
     [[nodiscard]] __fast_inline auto GetTxAvailable() const { return tx_fifo.available(); };
