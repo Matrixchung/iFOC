@@ -49,12 +49,12 @@ void StateMachineTask::InitNormal()
     // sleep(50);
     // foc->AppendTask(new WaveGenSVPWM);    // "WaveGen"
 
-    sleep(50); // we will wait for possible auxiliary encoder to boot up correctly.
     // Off axis encoder
     if(const auto enc = foc->GetPrimaryEncoder())
     {
         if(foc->GetConfig().deduction_ratio() > 1.0f)
         {
+            sleep(100); // we will wait for possible auxiliary encoder to boot up correctly.
             if(enc->GetEncoderType() != Encoder::Type::SENSORLESS_ENCODER &&
             foc->GetConfig().pole_pairs_valid() && foc->GetConfig().sensor_zero_offset_valid())
             {
