@@ -179,7 +179,11 @@ uint16_t FOCDriverDRV830x::SPITransfer(const uint16_t tx) const
     uint16_t rx_data = 0;
     spi_base->SetCS(false);
     HAL::DelayUs(5);
-    if(const auto r = spi_base->WriteReadBytes((const uint8_t*)&tx_data, (uint8_t*)&rx_data, 2); r != FuncRetCode::OK) return 0;
+    if(const auto r = spi_base->WriteReadBytes((const uint8_t*)&tx_data, (uint8_t*)&rx_data, 2); r != FuncRetCode::OK)
+    {
+        spi_base->SetCS(true); // fixed nCS not pulled high if return state error
+        return 0;
+    }
     spi_base->SetCS(true);
     HAL::DelayUs(5);
     return (rx_data << 8) | (rx_data >> 8);
