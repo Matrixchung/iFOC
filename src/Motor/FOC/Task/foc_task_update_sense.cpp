@@ -158,11 +158,11 @@ void UpdateSenseTask::UpdateRT(const float Ts)
         }
 
         // fallback to leakage current detection method
-        const real_t leakage_current = foc->GetCurrSense()->shunt_values[0] + foc->GetCurrSense()->shunt_values[1] + foc->GetCurrSense()->shunt_values[2];
-        if(ABS(leakage_current) >= foc->GetConfig().max_current() * 0.2f) // max leakage current = 20% max current
-        {
-            foc->DisarmWithError(MotorError::MOTOR_PHASE_IMBALANCE); // phase current imbalance
-        }
+        // const real_t leakage_current = foc->GetCurrSense()->shunt_values[0] + foc->GetCurrSense()->shunt_values[1] + foc->GetCurrSense()->shunt_values[2];
+        // if(ABS(leakage_current) >= foc->GetConfig().max_current() * 0.2f) // max leakage current = 20% max current
+        // {
+        //     foc->DisarmWithError(MotorError::MOTOR_PHASE_IMBALANCE); // phase current imbalance
+        // }
     }
     else
     {
