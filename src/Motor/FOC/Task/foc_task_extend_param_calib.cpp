@@ -13,8 +13,8 @@ constexpr size_t ANTICOGGING_LUT_SEGMENTS       = ANTICOGGING_LUT_POINTS - 1;
 constexpr float ANTICOGGING_STEP_RAD            = PI2 / (float)ANTICOGGING_LUT_SEGMENTS;
 // constexpr float ANTICOGGING_POS_ERR_TH_RAD      = ANTICOGGING_STEP_RAD * 0.5f;
 // constexpr float ANTICOGGING_VEL_TH_RAD_S        = ANTICOGGING_STEP_RAD * 20.0f;
-constexpr float ANTICOGGING_STABLE_HOLD_S       = 0.01f;
-constexpr uint16_t ANTICOGGING_AVG_SAMPLES      = 8;
+constexpr float ANTICOGGING_STABLE_HOLD_S       = 0.1f;
+constexpr uint16_t ANTICOGGING_AVG_SAMPLES      = 10;
 // If insufficient samples were collected for a single step during the following time,
 // a motor error will be raised (ANTICOGGING_POS_UNSTABLE) and the process will be stopped.
 constexpr float ANTICOGGING_MAX_TIME_PER_STEP_S = 10.0f;
