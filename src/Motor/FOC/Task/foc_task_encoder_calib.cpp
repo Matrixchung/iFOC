@@ -338,6 +338,12 @@ void EncoderCalibTask::UpdateNormal()
                 }
                 lut.setValueByIndex(LUT_SEGMENTS, lut.getValueByIndex(0)); // wrap around
 
+                if(temp_map)
+                {
+                    vPortFree(temp_map);
+                    temp_map = nullptr;
+                }
+
                 // Check LUT validity
                 constexpr float MAX_NONLINEAR_LUT_PEAK_RAD = 0.1f;
                 float lut_peak_abs_rad = 0.0f;
@@ -367,12 +373,6 @@ void EncoderCalibTask::UpdateNormal()
                     foc->GetConfig().set_sensor_zero_offset_valid(false);
                     foc->RemoveTaskByName(GetName());
                     break;
-                }
-
-                if(temp_map)
-                {
-                    vPortFree(temp_map);
-                    temp_map = nullptr;
                 }
 
                 char key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
@@ -412,7 +412,7 @@ void EncoderCalibTask::UpdateNormal()
     }
 }
 
-void EncoderCalibTask::UpdateMid(float Ts)
+void EncoderCalibTask::UpdateMid(const float Ts)
 {
     const auto foc = GetMotor<FOCMotor>();
     switch(stage)
