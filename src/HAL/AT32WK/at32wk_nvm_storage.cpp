@@ -33,6 +33,7 @@ FuncRetCode Erase(uint32_t addr, size_t size) // erase sectors
     flash_unlock();
     for(uint32_t i = 0; i < sector_count; i++)
     {
+        wdt_counter_reload(); // reset wdt during flash operation
         const uint32_t sector_addr = first_sector_addr + i * FLASH_SECTOR_SIZE_BYTES;
 #if FLASH_SECTOR_SIZE_BYTES == (1024 * 1)
         flash_sector_erase(sector_addr);
@@ -62,6 +63,7 @@ FuncRetCode Write_NoErase(uint32_t addr, const uint8_t* buffer, size_t size)
             uint8_t retry_time = 0;
             while(retry_time < 3)
             {
+                wdt_counter_reload(); // reset wdt during flash operation
                 if(flash_word_program(addr, write_data) == FLASH_OPERATE_DONE) break;
                 retry_time++;
             }
