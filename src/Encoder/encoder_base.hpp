@@ -3,6 +3,7 @@
 #include "../Common/foc_types.hpp"
 #include "../Common/Filter/lowpass_filter.hpp"
 #include "../Common/foc_task.hpp"
+#include "../DataType/lookup_table.hpp"
 
 namespace iFOC::Encoder
 {
@@ -30,6 +31,7 @@ public:
     virtual void UpdateRT(const float Ts) {};
     virtual void UpdateMid(const float Ts) {};
     virtual void SaveConfig(const uint8_t motor_id) {};
+    virtual void UpdateLUT(const DataType::LookupTable& new_lut) {};
     // Since Normal task is running in RTOS loop and delay time is not proven,
     // all encoder instance shouldn't run a normal task.
     [[nodiscard]] const char* GetName() const { return name; };

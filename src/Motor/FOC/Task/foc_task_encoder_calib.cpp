@@ -375,6 +375,12 @@ void EncoderCalibTask::UpdateNormal()
                     break;
                 }
 
+                const auto encoder = foc->GetPrimaryEncoder();
+                if(encoder)
+                {
+                    encoder->UpdateLUT(lut);
+                }
+
                 char key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) + 1];
                 memcpy(key, Encoder::NONLINEAR_LUT_DB_KEY_PREFIX, sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1);
                 key[sizeof(Encoder::NONLINEAR_LUT_DB_KEY_PREFIX) - 1] = foc->GetInternalID() + '0';

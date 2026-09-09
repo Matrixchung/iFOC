@@ -188,6 +188,10 @@ public:
         const real_t vel = delta / Ts;
         angular_speed_rad_s = speed_lpf.GetOutput(vel, Ts);
     }
+    void UpdateLUT(const DataType::LookupTable& new_lut) override
+    {
+        nonlinear_lut = new_lut;
+    }
 private:
     FuncRetCode ReadAbsAngleRad()
     {

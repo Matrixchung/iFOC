@@ -112,6 +112,11 @@ void EncoderMT6835::UpdateMid(const float Ts)
     }
 }
 
+void EncoderMT6835::UpdateLUT(const DataType::LookupTable& new_lut)
+{
+    nonlinear_lut = new_lut;
+}
+
 FuncRetCode EncoderMT6835::ReadAbsAngleRad()
 {
     // uint8_t ret[6] = {0x00}; // length: 6 for burst read (see datasheet and ReadAngleRegBurst())

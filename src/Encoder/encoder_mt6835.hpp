@@ -24,6 +24,7 @@ public:
     FuncRetCode Init(uint8_t motor_id) override;
     void UpdateRT(float Ts) override;
     void UpdateMid(float Ts) override;
+    void UpdateLUT(const DataType::LookupTable& new_lut) override;
     std::underlying_type_t<DeviceError> device_error = to_underlying(DeviceError::NONE);
 // private:
     FuncRetCode ReadAbsAngleRad();
