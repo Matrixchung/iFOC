@@ -2008,12 +2008,14 @@ namespace iFOC::Protocol
         if(new_id == 0 || new_id > BROADCAST_ID) new_id = BROADCAST_ID; // id invalid
         const auto motor = GetMotor<FOCMotor>();
         // Set HW filter: DIRECTION == 0, NODE_ID = node_id
-        // HW filter id: motor->GetInternalID() * 2 & motor->GetInternalID() * 2 + 1
+        // HW filter id: motor->GetInternalID() * 3 & motor->GetInternalID() * 3 + 1 & motor->GetInternalID() * 3 + 2
         // mask: 00111110000b (11-bit standard id) -> 0x1F0
         //   id: 000|id|0000b -> (new_id & 0xF) << 4
         // with FRAME_ID = 0: mask: 11111111111b -> 0x7FF, id: 10011110000b -> 0x4F0 (Dynamic Node Allocation)
-        can->SetHWFilter(motor->GetInternalID() * 2, (new_id & 0xF) << 4, 0x1F0, false);
-        can->SetHWFilter(motor->GetInternalID() * 2 + 1, 0x4F0, 0x7FF, false);
+        //                    mask: 11111111111b -> 0x7FF, id: 00011111101b -> 0x0FD (Sync Motion)
+        can->SetHWFilter(motor->GetInternalID() * 3, (new_id & 0xF) << 4, 0x1F0, false); // Regular point-to-point
+        can->SetHWFilter(motor->GetInternalID() * 3 + 1, 0x4F0, 0x7FF, false); // DNA
+        can->SetHWFilter(motor->GetInternalID() * 3 + 2, 0x0FD, 0x7FF, false); // Sync
         node_id = new_id;
         motor->GetConfig().set_node_id(new_id);
     }
@@ -2035,8 +2037,13 @@ namespace iFOC::Protocol
             if(direction) return false;
             // Step #2: validate class_id vs frame_id
             if(FIDToClass(frame_id) != class_id) return false;
-            // Step #3: validate target_node_id
-            if(target_node_id != node_id && (target_node_id == BROADCAST_ID && frame_id == 0x00)) return false;
+            // Step #3: validate target_node_id. FID=0 (DNA) and FID=13
+            // (motion synchronization) are the two host broadcast frames.
+            // All other frames must address this node explicitly.
+            const bool is_host_broadcast =
+                target_node_id == BROADCAST_ID &&
+                (frame_id == 0x00 || frame_id == 0x0D);
+            if(target_node_id != node_id && !is_host_broadcast) return false;
             switch(frame_id)
             {
                 case 0: // Dynamic Node Allocation
