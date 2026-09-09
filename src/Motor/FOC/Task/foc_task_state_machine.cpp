@@ -124,6 +124,8 @@ void StateMachineTask::InitNormal()
         }
     }
 
+    foc->SetControlMode(MotorControlMode::CTRL_MODE_CURRENT); // current mode init
+
     // Here we are in IDLE.
     // Play the beep first, but with a proper basic parameter set to avoid electrical misconfiguration
     if(!CheckStateRequirement(MotorState::BASIC_PARAM_CALIBRATION) &&
@@ -419,6 +421,7 @@ MotorState StateMachineTask::RequestState(const MotorState new_state)
                     current_target.speed.value = 0.0f;
                     current_target.pos.value = current_motion.pos.value;
                     foc->SetTargetMotion(current_target);
+                    foc->SetControlMode(MotorControlMode::CTRL_MODE_CURRENT); // current mode init
                     foc->Arm();
                     TRANSITION_OK(new_state);
                 }
