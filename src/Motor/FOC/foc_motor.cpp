@@ -138,8 +138,9 @@ FuncRetCode FOCMotor::Init(const bool initTIM)
                 deserialize_buffer = nullptr;
             }
         }
-        else // incorrect size, delete KV
+        else // incorrect size, delete KV, and invalid config value
         {
+            GetConfig().set_enable_anticogging(false);
             BlobNVMStorage().ClearNVM(key);
         }
     }
